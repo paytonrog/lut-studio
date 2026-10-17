@@ -232,8 +232,8 @@ whenever it's worn.
   for every item sharing those LUTs; **Next unconfirmed ▸** shows the next item of the chosen group (the menu)
   with LUTs left to confirm, and the progress line counts them. LUT Studio ships reviewed roles; yours come on top.
   **Export roles.json** saves the built-in roles with yours on top; **Forget mine here** drops yours on screen.
-- **Theme…**: pick a **Preset** (Orange Tiger, Desert, Oil Slick, Neon Circuit, Gilded Emperor, Volcanic: each a
-  look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
+- **Theme…**: pick a **Preset** (16 ready-made themes, from Desert and Orange Tiger to Oil Slick, Neon Circuit, Chrome
+  Legion and Zebra Prism: each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,
