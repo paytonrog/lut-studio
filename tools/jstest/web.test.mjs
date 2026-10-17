@@ -157,6 +157,13 @@ test('looks import: Paydex LUT Editor row presets and LUT Studio looks', () => {
   const got = importLooks(old);
   assert.deepEqual(got.map(l => [l.name, l.kind, l.row.length]), [['Chrome', 'material', 92], ['Cape gold', 'cape', 64], ['Stripe', 'pattern', 12]]);
   assert.deepEqual(got[0].row.slice(4, 8), [1, 0.5, 0.25, -1]);
-  const mine = [{ name: 'Mine', kind: 'material', row: Array(92).fill(0.1) }, { name: 'Bad', kind: 'cape', row: [1, 2] }];
-  assert.deepEqual(importLooks(mine).map(l => l.name), ['Mine']);
+  assert.ok(got.every(l => l.category === 'Paydex'));
+  const mine = [{ name: 'Mine', kind: 'material', category: 'Metals', row: Array(92).fill(0.1), saved: '2026-10-17T00:00:00Z' },
+    { name: 'Plain', kind: 'material', row: Array(92).fill(0.2) }, { name: 'Bad', kind: 'cape', row: [1, 2] }];
+  const back = importLooks(mine);
+  assert.deepEqual(back.map(l => [l.name, l.category ?? null, !!l.saved]), [['Mine', 'Metals', true], ['Plain', null, false]]);
+});
+
+test('built-in looks: each in a category', () => {
+  assert.ok(BUILTIN.length > 0 && BUILTIN.every(p => typeof p.category === 'string' && p.category));
 });

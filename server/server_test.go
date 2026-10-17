@@ -224,6 +224,32 @@ func TestSchemaAndPresets(t *testing.T) {
 	if len(back) != 1 || back[0]["name"] != "Mine" {
 		t.Fatalf("presets: %v", back)
 	}
+	// kept beside the projects ("LUT Studio looks.json"), said by /api/presets/where
+	var where struct{ Path string }
+	c.json("GET", "/api/presets/where", nil, &where)
+	if filepath.Base(where.Path) != "LUT Studio looks.json" {
+		t.Errorf("looks kept at %q", where.Path)
+	}
+	if _, err := os.Stat(where.Path); err != nil {
+		t.Errorf("looks file: %v", err)
+	}
+}
+
+// looks saved before they moved beside the projects (%APPDATA%\LUTStudio\presets.json) are read until the new file is
+// written
+func TestPresetsFromOldPlace(t *testing.T) {
+	c, _ := setup(t) // (a fresh projects folder: no looks file there yet)
+	if err := os.MkdirAll(filepath.Dir(oldPresetsPath()), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(oldPresetsPath(), []byte(`[{"name":"Old","kind":"material","row":[1]}]`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var back []map[string]any
+	c.json("GET", "/api/presets", nil, &back)
+	if len(back) != 1 || back[0]["name"] != "Old" {
+		t.Fatalf("old looks: %v", back)
+	}
 }
 
 func TestLabelHelpers(t *testing.T) {

@@ -111,6 +111,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/new", s.needs(true, false, s.newProject))
 	mux.HandleFunc("GET /api/presets", s.getPresets)
 	mux.HandleFunc("PUT /api/presets", s.putPresets)
+	mux.HandleFunc("GET /api/presets/where", s.presetsWhere)
 	mux.HandleFunc("GET /api/roles", s.getRoles)
 	mux.HandleFunc("PUT /api/roles", s.putRoles)
 	mux.HandleFunc("GET /api/roles/export", s.exportRoles)

@@ -552,17 +552,34 @@ async function main() {
       // an edit: the first built-in look on the selected zone, then saved
       // (built-in looks exist for material LUTs: select one first; a cape project may open on its trim LUT)
       const applied = await evaluate(`(async () => {
-        const looks = () => document.getElementById('zPreset')?.options.length ?? 0;
+        const looks = () => document.querySelectorAll('#zLooks .lkItem[data-own="0"]').length;
         for (const it of document.querySelectorAll('#lutList .item[data-lut]')) {
-          if (looks() > 1) break;
+          if (looks() > 0) break;
           it.click(); await new Promise(r => setTimeout(r, 300));
         }
-        const ps = document.getElementById('zPreset'); if (!ps || ps.options.length < 2) return false;
-        ps.value = ps.options[1].value; ps.dispatchEvent(new Event('change'));
+        const first = document.querySelector('#zLooks .lkItem[data-own="0"]'); if (!first) return false;
+        first.click();
         document.getElementById('save')?.click(); return true; })()`);
       check(`${kind}: a look applies`, applied === true);
       const saved = await waitFor(`/Saved/.test(document.getElementById('status').textContent)`, 30000);
       check(`${kind}: the edit is saved`, !!saved, await evaluate(`document.getElementById('status').textContent`));
+      if (kind === 'armor') {   // a look of your own: saved in a category (beside the projects), listed, then deleted
+        const own = JSON.parse(await evaluate(`(async () => {
+          const wait = async f => { for (let i = 0; i < 50; i++) { const v = f(); if (v) return v; await new Promise(r => setTimeout(r, 100)); } return null; };
+          window.confirm = () => true;
+          document.getElementById('lkSave').click();
+          (await wait(() => document.getElementById('lkName'))).value = 'E2E look';
+          document.getElementById('lkCat').value = 'E2E';
+          document.getElementById('lkOk').click();
+          const item = await wait(() => [...document.querySelectorAll('#zLooks details.lkCat[data-cat="m:E2E"] .lkItem')].find(e => /E2E look/.test(e.textContent)));
+          const where = (await wait(() => document.getElementById('lkWhere')?.textContent))?.trim() ?? '';
+          const listed = (await (await fetch('/api/presets')).json()).filter(p => p.name === 'E2E look' && p.category === 'E2E').length;
+          item?.querySelector('.lkDel')?.click();
+          const gone = await wait(() => !(document.querySelector('#zLooks')?.textContent ?? '').includes('E2E look'));
+          return JSON.stringify({ item: !!item, swatch: !!item?.querySelector('.swatch:not(.none)'), where, listed, gone: !!gone }); })()`));
+        check(`${kind}: a look of your own: saved in a category beside the projects, listed with its swatch, deleted`,
+          own.item && own.swatch && own.listed === 1 && own.gone && /looks\.json|browser/.test(own.where) && errors.length === 0, JSON.stringify(own));
+      }
 
       // build with the button (renders icon and variant pictures), then the download
       errors.length = 0;

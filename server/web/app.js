@@ -3,7 +3,8 @@ import { SLOT_ORDER, slotList, vehicleMount } from './helpers.js';
 import { buildScene, SCENE } from './scene.js';
 import { openShowcase } from './showcaseui.js';
 import { Renderer, parseGLB, extractPieces, DEBUG_VIEWS, WORLD, decalNumbers, prepareClip, skeletonOf, nodeWorld, transformPrim, mountMatrix } from './render.js';
-import { BUILTIN, applyPreset, importLooks } from './presets.js';
+import { importLooks } from './presets.js';
+import { looksPanel } from './looks.js';
 import { showHome } from './home.js';
 import { decalDialog } from './decals.js';
 import { designDialog } from './designs.js';
@@ -892,33 +893,12 @@ function renderFieldsInto(box, head) {
   head.innerHTML = `<div class="t">${l.kind === 'pattern' ? 'Pattern LUT' : esc(l.labels[z] || 'zone ' + z)} <span class="hint">${S.sel.lut}</span></div>
     ${(() => { if (l.pull || !S.state.parts?.[S.sel.lut]) return `<div class="s" title="${esc(l.note || '')}">${esc(l.note || '')}</div>`; const d = describeLut(S.sel.lut, l.kind); return `<div class="s" title="${esc(d.parts + ' · ' + d.shared)}"><span class="badge ${d.cls}">${esc(d.badge)}</span>${esc(d.parts)} · ${esc(d.shared)}</div>`; })()}
     <div class="row" style="margin-top:6px"><button id="zCopy">Copy zone</button><button id="zPaste">Paste zone</button><button id="zReset">Reset zone</button></div>
-    <div class="lookRow" style="margin-top:6px"><select id="zPreset"><option value="">Apply a look…</option></select><button id="zSavePreset" title="Save this zone's settings as a look of your own (all projects)">Save look</button></div>
-    <div class="row"><button id="zImportPresets" title="Bring in the Row Presets you saved in the Paydex LUT Editor, as looks of your own">Import Row Presets from Paydex…</button></div>`;
-  const ps = $('zPreset');
-  const builtin = l.kind === 'material' ? BUILTIN : [];
-  const mine = (S.presets ?? []).filter(p => p.kind === l.kind);
-  if (builtin.length) { const g = document.createElement('optgroup'); g.label = 'Built-in'; builtin.forEach((p, i) => g.appendChild(new Option(p.name, 'b' + i))); ps.appendChild(g); }
-  if (mine.length) { const g = document.createElement('optgroup'); g.label = 'Mine'; mine.forEach(p => g.appendChild(new Option(p.name, 'm' + S.presets.indexOf(p)))); ps.appendChild(g); }
-  ps.onchange = () => {
-    const v = ps.value; if (!v) return;
-    const preset = v[0] === 'b' ? builtin[+v.slice(1)] : S.presets[+v.slice(1)];
-    snapshot(); S.lastSnap = 0;
-    try { applyPreset(preset, l, z, S.schema[l.kind]); } catch (e) { return status(e.message, true); }
-    changed(l); renderFields();
-    status(`Applied "${preset.name}" to ${l.labels[z] || 'zone ' + z} (Ctrl+Z undoes it)`);
-    track('look applied', { look: v[0] === 'b' ? preset.name : '(saved look)', kind: l.kind });
-  };
-  $('zSavePreset').onclick = async () => {
-    const name = prompt('Name of this look:');
-    if (!name) return;
-    const prev = S.presets;
-    S.presets = [...(S.presets ?? []), { name, kind: l.kind, row: Array.from(l.edited.slice(z * l.w * 4, (z + 1) * l.w * 4)) }];
-    try { await api('/api/presets', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(S.presets) }); }
-    catch (e) { S.presets = prev; return status('The look was not saved: ' + e.message, true); }
-    renderFields();
-    status(`Saved the look "${name}"`);
-  };
-  $('zImportPresets').onclick = paydexDialog;
+    <div id="zLooks" class="looks"></div>`;
+  // the looks: the built-in ones and yours, in categories (looks.js)
+  looksPanel($('zLooks'), {
+    S, api, l, z, schema: S.schema[l.kind], status, track, paydex: paydexDialog, rerender: renderFields,
+    apply: fn => { snapshot(); S.lastSnap = 0; fn(); changed(l); renderFields(); },
+  });
   $('zCopy').onclick = () => { S.clip = l.edited.slice(z * l.w * 4, (z + 1) * l.w * 4); status('Zone copied'); };
   $('zPaste').onclick = () => {
     if (!S.clip || S.clip.length !== l.w * 4) return status('Nothing to paste (copy a zone of a LUT of the same kind)', true);
@@ -954,7 +934,7 @@ async function paydexDialog() {
     <p class="hint">(That is <code>C:\\Users\\<i>your name</i>\\AppData\\Local\\PaydexLutEditor</code>. AppData is a hidden folder:
       in the file window that opens next, paste the copied path into the <b>File name</b> box and press Enter to jump
       there, then pick <b>row_presets.json</b>.)</p>
-    <p class="hint">Each preset becomes a look of your own (under <i>Mine</i> in <b>Apply a look…</b>), for the kind of LUT its
+    <p class="hint">Each preset becomes a look of your own (in the <b>Looks</b> list, category <i>Paydex</i>), for the kind of LUT its
       row fits: armor and other materials, capes or patterns.</p>
     <div class="row"><button id="pdxPick" class="primary">Choose row_presets.json…</button></div>
     <p class="hint" id="pdxInfo"></p>`;
@@ -978,7 +958,7 @@ async function paydexDialog() {
       await api('/api/presets', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(S.presets) });
       renderFields();
       const kinds = [...new Set(looks.map(l => l.kind))].join(', ');
-      info(`Imported ${looks.length} Row Preset(s) (${kinds}): find them under "Mine" in Apply a look…`);
+      info(`Imported ${looks.length} Row Preset(s) (${kinds}): find them in the Looks list, in the Paydex category`);
       status(`Imported ${looks.length} Row Preset(s) from Paydex`);
       track('looks imported', { count: looks.length, kinds, from: 'paydex' });
     };

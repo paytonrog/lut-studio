@@ -202,3 +202,19 @@ details.pop.up-right > .popBody { left: auto; right: 0; }
 .lookRow { display: flex; gap: 6px; align-items: center; }
 .lookRow select { flex: 1; min-width: 0; }
 .popRow.check { justify-content: flex-start; }
+
+/* the zone's looks (looks.js) */
+.looks { margin-top: 8px; border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; }
+.looks .lkHead { display: flex; align-items: center; gap: 8px; }
+.looks .lkHead select { max-width: 120px; }
+.looks .lkGroup { margin-top: 6px; }
+.looks details.lkCat > summary { cursor: pointer; padding: 2px 0; font-size: 12px; }
+.looks .lkItem { display: flex; align-items: center; gap: 7px; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+.looks .lkItem:hover { background: var(--panel2); }
+.looks .lkItem .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.looks .lkItem button.icon { padding: 0 5px; font-size: 11px; opacity: 0.6; }
+.looks .lkItem button.icon:hover { opacity: 1; }
+.looks .swatch.none { background: repeating-linear-gradient(45deg, #333 0 3px, #444 3px 6px); }
+.looks .lkFormBox { margin: 6px 0; padding: 6px; background: var(--panel2); border-radius: 4px; }
+.looks .lkFiles { margin-top: 6px; }
+.looks button.link { background: none; border: none; color: var(--dim); text-decoration: underline; padding: 0 4px; }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -325,12 +326,21 @@ func (s *Server) newProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"project": dir})
 }
 
-// ---------- user presets (zone looks), shared by all projects: %APPDATA%\LUTStudio\presets.json
+// ---------- the user's looks (zone presets), shared by all projects: "LUT Studio looks.json" in the projects folder
+// (on disk: Documents\LUT Studio, or the folder chosen; on the website, the folder on disk the user chose, else the
+// browser's storage). Earlier versions kept them in %APPDATA%\LUTStudio\presets.json: read while the new file isn't there.
+// Each look: {name, kind (material, cape, pattern), category, row (the zone's raw values), saved (RFC 3339)}.
 
-func presetsPath() string { return filepath.Join(appcfg.Dir(), "presets.json") }
+const looksFile = "LUT Studio looks.json"
+
+func presetsPath() string    { return filepath.Join(appcfg.Load().ProjectsFolder(), looksFile) }
+func oldPresetsPath() string { return filepath.Join(appcfg.Dir(), "presets.json") }
 
 func (s *Server) getPresets(w http.ResponseWriter, r *http.Request) {
 	b, err := os.ReadFile(presetsPath())
+	if err != nil {
+		b, err = os.ReadFile(oldPresetsPath())
+	}
 	if err != nil {
 		b = []byte("[]")
 	}
@@ -351,6 +361,11 @@ func (s *Server) putPresets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, "ok")
+}
+
+// where the looks are kept: {path, browser (true: only in the browser's storage, the website with no folder on disk)}
+func (s *Server) presetsWhere(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"path": presetsPath(), "browser": runtime.GOOS == "js" && appcfg.Load().ProjectsDir == ""})
 }
 
 // download sends the project's built mod zip to the browser as a file download.

@@ -134,9 +134,16 @@ whenever it's worn.
     colors), **camo** (4 colors on one of the game's camo patterns).
   Each field has a short explanation, a slider over its useful range and a **↺ vanilla** button. Colors accept
   `#rrggbb`.
-- **Apply a look…**: ready-made settings for the zone (matte / satin / gloss paint, lacquer, bare or brushed
-  metal, worn metal edges, camo, glow, oil-slick, fabric…). **Save look** keeps the zone's settings as a look of
-  your own for every project. **Import Row Presets from Paydex…** brings in the Row Presets saved in the Paydex LUT Editor: the dialog says where its file is (`row_presets.json` in `%LOCALAPPDATA%\PaydexLutEditor`, with a **Copy** button for the path), and each preset becomes a look of your own, under *Mine*, for the LUT kind its row fits (material, cape or pattern).
+- **Looks**: under the zone, in categories. The built-in ones (Paint: matte / satin / gloss, lacquer; Metal: bare,
+  brushed; Wear; Camo; Effects: glow, oil-slick; Cloth) set only what they're about. **Save look** keeps the zone's
+  settings as a look of your own, with a name and a category (a new name adds one; the same name replaces it). One
+  click applies a look; yours apply by **Apply**: everything, the finish only (all but the colors) or the colors
+  only. ✎ renames a look of yours or moves it to another category, ✕ deletes it. Yours are kept in
+  `LUT Studio looks.json` in your projects folder (on the website: in the projects folder on disk you chose on the
+  start page; without one, in the browser only, as the panel warns). **Export…** saves them to a file (a backup, or
+  to share), **Import…** brings looks in from such a file or from the Paydex LUT Editor's `row_presets.json`
+  (**Paydex presets…** says where its file is: `%LOCALAPPDATA%\PaydexLutEditor`); a look you already have is
+  skipped, a name taken gets a number, Paydex presets go in the *Paydex* category.
 - **Copy / Paste / Reset zone**, **Ctrl+Z / Ctrl+Y** undo / redo, **Ctrl+S** save (autosave is on by default).
 - **Moving around**: drag to rotate, right-drag (or Shift+drag) to pan, the mouse wheel to zoom, double-click to
   frame the armor again. **Camera** has fixed views; **Turntable** spins it. **Armory: overview / armor / helmet /

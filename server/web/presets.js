@@ -12,32 +12,32 @@ const paint = (rough) => ({ 'paint.mode': 0, 'shine.roughness': rough, 'shine.ro
   'shine.specular': 0.5, 'shine.specular_vary': R0, ...noMetal, ...noCoat });
 
 export const BUILTIN = [
-  { name: 'Matte paint', fields: paint(0.75) },
-  { name: 'Satin paint', fields: paint(0.45) },
-  { name: 'Gloss paint', fields: paint(0.15) },
-  { name: 'Lacquered (clearcoat)', fields: { ...paint(0.5), 'paint.mode': 2, 'clearcoat.amount': 0.8, 'clearcoat.bump': 0,
+  { name: 'Matte paint', category: 'Paint', fields: paint(0.75) },
+  { name: 'Satin paint', category: 'Paint', fields: paint(0.45) },
+  { name: 'Gloss paint', category: 'Paint', fields: paint(0.15) },
+  { name: 'Lacquered (clearcoat)', category: 'Paint', fields: { ...paint(0.5), 'paint.mode': 2, 'clearcoat.amount': 0.8, 'clearcoat.bump': 0,
     'clearcoat.roughness': { ...R0, base: 0.05 } } },
-  { name: 'Bare metal', fields: { 'paint.mode': 0, 'metal.mask': OCC0, 'metal.offset': 1, 'shine.roughness': 0.3,
+  { name: 'Bare metal', category: 'Metal', fields: { 'paint.mode': 0, 'metal.mask': OCC0, 'metal.offset': 1, 'shine.roughness': 0.3,
     'shine.roughness_vary': { ...R0, hollow: 0 }, ...noWear, ...noCoat } },
-  { name: 'Brushed metal', fields: { 'paint.mode': 0, 'metal.mask': OCC0, 'metal.offset': 1, 'shine.roughness': 0.35,
+  { name: 'Brushed metal', category: 'Metal', fields: { 'paint.mode': 0, 'metal.mask': OCC0, 'metal.offset': 1, 'shine.roughness': 0.35,
     'shine.roughness_vary': { grunge_b: 0.5, grunge_a: 0, edge: 0, hollow: 0 }, 'detail.layer': 24, 'detail.tiling': 3,
     'detail.bump': 0.3, ...noWear, ...noCoat } },
-  { name: 'Worn metal edges', fields: { 'wear.mask': { grunge_b: 0, grunge_a: 0, edge: 8, occlusion: 0 }, 'wear.mask_offset': -1,
+  { name: 'Worn metal edges', category: 'Wear', fields: { 'wear.mask': { grunge_b: 0, grunge_a: 0, edge: 8, occlusion: 0 }, 'wear.mask_offset': -1,
     'wear.color': [0.45, 0.45, 0.45], 'wear.heavy_color': [0.7, 0.7, 0.7],
     'metal.mask': { grunge_b: 0, grunge_a: 0, edge: 8, occlusion: 0 }, 'metal.offset': -1 } },
-  { name: 'Clean (no wear)', fields: { ...noWear } },
-  { name: 'Woodland camo', fields: { 'camo.layer': 3, 'camo.contrast': 250, 'camo.offset': -1, 'camo.tiling': 0.3,
+  { name: 'Clean (no wear)', category: 'Wear', fields: { ...noWear } },
+  { name: 'Woodland camo', category: 'Camo', fields: { 'camo.layer': 3, 'camo.contrast': 250, 'camo.offset': -1, 'camo.tiling': 0.3,
     'camo.keep': { grunge_b: 0, grunge_a: 0, edge: 0, threshold: 0 },
     'camo.color1': [0.24, 0.27, 0.18], 'camo.color2': [0.13, 0.15, 0.1], 'camo.color3': [0.35, 0.32, 0.22], 'camo.color4': [0.08, 0.08, 0.07] } },
-  { name: 'Tiger stripes', fields: { 'camo.layer': 4, 'camo.contrast': 250, 'camo.offset': 0, 'camo.tiling': 0.5,
+  { name: 'Tiger stripes', category: 'Camo', fields: { 'camo.layer': 4, 'camo.contrast': 250, 'camo.offset': 0, 'camo.tiling': 0.5,
     'camo.keep': { grunge_b: 0, grunge_a: 0, edge: 0, threshold: 0 },
     'camo.color1': [0.6, 0.45, 0.25], 'camo.color2': [0.15, 0.12, 0.08], 'camo.color3': [0.35, 0.28, 0.16], 'camo.color4': [0.05, 0.05, 0.05] } },
-  { name: 'No camo', fields: { 'camo.layer': -1 } },
-  { name: 'Glow', fields: { 'paint.mode': 0, 'glow.emissive': 0.1, 'shine.roughness': 0.2 } },
-  { name: 'Oil-slick sheen (dark colors)', fields: { 'iridescence.thickness': 0.3, 'iridescence.thickness_shift': 0.5,
+  { name: 'No camo', category: 'Camo', fields: { 'camo.layer': -1 } },
+  { name: 'Glow', category: 'Effects', fields: { 'paint.mode': 0, 'glow.emissive': 0.1, 'shine.roughness': 0.2 } },
+  { name: 'Oil-slick sheen (dark colors)', category: 'Effects', fields: { 'iridescence.thickness': 0.3, 'iridescence.thickness_shift': 0.5,
     'iridescence.mask': { ...R0, offset: 1 }, 'iridescence.strength': { ...R0, offset: 0.8 } } },
-  { name: 'No sheen', fields: { ...noIri } },
-  { name: 'Fabric', fields: { 'paint.mode': 1, 'shine.roughness': 0.9, 'cloth.fuzz': 0.6, 'cloth.rim': 0.2,
+  { name: 'No sheen', category: 'Effects', fields: { ...noIri } },
+  { name: 'Fabric', category: 'Cloth', fields: { 'paint.mode': 1, 'shine.roughness': 0.9, 'cloth.fuzz': 0.6, 'cloth.rim': 0.2,
     'cloth.fuzz_color': [0.5, 0.5, 0.5], 'detail.layer': 23, 'detail.tiling': 6, 'detail.bump': 0.5, ...noMetal } },
 ];
 
@@ -57,18 +57,19 @@ export function applyPreset(preset, l, z, fields) {
   }
 }
 
-// Looks from a file: LUT Studio's own (an array of {name, kind, row}) or the Paydex LUT Editor's row presets
+// Looks from a file: LUT Studio's own (an array of {name, kind, category, row, saved}) or the Paydex LUT Editor's row presets
 // ({name: {timestamp, rowData: [{r, g, b, a} per column]}}); the kind from the row's width (23 material, 16 cape,
-// 3 pattern: the same raw texel values LUT Studio edits)
+// 3 pattern: the same raw texel values LUT Studio edits; category Paydex)
 export function importLooks(j) {
   const KIND = { 23: 'material', 16: 'cape', 3: 'pattern' };
   if (Array.isArray(j)) return j.filter(p => p && typeof p.name === 'string' && Array.isArray(p.row) && KIND[p.row.length / 4] === p.kind)
-    .map(p => ({ name: p.name, kind: p.kind, row: p.row.map(Number) }));
+    .map(p => ({ name: p.name, kind: p.kind, ...(typeof p.category === 'string' && p.category ? { category: p.category } : {}),
+      row: p.row.map(Number), ...(p.saved ? { saved: String(p.saved) } : {}) }));
   const out = [];
   for (const [name, p] of Object.entries(j ?? {})) {
     const cols = p?.rowData;
     if (!Array.isArray(cols) || !KIND[cols.length]) continue;
-    out.push({ name, kind: KIND[cols.length], row: cols.flatMap(c => [+c.r || 0, +c.g || 0, +c.b || 0, +c.a || 0]) });
+    out.push({ name, kind: KIND[cols.length], category: 'Paydex', row: cols.flatMap(c => [+c.r || 0, +c.g || 0, +c.b || 0, +c.a || 0]) });
   }
   return out;
 }
