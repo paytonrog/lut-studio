@@ -16,21 +16,21 @@ import { Showcase, LOOK, tone8 } from './showcase.js';
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
 // [x, z], its lowest point to the ground (lift: above it); yaw turns it about the vertical, pitch about the camera's
 // left-right, roll about its line of sight (radians, in that order: roll, pitch, then yaw). Helldivers: armor (its
-// own helmet), a cape, the weapon held (weapon: a Weapons item's name); pose: a pose's name (or a number: an Armory
+// own helmet), a cape, the weapon held (weapon: a Weapons item's name); label: the slot's name (the panel); pose: a pose's name (or a number: an Armory
 // idle), at t seconds into it or tf of its length. layer: back (behind the squad: hazed), squad, front.
 export const SCENE = [
   // the squad: the leader in front, two flanking a step behind; the camera low
-  { group: 'Armor', name: 'TR-117 Alpha Commander', cape: 'Eye of the Clandestine', weapon: 'AR-23 Liberator', at: [0, -0.55], yaw: 0, pose: 'I-102 Draconaught pose', tf: 0.5, layer: 'squad' },
-  { group: 'Armor', name: 'CE-35 Trench Engineer', cape: 'Bastion of Integrity', weapon: 'SG-225 Breaker', at: [-1.3, 0.55], yaw: -0.95, pose: 'GS-17 Frontier Marshal pose', tf: 0.5, layer: 'squad' },
-  { group: 'Armor', name: 'SC-34 Infiltrator', cape: 'Badge of Order', weapon: 'AC-8 Autocannon', at: [1.05, 0.6], yaw: -0.45, pose: 'PH-9 Predator pose', tf: 0.15, layer: 'squad' },
+  { label: 'Leader', group: 'Armor', name: 'TR-117 Alpha Commander', cape: 'Eye of the Clandestine', weapon: 'AR-23 Liberator', at: [0, -0.55], yaw: 0, pose: 'I-102 Draconaught pose', tf: 0.5, layer: 'squad' },
+  { label: 'Left', group: 'Armor', name: 'CE-35 Trench Engineer', cape: 'Bastion of Integrity', weapon: 'SG-225 Breaker', at: [-1.3, 0.55], yaw: -0.95, pose: 'GS-17 Frontier Marshal pose', tf: 0.5, layer: 'squad' },
+  { label: 'Right', group: 'Armor', name: 'SC-34 Infiltrator', cape: 'Badge of Order', weapon: 'AC-8 Autocannon', at: [1.05, 0.6], yaw: -0.45, pose: 'PH-9 Predator pose', tf: 0.15, layer: 'squad' },
   // the big gear behind, cut by the frame
-  { group: 'Vehicles', name: 'Patriot Exosuit: Standard Exosuit Pattern', at: [-3.35, 2.6], yaw: -0.6, layer: 'back' },
-  { group: 'Vehicles', name: 'Gunner FRV: Standard Vehicle Pattern', at: [4.1, 3.0], yaw: 1.0, layer: 'back' },
-  { group: 'Stratagems', name: 'Stratagem: SOS Beacon', at: [-2.25, 4.6], yaw: 0.3, layer: 'back' },
+  { label: 'Back left', group: 'Vehicles', name: 'Patriot Exosuit: Standard Exosuit Pattern', at: [-3.35, 2.6], yaw: -0.6, layer: 'back' },
+  { label: 'Back right', group: 'Vehicles', name: 'Gunner FRV: Standard Vehicle Pattern', at: [4.1, 3.0], yaw: 1.0, layer: 'back' },
+  { label: 'Stratagem', group: 'Stratagems', name: 'Stratagem: SOS Beacon', at: [-2.25, 4.6], yaw: 0.3, layer: 'back' },
   // the small gear at the squad's feet
-  { group: 'Backpacks', name: 'LIFT-850 Jump Pack', at: [1.65, -1.05], yaw: 0.7, layer: 'front' },
-  { group: 'Weapons', name: 'P-2 Peacemaker', at: [-0.8, -0.95], yaw: -1.9, layer: 'front' },
-  { group: 'Equipment', name: 'Throwable: Frag Grenade', at: [0.45, -1.05], yaw: 0, layer: 'front' },
+  { label: 'Backpack', group: 'Backpacks', name: 'LIFT-850 Jump Pack', at: [1.65, -1.05], yaw: 0.7, layer: 'front' },
+  { label: 'Sidearm', group: 'Weapons', name: 'P-2 Peacemaker', at: [-0.8, -0.95], yaw: -1.9, layer: 'front' },
+  { label: 'Throwable', group: 'Equipment', name: 'Throwable: Frag Grenade', at: [0.45, -1.05], yaw: 0, layer: 'front' },
 ];
 // the camera (fov: vertical, of the 16:9 frame)
 export const CAM = { pitch: -0.05, fov: 0.5, target: [0, 0.78, 0.35], dist: 7.0 };
@@ -69,42 +69,38 @@ export function holdsWeapon(poses, pose) {
 // opts: { scene (SCENE), cam (over CAM), weapons: [name|null per Helldiver], poses: [pose per Helldiver], progress(msg) }
 export async function buildScene(app, opts = {}) {
   const R = app.R, say = opts.progress ?? (() => { });
-  let scene = (opts.scene ?? SCENE).map(it => ({ ...it }));
-  const divers = scene.filter(it => it.group === 'Armor');
+  const slots = (opts.scene ?? SCENE).map(it => ({ ...it }));
+  const divers = slots.filter(it => it.group === 'Armor');
   (opts.weapons ?? []).forEach((w, i) => { if (divers[i] && w !== undefined) divers[i].weapon = w; });
   (opts.poses ?? []).forEach((p, i) => { if (divers[i] && p !== undefined && p !== '') divers[i].pose = p; });
   const poses = app.poses(), notes = [];
-  // the held weapons: an item each, after its Helldiver
-  const list = [];
-  for (const it of scene) {
-    list.push(it);
-    if (it.group === 'Armor' && it.weapon) {
-      if (holdsWeapon(poses, it.pose)) list.push({ group: 'Weapons', name: it.weapon, layer: it.layer, holder: list.length - 1 });
-      else notes.push(`${it.name}: ${it.pose} holds no weapon`);
-    }
-  }
-  scene = list;
   const kits = app.kits(), kitIn = (group, name) => kits.find(k => k.group === group && (k.name === name || k.label.startsWith(name)));
   const state = app.snapshot(), cam = { ...R.cam, target: [...R.cam.target] }, pose = R.pose, rim = R.rim.map(l => ({ ...l }));
-  const items = [];   // {n, layer, pieces, pose, rot, shift, posed}
+  // the drawn parts: {n (an id), slot, kind ('item', 'diver', 'weapon'), layer, pieces, pose, rot, shift, posed, hidden}
+  const items = [];
+  let ids = 0, sc = null;
   const loaded = async () => { for (let i = 0; i < 240; i++) { if (/parts\./.test(app.statusText())) return; await sleep(250); } };
-  for (const [n, it] of scene.entries()) {
-    const kit = kitIn(it.group, it.name);
-    if (!kit) { notes.push(`not found: ${it.name}`); continue; }
-    say(`Loading ${n + 1} / ${scene.length}: ${it.name}`);
-    const keys = [kit.value];
-    if (it.cape) { const k = kitIn('Capes', it.cape); if (k) keys.push(k.value); else notes.push(`not found: ${it.cape}`); }
-    for (const k of keys) { await app.showItem(k); await loaded(); await sleep(400); }
-    const ps = R.pieces; R.pieces = [];   // (kept: the next item's load clears nothing of them)
-    if (it.holder !== undefined) { const r = holdWeapon(R, items.find(s => s.n === it.holder), n, it, ps); if (r) items.push(r); continue; }
-    let pz = null;
-    if (it.pose !== undefined) {
-      const idles = poses.filter(p => /armory idle/i.test(p.name));
-      const p = typeof it.pose === 'string' ? poses.find(p => p.name === it.pose) : idles[it.pose % Math.max(1, idles.length)];
-      if (p) { const clip = await app.clip(p.animation); pz = { clip, time: it.tf !== undefined ? it.tf * clip.length : (it.t ?? 0) % Math.max(clip.length, 1e-3) }; }
-      else notes.push(`no pose ${it.pose}`);
-    }
-    // the turn: roll, pitch, then yaw (the camera looks along +z: its right is -x, so yaw and roll are mirrored)
+  const sync = () => { R.pieces = items.filter(e => !e.hidden).flatMap(e => e.pieces); };
+  // an item's pieces, shown in the editor and taken (old: pieces to free, put on screen for the load to clear)
+  const fetch = async (keys, old = []) => {
+    const keep = R.pieces;
+    R.pieces = old;
+    for (const k of keys) { await app.showItem(k); await loaded(); await sleep(300); }
+    const ps = R.pieces;
+    R.pieces = keep.filter(p => !old.includes(p));
+    return ps;
+  };
+  const poseOf = async it => {
+    if (it.pose === undefined) return null;
+    const idles = poses.filter(p => /armory idle/i.test(p.name));
+    const p = typeof it.pose === 'string' ? poses.find(p => p.name === it.pose) : idles[it.pose % Math.max(1, idles.length)];
+    if (!p) { notes.push(`no pose ${it.pose}`); return null; }
+    const clip = await app.clip(p.animation);
+    return { clip, time: it.tf !== undefined ? it.tf * clip.length : (it.t ?? 0) % Math.max(clip.length, 1e-3) };
+  };
+  // placed: on the ground, its footprint's center at its spot, turned (roll, pitch, then yaw; the camera looks along
+  // +z: its right is -x, so yaw and roll are mirrored)
+  const place = (it, ps, pz) => {
     const mul = (A, B) => A.map(r => [0, 1, 2].map(j => r[0] * B[0][j] + r[1] * B[1][j] + r[2] * B[2][j]));
     const a = -(it.yaw ?? 0), b = it.pitch ?? 0, g = -(it.roll ?? 0);
     const Ry = [[Math.cos(a), 0, Math.sin(a)], [0, 1, 0], [-Math.sin(a), 0, Math.cos(a)]];
@@ -119,35 +115,85 @@ export async function buildScene(app, opts = {}) {
         lo[k] = Math.min(lo[k], v); hi[k] = Math.max(hi[k], v);
       }
     }
-    const shift = [-it.at[0] - (lo[0] + hi[0]) / 2, -lo[1] + (it.lift ?? 0), it.at[1] - (lo[2] + hi[2]) / 2];
+    // (an item behind the squad keeps the first one's inner and front edges: a bigger one swapped in grows outward
+    // and back, not into the squad)
+    let [ax, az] = it.at;
+    const w = hi[0] - lo[0], d = hi[2] - lo[2], out = Math.sign(it.at[0]) || 1;
+    if (it.layer === 'back') {
+      it.edges ??= { x: it.at[0] - out * w / 2, z: it.at[1] - d / 2 };
+      ax = it.edges.x + out * w / 2; az = it.edges.z + d / 2;
+    }
+    const shift = [-ax - (lo[0] + hi[0]) / 2, -lo[1] + (it.lift ?? 0), az - (lo[2] + hi[2]) / 2];
     for (const p of ps) { p.rot = rot; p.shift = shift; p.pose = p.skin && !p.info?.vehicle ? pz : null; }
-    items.push({ n, layer: it.layer, pieces: ps, pose: pz, rot, shift });
+    return { rot, shift };
+  };
+  // a Helldiver's weapon in their hands, when the pose holds one (else put away)
+  const grip = si => {
+    const d = items.find(e => e.slot === si && e.kind === 'diver'), w = items.find(e => e.slot === si && e.kind === 'weapon');
+    if (!d) return;
+    d.posed = null;
+    for (const p of d.pieces) if (p.skin && !p.info?.vehicle) p.pose = d.pose;   // (the pose without a left hand on a weapon)
+    if (!w) return;
+    w.hidden = !holdsWeapon(poses, slots[si].pose);
+    if (w.hidden) { notes.push(`${slots[si].name}: ${slots[si].pose} holds no weapon`); return; }
+    holdWeapon(R, d, w.n, { layer: d.layer }, w.pieces);
+  };
+  // a slot loaded (again): an item, or a Helldiver (armor, cape) and the weapon they hold; parts: 'all', 'weapon'
+  const loadSlot = async (si, parts = 'all') => {
+    const it = slots[si], old = items.filter(e => e.slot === si && (parts === 'all' || e.kind === 'weapon'));
+    const oldPieces = old.flatMap(e => e.pieces);
+    for (const e of old) items.splice(items.indexOf(e), 1);
+    let freed = false;
+    const take = async keys => { const ps = await fetch(keys, freed ? [] : oldPieces); freed = true; return ps; };
+    if (parts === 'all') {
+      const kit = kitIn(it.group, it.name);
+      if (!kit) notes.push(`not found: ${it.name}`);
+      else {
+        const keys = [kit.value];
+        if (it.cape) { const k = kitIn('Capes', it.cape); if (k) keys.push(k.value); else notes.push(`not found: ${it.cape}`); }
+        const ps = await take(keys), pz = await poseOf(it), { rot, shift } = place(it, ps, pz);
+        items.push({ n: ids++, slot: si, kind: it.group === 'Armor' ? 'diver' : 'item', layer: it.layer, pieces: ps, pose: pz, rot, shift });
+      }
+    }
+    if (it.group === 'Armor' && it.weapon) {
+      const kit = kitIn('Weapons', it.weapon);
+      if (!kit) notes.push(`not found: ${it.weapon}`);
+      else items.push({ n: ids++, slot: si, kind: 'weapon', layer: it.layer, pieces: await take([kit.value]) });
+    }
+    if (!freed && oldPieces.length) { const keep = R.pieces; R.pieces = oldPieces; R.clearPieces(); R.pieces = keep; }
+    if (it.group === 'Armor') grip(si);
+  };
+  for (const [si, it] of slots.entries()) {
+    say(`Loading ${si + 1} / ${slots.length}: ${it.name}${it.weapon ? ' + ' + it.weapon : ''}`);
+    await loadSlot(si);
   }
-  R.pieces = items.flatMap(s => s.pieces); R.pose = null;
+  sync(); R.pose = null;
   const prevEnv = await app.setEnv(ENV);
   await sleep(500);
-  const baseExposure = R.env.exposure, sc = new Showcase(R);
+  const baseExposure = R.env.exposure;
+  sc = new Showcase(R);
   // the glow behind the squad, the pool of light at its feet (world: x is the scene's mirrored)
-  const squad = scene.filter(it => it.group === 'Armor');
-  const cx = squad.length ? -squad.reduce((a, it) => a + it.at[0], 0) / squad.length : 0, cz = squad.length ? squad.reduce((a, it) => a + it.at[1], 0) / squad.length : 0;
+  const cx = divers.length ? -divers.reduce((a, it) => a + it.at[0], 0) / divers.length : 0, cz = divers.length ? divers.reduce((a, it) => a + it.at[1], 0) / divers.length : 0;
   sc.anchor = [cx, 1.25, cz + 1.4]; sc.floorC = [cx, 0, cz];
   const camera = () => { const c = { ...CAM, ...opts.cam }; Object.assign(R.cam, { yaw: Math.PI, pitch: c.pitch, fov: c.fov, shiftX: 0, target: [...c.target], dist: c.dist }); };
   camera();
   R.post = sc;
-  let n = 0, auto = 1, theme = null;
+  let n = 0, auto = 1, theme = null, busy = Promise.resolve();
   const rimLight = () => {
     const lin = hexRGB(sc.look.color || sc.accent).map(c => Math.pow(c / 255, 2.2)), top = Math.max(...lin, 1e-3), I = RIM * sc.look.rim * (0.35 + 0.65 * sc.sat);
     R.rim = [{ on: true, az: 200, el: 22, color: lin.map(c => c / top), intensity: I }, { on: true, az: 160, el: 22, color: lin.map(c => c / top), intensity: I }];
   };
   const out = {
-    notes, items, showcase: sc,
-    // a theme on the scene: { name, looksFor(zones, rowOf) -> {role: LUT row}, colors: [[role, hex]] }: the items'
-    // LUTs, the light's color, the exposure (lowered while the squad's lit parts would clip: a white or pastel theme)
+    notes, items, slots, showcase: sc,
+    // a theme on the scene: { name, looksFor(zones, rowOf) -> {role: LUT row}, colors: [[role, hex]], base } (no
+    // looksFor: the items as they are; base 'vanilla': as the game has them, else as in the mod): the items' LUTs, the
+    // light's color (the theme's colors, else the squad's), the exposure (lowered while the squad's lit parts would
+    // clip: a white or pastel theme)
     async setTheme(t) {
       theme = t;
       say('Theming…');
-      await themeItems(app, items, t, 'sc' + n++ + ':');
-      const pal = palette(t.colors);
+      const worn = await themeItems(app, items, t, 'sc' + n++ + ':');
+      const pal = palette(t.colors?.length ? t.colors : worn);
       sc.accent = pal.accent; sc.text = pal.text; sc.k = pal.k; sc.sat = pal.sat; sc.titleKey = null;
       rimLight();
       await sleep(200);   // (the LUTs uploaded)
@@ -155,6 +201,41 @@ export async function buildScene(app, opts = {}) {
       R.env.exposure = baseExposure * auto * sc.look.exposure;
       say('');
     },
+    // a slot changed: { name, cape, weapon (null: none), pose } (the frame held meanwhile; the camera kept), then the
+    // theme again on the scene. One change at a time (a second waits for the first).
+    swap(si, patch) {
+      busy = busy.then(async () => {
+        const it = slots[si], c = { ...R.cam, target: [...R.cam.target] }, before = { ...it };
+        Object.assign(it, patch);
+        sc.frozen = true;
+        try {
+          if (patch.name !== undefined && patch.name !== before.name || patch.cape !== undefined && patch.cape !== before.cape) await loadSlot(si);
+          else if (patch.weapon !== undefined && patch.weapon !== before.weapon) await loadSlot(si, 'weapon');
+          if (patch.pose !== undefined && patch.pose !== before.pose) {
+            const d = items.find(e => e.slot === si && e.kind === 'diver');
+            if (d) { d.pose = await poseOf(it); grip(si); }
+          }
+          sync();
+          Object.assign(R.cam, c);
+          if (theme) await this.setTheme(theme);
+        } finally { sc.frozen = false; Object.assign(R.cam, c); }
+      });
+      return busy;
+    },
+    // the items a slot can take (names; a vehicle: its standard look), and the poses
+    choices(si) {
+      const it = slots[si], named = k => k.name && !/^[0-9a-f]{6,8}$/.test(k.name);
+      const uniq = list => [...new Set(list)].sort((a, b) => a.localeCompare(b));
+      if (it.group === 'Vehicles') {
+        const by = new Map();
+        for (const k of kits) if (k.group === 'Vehicles' && named(k)) { const body = k.name.split(':')[0]; if (!by.has(body) || /Standard/.test(k.name)) by.set(body, k.name); }
+        return [...by.values()].sort((a, b) => a.localeCompare(b));
+      }
+      return uniq(kits.filter(k => k.group === it.group && named(k) && !(it.group === 'Weapons' && /: .* paint scheme$/.test(k.name))).map(k => k.name));
+    },
+    weapons() { return uniq2(kits.filter(k => k.group === 'Weapons' && k.name && !/: .* paint scheme$/.test(k.name)).map(k => k.name)); },
+    capes() { return uniq2(kits.filter(k => k.group === 'Capes' && k.name).map(k => k.name)); },
+    poses() { return poses.filter(p => p.group !== 'Moves' || p.name === 'Stand').map(p => ({ name: p.name, group: p.group, holds: holdsWeapon(poses, p.name) })); },
     setLook(look) {
       Object.assign(sc.look, look); sc.titleKey = null;
       rimLight();
@@ -169,6 +250,7 @@ export async function buildScene(app, opts = {}) {
       return sc.exportCanvas(size[0], size[1]);
     },
     async dispose() {
+      await busy.catch(() => { });
       R.post = null; sc.dispose();
       R.rim = rim; R.env.exposure = baseExposure;
       Object.assign(R.cam, cam); R.pose = pose;
@@ -179,6 +261,7 @@ export async function buildScene(app, opts = {}) {
   };
   return out;
 }
+const uniq2 = list => [...new Set(list)].sort((a, b) => a.localeCompare(b));
 export { LOOK };
 
 // the exposure (a factor) the squad's lit parts stop clipping at after the tone: its 70th percentile below 236
@@ -205,7 +288,7 @@ function autoExposure(R, items, base) {
 function holdWeapon(R, h, n, it, ps) {
   const S = R.avatarSkel;
   if (!h || !S) return null;
-  const at = nm => S.names.indexOf(nm);
+  const at = nm => S.names.indexOf(nm);   // (n, it: the weapon's id and layer; unused but for the key)
   h.posed ??= poseSkeleton(S, h.pose?.clip ?? null, h.pose?.time ?? 0);
   const posed = h.posed;
   const wp = ps.find(p => p.skin), wsk = wp?.skin.skel, wb = wsk ? poseSkeleton(wsk, null, 0) : null;
@@ -214,7 +297,7 @@ function holdWeapon(R, h, n, it, ps) {
   const Mw = M4.mul(posed[at('attach_hand_r')], M4.invert(root));
   const rot = mul3(h.rot, m3(Mw)), shift = v3.add(app3(h.rot, pos(Mw)), h.shift);
   for (const p of ps) { p.rot = rot; p.shift = shift; p.pose = null; }
-  const item = { n, layer: it.layer, pieces: ps };
+  const item = null;
   const ikl = wnode('IK_left');
   if (!ikl) return item;
   const goal = M4.mul(Mw, ikl), iS = at('l_shoulder'), iE = at('l_elbow'), iH = at('l_hand'), iA = at('attach_hand_l');
@@ -239,15 +322,19 @@ function holdWeapon(R, h, n, it, ps) {
   const R3 = M4.mul(handGoal, M4.invert(Wd[iH]));   // (the hand turned as the grip, about the wrist; its fingers with it)
   for (const i of under(iH)) Wd[i] = M4.mul(R3, Wd[i]);
   const world = new Map(); S.names.forEach((nm, i) => { if (nm && !world.has(nm)) world.set(nm, Wd[i]); });
-  const key = 'held' + h.n + ':' + (h.pose ? h.pose.clip.animation + '@' + h.pose.time.toFixed(4) : 'bind');
+  const key = 'held' + h.n + ':' + n + ':' + (h.pose ? h.pose.clip.animation + '@' + h.pose.time.toFixed(4) : 'bind');   // (per weapon: its grip)
   for (const p of h.pieces) if (p.skin && !p.info?.vehicle) p.pose = { ...(h.pose ?? { clip: null, time: 0 }), key, world };
   return item;
 }
 
 // each item's LUTs in the theme (its roles: yours, else built-in, else suggested for the item), under keys of their
 // own; patterns and capes' trim lines take the trim look's color
+// theme.base: 'vanilla' (the items as the game has them) or the mod's (default: its edits, this variant). Returns the
+// colors the squad wears ([role, hex]: its glow, trim, primary and secondary zones), for the light when the theme
+// brings none
 async function themeItems(app, items, theme, tag) {
-  const { R, api } = app, S = window.lutstudio.S, roles = await api('/api/roles'), done = new Set();
+  const { R, api } = app, S = window.lutstudio.S, roles = await api('/api/roles'), done = new Set(), worn = [];
+  const vanilla = theme.base === 'vanilla', baseOf = l => (vanilla ? l.vanilla : l.edited ?? l.vanilla);
   for (const it of items) for (const p of it.pieces) { p.sceneKeys ??= { ...p.lutKeys }; Object.assign(p.lutKeys, p.sceneKeys); }
   for (const it of items) {
     const luts = [...new Set(it.pieces.map(p => p.info.lut))].filter(h => S.luts.get(h)?.kind === 'material');
@@ -258,28 +345,31 @@ async function themeItems(app, items, theme, tag) {
       const l = S.luts.get(h), r = roles.mine[h] ?? roles.builtin[h] ?? sug[h]?.roles ?? [];
       for (let z = 0; z < l.h; z++) zones.push({ h, lut: h, z, role: r[z] ?? 'keep', cov: sug[h]?.coverage?.[z] ?? 0, w: l.w });
     }
-    const rowOf = x => { const l = S.luts.get(x.h), a = l.edited ?? l.vanilla; return Array.from(a.slice(x.z * l.w * 4, (x.z + 1) * l.w * 4)); };
-    const looks = theme.looksFor(zones, rowOf) ?? {};
+    const rowOf = x => { const l = S.luts.get(x.h), a = baseOf(l); return Array.from(a.slice(x.z * l.w * 4, (x.z + 1) * l.w * 4)); };
+    const looks = theme.looksFor?.(zones, rowOf) ?? {};
     for (const h of luts) {
       if (done.has(h)) continue;
       done.add(h);
-      const l = S.luts.get(h), px = (l.edited ?? l.vanilla).slice();
+      const l = S.luts.get(h), px = baseOf(l).slice();
       for (const x of zones) if (x.h === h && looks[x.role] && l.w === W23) putLook(px, l, x.z, looks[x.role], x.role);
       R.setLut(tag + h, l.w, l.h, px);
+      if (it.kind === 'diver') for (const x of zones) if (x.h === h && ['glow', 'trim', 'primary', 'secondary'].includes(x.role) && x.cov > 0.02)
+        worn.push([x.role, '#' + [0, 1, 2].map(k => Math.round(Math.min(1, Math.max(0, px[x.z * l.w * 4 + k])) * 255).toString(16).padStart(2, '0')).join('')]);
     }
     for (const p of it.pieces) {
       if (luts.includes(p.info.lut)) p.lutKeys.edited = tag + p.info.lut;
       const trim = looks.trim;
       for (const [key, h, rows] of [['pattern', p.info.pattern, true], ['cape', p.info.cape, false]]) {
         const l = h && S.luts.get(h);
-        if (!trim || !l) continue;
-        const px = (l.edited ?? l.vanilla).slice();
-        for (let z = 0; z < l.h; z++) if (!rows || px[z * l.w * 4 + 3] !== -1) for (let k = 0; k < 3; k++) px[z * l.w * 4 + k] = trim[k];
+        if (!l || (!trim && !vanilla)) continue;
+        const px = baseOf(l).slice();
+        if (trim) for (let z = 0; z < l.h; z++) if (!rows || px[z * l.w * 4 + 3] !== -1) for (let k = 0; k < 3; k++) px[z * l.w * 4 + k] = trim[k];
         R.setLut(tag + key + ':' + h, l.w, l.h, px);
         p.lutKeys[key] = tag + key + ':' + h;
       }
     }
   }
+  return worn;
 }
 // (theme.js's, without importing it: theme.js imports this module)
 function putLook(px, l, z, look, role) {

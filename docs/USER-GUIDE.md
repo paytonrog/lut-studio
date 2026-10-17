@@ -240,19 +240,7 @@ whenever it's worn.
   **Eagle & craft**; **only items already in this mod** to stay within it) and
   **Apply theme**: every zone of those roles on those items gets the look, in the current variant. Items not in the
   mod yet are added to it (every variant, with the game's colors), so a theme can make a whole overhaul. Zones with
-  the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Showcase** turns the viewport into key art of the theme, live: three
-  Helldivers in warbond poses holding their weapons, a jump pack, a pistol and a grenade at their feet, an exosuit, an
-  FRV and an SOS Beacon behind, in the Armory menu's light with a glow in the theme's color, a glossy floor that
-  reflects them, haze, bloom and the theme's name. The items load one by one (a few seconds each the first time); then
-  orbit, pan and zoom as ever (the frame in the viewport is the image's, 16:9). The Showcase section of the panel
-  has the **Title** (the big line) and the **Line** over it (either can be empty), the light's color (the theme's, or
-  your own), and sliders for the background, the glow and its size, the rim light, exposure, reflections, floor
-  shadows, haze, the aura around the squad, bloom, embers, grain, the vignette, the punch (how much the tone lifts the
-  midtones) and the text size (remembered in this browser). Change the preset to see another theme on the same
-  scene. **Save 4K PNG** saves the frame on screen at 3840 x 2160; **Reset camera** and **Reset look** go back to the
-  defaults. With a preset each item takes the preset's looks over its own zones; with your own looks every item takes
-  them as **Apply theme** would. Nothing in the mod changes; **Exit showcase** (or closing the panel) puts the editor
-  back as it was. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
+  the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Showcase** opens Showcase mode (below) with these looks. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
   choice while they keep their metal finish; off, they stay as the game made them. A zone that is cloth in the game but has another role (a cape's panels, padded armor) takes only
   the look's colors and keeps its cloth finish. Capes' trim lines (their cape design) and the items' patterns (stripes,
   camo: a pattern LUT's patterned rows) take the trim look's color; capes' gradient and emblems stay as the game made
@@ -286,6 +274,26 @@ whenever it's worn.
 - **Body**: slim or stocky; some pieces differ between the two.
 - **Project…**: **Save as a new project** (a copy that becomes its own mod), **Export .lutproj** (the whole project in one file, to back up or share). **Import .lutproj** is
   on the start page.
+
+## Showcase
+
+**Showcase** (on the view bar, or the Theme panel's button) turns the viewport into key art, live: three Helldivers in
+warbond poses holding their weapons, two vehicles and a stratagem behind them, a backpack, a sidearm and a throwable at
+their feet, in the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
+a title. The items load one by one (a few seconds each the first time); then orbit, pan and zoom as ever (the frame in
+the viewport is the image's, 16:9). The editor's lists and bars step aside and the right sidebar holds the options:
+
+- **Show**: the items as in this mod (its edits, this variant), as the game has them, the Theme panel's looks (when
+  opened from there), or any theme preset.
+- **Title** (the big line) and **Line** (the small one over it): either can be empty.
+- **Light**: the glow's color, from the scene (the theme's, or the squad's own colors) or your own.
+- **Scene**: each Helldiver's armor, cape, weapon and pose (an Armory pose holds the weapon, an emote puts it away),
+  the two vehicles, the stratagem, the backpack, the sidearm and the throwable. A change swaps that item in place.
+- **Look**: sliders for the background, the glow and its size, the rim light, exposure, reflections, floor shadows,
+  haze, the aura around the squad, bloom, embers, grain, the vignette, the punch (how much the tone lifts the
+  midtones) and the text size (remembered in this browser); **Reset look**, **Reset camera**.
+- **Save 4K PNG** saves the frame on screen at 3840 x 2160. Nothing in the mod changes; **Exit showcase** puts the
+  editor back as it was.
 
 ## Build and install
 

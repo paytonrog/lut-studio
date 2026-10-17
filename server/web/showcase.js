@@ -261,6 +261,7 @@ export class Showcase {
   }
   // a frame: into the canvas (letterboxed 16:9), or at size [w, h] into this.out (an export)
   draw(R, time = 0, size = null) {
+    if (this.frozen && !size) return null;   // (an item being swapped: the last frame stays on the canvas)
     const gl = R.gl, cv = R.canvas;
     let rect;
     if (size) rect = [0, 0, size[0], size[1]];

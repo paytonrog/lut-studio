@@ -1,6 +1,7 @@
 // LUT Studio editor UI. Talks to the API (server.go, in a worker: bridge.js); renders with render.js.
 import { SLOT_ORDER, slotList, vehicleMount } from './helpers.js';
 import { buildScene, SCENE } from './scene.js';
+import { openShowcase } from './showcaseui.js';
 import { Renderer, parseGLB, extractPieces, DEBUG_VIEWS, WORLD, decalNumbers, prepareClip, skeletonOf, nodeWorld, transformPrim, mountMatrix } from './render.js';
 import { BUILTIN, applyPreset, importLooks } from './presets.js';
 import { showHome } from './home.js';
@@ -378,6 +379,8 @@ function sceneApp() {
     },
   };
 }
+// the Showcase mode's app (showcaseui.js): the scene's, and analytics, the project's name
+function showcaseApp() { return { ...sceneApp(), track, projectName: () => S.state?.project?.name ?? '' }; }
 // a pose's animation, loaded once
 async function loadClip(hash) {
   if (!POSE.cache.has(hash)) POSE.cache.set(hash, prepareClip(await api('/api/anim?hash=' + hash)));
@@ -1320,9 +1323,10 @@ function wire() {
       },
       refresh: async () => { S.state = await api('/api/state'); fillKits(); await loadVariant(S.variant); },
       projectLuts: () => new Set(S.state.variants.flatMap(v => (v.luts ?? []).map(l => l.lut))),
-      scene: sceneApp(),
+      openShowcase: o => openShowcase(showcaseApp(), o),
     }).catch(e => status('Theme: ' + e.message, true));
   };
+  $('showcaseBtn').onclick = () => (track('editor opened', { editor: 'showcase' }), openShowcase(showcaseApp()));
   for (const n of Object.keys(CAMERAS)) $('camera').add(new Option(n, n));
   $('camera').onchange = () => setCamera($('camera').value);
   $('pose').onchange = () => setPose($('pose').value);

@@ -89,8 +89,8 @@ game update: a big part left in a normal military color is metal (hardware), a r
 
 ## Theme preview scene
 
-The Theme panel's **Showcase** (`server/web/scene.js` builds the scene, `server/web/showcase.js` draws it) turns the
-viewport into live key art: three Helldivers in the Armory's warbond poses holding their weapons, the small gear at
+**Showcase** mode (`server/web/showcaseui.js`, its options in the right sidebar; `server/web/scene.js` builds the
+scene and swaps its items, `server/web/showcase.js` draws it) turns the viewport into live key art: three Helldivers in the Armory's warbond poses holding their weapons, the small gear at
 their feet, an exosuit, an FRV and a beacon behind, in the Armory menu lighting with a rim light in the theme's color.
 Each frame the renderer draws the scene into a target of its own, upside down for the floor's reflection and from
 under the floor for the contact shadows; GPU passes add the backdrop (a glowing disc behind the squad, bokeh), the
