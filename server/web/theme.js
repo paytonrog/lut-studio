@@ -251,7 +251,7 @@ Object.assign(PRESETS, {
 
 const unhexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 // a preset's look of a role over a row on screen: its color (paint, secondary, wear), its fields, its camo
-function presetRow(row, L) {
+export function presetRow(row, L) {
   let out = row.slice();
   const c = unhexc(L.c);
   for (const [col, f] of [[0, 1], [2, 0.8], [5, 0.9], [6, 0.9]]) for (let k = 0; k < 3; k++) out[col * 4 + k] = c[k] * f;
@@ -262,7 +262,7 @@ function presetRow(row, L) {
 }
 // a look on a zone, as the server applies it (theme.go): a zone that is cloth in the game but has another role takes
 // the look's colors only (paint, secondary, wear, camo), keeping its cloth finish
-function putLook(px, l, z, look, role) {
+export function putLook(px, l, z, look, role) {
   const base = z * l.w * 4, cloth = Math.round(px[base + 3]) === 1 && role !== 'cloth';
   if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) px[base + i] = look[i]; return; }
   for (const col of [0, 2, 5, 6]) for (let k = 0; k < 3; k++) px[base + col * 4 + k] = look[col * 4 + k];

@@ -58,7 +58,10 @@ const fmt = v => (Math.abs(v) >= 100 ? v.toFixed(1) : +v.toFixed(4)).toString();
 
 async function init() {
   R = new Renderer($('canvas'));
-  window.lutstudio = { R, S };   // for headless checks (tools/headless.mjs)
+  // for headless checks (tools/headless.mjs) and the theme scene (tools/themescene.mjs: items shown one by one, then
+  // drawn together)
+  window.lutstudio = { R, S, showItem: k => showItem(k), api: (...a) => api(...a), poses: () => POSE.list,
+    clip: async hash => POSE.cache.get(hash) ?? (POSE.cache.set(hash, prepareClip(await api('/api/anim?hash=' + hash))), POSE.cache.get(hash)) };
   [S.schema, S.state] = await Promise.all([api('/api/schema'), api('/api/state')]);
   $('projName').textContent = S.state.project.name;
   const own = document.createElement('optgroup'); own.label = 'LUT Studio presets';

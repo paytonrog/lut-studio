@@ -25,6 +25,7 @@ uniform mat4 uViewProj;
 uniform int uSkinned;
 uniform highp sampler2D uJointTex; // 4 texels (columns) per joint matrix, row 0
 uniform vec3 uShift;
+uniform mat3 uRot; uniform int uRotOn;   // a piece's turn (scenes of several items: with uShift, its place)
 out vec3 vPos; out vec3 vNrm; out vec2 vUv0; out vec2 vUv1; out vec2 vUv2;
 mat4 jointMat(float j) {
   int x = int(j + 0.5) * 4;
@@ -39,6 +40,7 @@ void main() {
     p = (S * vec4(aPos, 1.0)).xyz;
     n = mat3(S) * aNrm;
   }
+  if (uRotOn == 1) { p = uRot * p; n = uRot * n; }
   p += uShift;
   vPos = p; vNrm = n; vUv0 = aUv0; vUv1 = aUv1; vUv2 = aUv2;
   gl_Position = uViewProj * vec4(p, 1.0);

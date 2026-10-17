@@ -87,6 +87,22 @@ game update: a big part left in a normal military color is metal (hardware), a r
     node tools/webserve.mjs 8790
     node tools/rolecheck.mjs <out dir> <Armor|Helmets|Capes|Backpacks|Weapons|Vehicles|Equipment|Stratagems|"Eagle & craft"> [name…]
 
+## Theme preview scene
+
+`tools/themescene.mjs` renders theme presets as key art: three Helldivers in the Armory's warbond poses holding
+their weapons, the small gear at their feet, an exosuit, an FRV and a beacon behind, in the Armory menu lighting with
+a rim light in the theme's color, composited (backlight, haze, floor reflections, contact shadows, embers, bloom,
+grain, the theme's name). It is a dev tool: use it to look at a theme on every kind of item at once.
+
+    node tools/webserve.mjs 8790
+    node tools/themescene.mjs <out dir> [preset…] [--weapons=A,B,C] [--pose=P,Q,R] [--scene=file.json] [--no-title]
+    node tools/themescene.mjs x --poses        (the poses; * : the pose holds a weapon)
+
+A Helldiver holds the weapon when the pose does (the Armory's poses and the moves; an emote puts it away): the
+weapon's root on the avatar's `attach_hand_r` (the pose animates that node: a weapon held, propped on a shoulder or
+hanging at the side goes where the pose puts it), the left hand bent onto the weapon's `IK_left` (two-bone IK) when
+the pose holds it two-handed. A white or pastel theme lowers the scene's exposure until the squad stops clipping.
+
 ## Not covered (by design or yet)
 
 - Pixel accuracy of the shaders against the game's own compiled shaders: checked with separate tooling that needs

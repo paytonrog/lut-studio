@@ -283,6 +283,31 @@ export function mountMatrix(body, mount, part) {
 }
 
 // moves a prim from extractPieces by matrix m (positions and normals)
+// a piece's bounds where it stands: turned by its yaw, moved by its shift (a scene's items)
+function placedBounds(p) {
+  const [a, b] = p.bounds, s = p.shift ?? [0, 0, 0], m = pieceRot(p);
+  if (!m) return [a.map((v, k) => v + s[k]), b.map((v, k) => v + s[k])];
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const x of [a[0], b[0]]) for (const y of [a[1], b[1]]) for (const z of [a[2], b[2]]) for (let k = 0; k < 3; k++) {
+    const v = m[k] * x + m[3 + k] * y + m[6 + k] * z + s[k];
+    lo[k] = Math.min(lo[k], v); hi[k] = Math.max(hi[k], v);
+  }
+  return [lo, hi];
+}
+// a piece's turn (column-major 3x3): its own (p.rot), else its yaw about the vertical; null: none
+function pieceRot(p) {
+  if (p.rot) return p.rot;
+  const y = p.yaw ?? 0;
+  if (!y) return null;
+  const c = Math.cos(y), s = Math.sin(y);
+  return [c, 0, -s, 0, 1, 0, s, 0, c];
+}
+function setRot(gl, u, p) {
+  const m = pieceRot(p);
+  gl.uniform1i(u.uRotOn, m ? 1 : 0);
+  if (m) gl.uniformMatrix3fv(u.uRot, false, m);
+}
+
 export function transformPrim(prim, m) {
   const p = prim.pos, n = prim.nrm;
   for (let v = 0; v < p.length; v += 3) {
@@ -768,7 +793,7 @@ export class Renderer {
 
   frame() {
     let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-    for (const p of this.pieces) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p.bounds[0][k]); hi[k] = Math.max(hi[k], p.bounds[1][k]); }
+    for (const p of this.pieces) { const [a, b] = placedBounds(p); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], a[k]); hi[k] = Math.max(hi[k], b[k]); } }
     if (!isFinite(lo[0])) return;
     this.cam.target = lo.map((v, k) => (v + hi[k]) / 2);
     this.cam.dist = Math.max(0.5, Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) * 1.45);
@@ -815,16 +840,20 @@ export class Renderer {
   // a skinned piece's joint matrices for the current pose (uploaded when the pose changed)
   poseSkin(p) {
     const gl = this.gl;
-    const key = (this.avatarSkel && !p.info?.vehicle ? 'avatar:' : '') + (this.pose ? `${this.pose.clip.animation}@${this.pose.time.toFixed(4)}` : 'bind');
+    const pose = p.pose !== undefined ? p.pose : this.pose;   // (a piece's own pose: a scene's characters)
+    // (a pose may bring the avatar's bones already solved: world, a name -> matrix map, under its own key; a scene's
+    // Helldiver whose left hand is put on the weapon it holds)
+    const key = (this.avatarSkel && !p.info?.vehicle ? 'avatar:' : '') + (pose ? pose.key ?? `${pose.clip.animation}@${pose.time.toFixed(4)}` : 'bind');
     if (p.skin.key === key) return;
     const sk = p.skin.skel;
     if (!sk.bind) sk.bind = poseSkeleton(sk, null, 0);
     let avatar = null;                         // the avatar's bones, posed or at rest (until it loads: the piece's own)
     if (this.avatarSkel && !p.info?.vehicle) { // (armor and capes: vehicles, weapons, backpacks have skeletons of their own)
-      if (this.avatarKey !== key) { this.avatar = avatarWorld(this.avatarSkel, this.pose?.clip ?? null, this.pose?.time ?? 0); this.avatarKey = key; }
-      avatar = this.avatar;
+      this.avatars ??= new Map();
+      if (!this.avatars.has(key)) { if (this.avatars.size > 16) this.avatars.clear(); this.avatars.set(key, pose?.world ?? avatarWorld(this.avatarSkel, pose?.clip ?? null, pose?.time ?? 0)); }
+      avatar = this.avatars.get(key);
     }
-    const world = avatar ? null : poseSkeleton(sk, this.pose?.clip, this.pose?.time ?? 0);
+    const world = avatar ? null : poseSkeleton(sk, pose?.clip, pose?.time ?? 0);
     const n = p.skin.jointNodes.length, data = new Float32Array(n * 16);
     for (let k = 0; k < n; k++) {
       const node = p.skin.jointNodes[k], ibm = Array.from(p.skin.ibm.subarray(k * 16, k * 16 + 16));
@@ -858,10 +887,7 @@ export class Renderer {
     }
     if (!toLights?.length) return null;
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-    for (const p of this.pieces) for (let k = 0; k < 3; k++) {
-      const s = p.shift?.[k] ?? 0;
-      lo[k] = Math.min(lo[k], p.bounds[0][k] + s); hi[k] = Math.max(hi[k], p.bounds[1][k] + s);
-    }
+    for (const p of this.pieces) { const [a, b] = placedBounds(p); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], a[k]); hi[k] = Math.max(hi[k], b[k]); } }
     if (!isFinite(lo[0])) return null;
     const c = lo.map((v, k) => (v + hi[k]) / 2), r = Math.max(1e-3, 0.5 * Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) * 1.15);
     const n = Math.min(4, toLights.length), grid = n > 1 ? 2 : 1, T = S / grid;
@@ -892,6 +918,7 @@ export class Renderer {
       gl.useProgram(pr.p);
       gl.uniformMatrix4fv(u.uViewProj, false, mat);
       gl.uniform3fv(u.uShift, p.shift ?? [0, 0, 0]);
+      setRot(gl, u, p);
       if (p.kind === 'cape') {
         this.bindTex(15, gl.TEXTURE_2D_ARRAY, (p.scalar ?? this.white).tex, u.uScalar);
         this.bindTex(1, gl.TEXTURE_2D_ARRAY, (p.tear ?? this.white).tex, u.uTear);
@@ -1095,6 +1122,7 @@ export class Renderer {
         gl.uniform1f(u.uBugLayer, p.bugLayer ?? 0);
         gl.uniform1f(u.uPieceId, i);
         gl.uniform3fv(u.uShift, p.shift ?? [0, 0, 0]);
+        setRot(gl, u, p);
         if (p.skin) {
           this.poseSkin(p);                            // pose the skeleton, upload joint matrices
           this.bindTex(8, gl.TEXTURE_2D, p.skin.tex, u.uJointTex);
