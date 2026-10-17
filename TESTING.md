@@ -89,13 +89,16 @@ game update: a big part left in a normal military color is metal (hardware), a r
 
 ## Theme preview scene
 
-`tools/themescene.mjs` renders theme presets as key art: three Helldivers in the Armory's warbond poses holding
-their weapons, the small gear at their feet, an exosuit, an FRV and a beacon behind, in the Armory menu lighting with
-a rim light in the theme's color, composited (backlight, haze, floor reflections, contact shadows, embers, bloom,
-grain, the theme's name). It is a dev tool: use it to look at a theme on every kind of item at once.
+The Theme panel's **Showcase image** (`server/web/scene.js`) draws a theme as key art: three Helldivers in the
+Armory's warbond poses holding their weapons, the small gear at their feet, an exosuit, an FRV and a beacon behind, in
+the Armory menu lighting with a rim light in the theme's color, composited on a 2D canvas at 3840 x 2160 (backlight,
+haze, floor reflections, contact shadows, embers, bloom, the tone and grain, a vignette, the editable title and line).
+The e2e run checks it once on the armor (a preset, a 4K image that isn't black, the title fields, the item back on
+screen after). `tools/themescene.mjs` drives the same scene headless to render many presets (about 2.5 s each at 4K
+once the scene is built):
 
     node tools/webserve.mjs 8790
-    node tools/themescene.mjs <out dir> [preset…] [--weapons=A,B,C] [--pose=P,Q,R] [--scene=file.json] [--no-title]
+    node tools/themescene.mjs <out dir> [preset…] [--no-title] [--line=text] [--size=WxH] [--weapons=A,B,C] [--pose=P,Q,R] [--scene=file.json]
     node tools/themescene.mjs x --poses        (the poses; * : the pose holds a weapon)
 
 A Helldiver holds the weapon when the pose does (the Armory's poses and the moves; an emote puts it away): the

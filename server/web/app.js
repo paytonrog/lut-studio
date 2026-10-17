@@ -1,5 +1,6 @@
 // LUT Studio editor UI. Talks to the API (server.go, in a worker: bridge.js); renders with render.js.
 import { SLOT_ORDER, slotList, vehicleMount } from './helpers.js';
+import { buildScene, SCENE } from './scene.js';
 import { Renderer, parseGLB, extractPieces, DEBUG_VIEWS, WORLD, decalNumbers, prepareClip, skeletonOf, nodeWorld, transformPrim, mountMatrix } from './render.js';
 import { BUILTIN, applyPreset, importLooks } from './presets.js';
 import { showHome } from './home.js';
@@ -60,8 +61,8 @@ async function init() {
   R = new Renderer($('canvas'));
   // for headless checks (tools/headless.mjs) and the theme scene (tools/themescene.mjs: items shown one by one, then
   // drawn together)
-  window.lutstudio = { R, S, showItem: k => showItem(k), api: (...a) => api(...a), poses: () => POSE.list,
-    clip: async hash => POSE.cache.get(hash) ?? (POSE.cache.set(hash, prepareClip(await api('/api/anim?hash=' + hash))), POSE.cache.get(hash)) };
+  window.lutstudio = { R, S, showItem: k => showItem(k), api: (...a) => api(...a), poses: () => POSE.list, clip: loadClip,
+    scene: { buildScene, SCENE, app: () => sceneApp() } };
   [S.schema, S.state] = await Promise.all([api('/api/schema'), api('/api/state')]);
   $('projName').textContent = S.state.project.name;
   const own = document.createElement('optgroup'); own.label = 'LUT Studio presets';
@@ -355,6 +356,32 @@ async function showItem(key) {
   if (cape) S.look.cape = cape.value;
   saveLook();
   return loadCharacter();
+}
+// the editor as scene.js uses it (the showcase scene: items shown one by one, then drawn together), and putting the
+// editor back as it was after
+function sceneApp() {
+  return {
+    R, api, kits: () => S.kitList ?? [], poses: () => POSE.list, clip: loadClip, showItem,
+    statusText: () => $('status').textContent,
+    // a lighting picked (a game one: until its cube map is in), the one before returned
+    setEnv: async name => {
+      const prev = { env: $('env').value, sunAz: $('sunAz').value, sunElevUser: R.sunElevUser };
+      if (typeof name === 'object') { $('sunAz').value = name.sunAz; $('env').value = name.env; setEnv(); R.sunElevUser = name.sunElevUser; showSunElev(); return prev; }
+      $('env').value = name; R.sunElevUser = null; setEnv(); showSunElev();
+      for (let i = 0; i < 120 && R.env.game && !R.env.cubeTex; i++) await new Promise(r => setTimeout(r, 250));
+      return prev;
+    },
+    snapshot: () => ({ mode: S.mode, kit: S.kit, look: { ...S.look } }),
+    restore: async st => {
+      if (st.mode === 'other' && st.kit) return loadKit(st.kit);
+      S.look = { ...st.look }; saveLook(); return loadCharacter();
+    },
+  };
+}
+// a pose's animation, loaded once
+async function loadClip(hash) {
+  if (!POSE.cache.has(hash)) POSE.cache.set(hash, prepareClip(await api('/api/anim?hash=' + hash)));
+  return POSE.cache.get(hash);
 }
 // Redraw what's shown (body type, attachments, pickers changed)
 function reload() { return S.mode === 'other' && S.kit ? loadKit(S.kit) : loadCharacter(); }
@@ -1293,7 +1320,7 @@ function wire() {
       },
       refresh: async () => { S.state = await api('/api/state'); fillKits(); await loadVariant(S.variant); },
       projectLuts: () => new Set(S.state.variants.flatMap(v => (v.luts ?? []).map(l => l.lut))),
-      projectLuts: () => new Set(S.state.variants.flatMap(v => (v.luts ?? []).map(l => l.lut))),
+      scene: sceneApp(),
     }).catch(e => status('Theme: ' + e.message, true));
   };
   for (const n of Object.keys(CAMERAS)) $('camera').add(new Option(n, n));

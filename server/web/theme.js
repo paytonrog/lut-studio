@@ -5,6 +5,7 @@
 
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { ROLE_INFO } from './roles.js';
+import { buildScene } from './scene.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft'];
 const DEFAULT_GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks'];   // (ticked when the item on screen is none of them)
@@ -260,6 +261,30 @@ export function presetRow(row, L) {
   else if (out[21 * 4 + 3] !== -1) for (let j = 0; j < 4; j++) for (let k = 0; k < 3; k++) out[(16 + j) * 4 + k] = c[k] * [1, 0.55, 1.25, 0.3][j];
   return out;
 }
+// a preset as the showcase scene takes it (scene.js render): its colors (for the scene's light) and its looks over
+// each item's own zones (as the Theme panel's preview: each role's look over the item's biggest zone of that role,
+// else its primary's); metal: the metal parts' color (paint metal parts), or null
+export function presetTheme(name, metal = null) {
+  const P = PRESETS[name], colors = [], walk = (v, role) => {
+    if (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) colors.push([role, v]);
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, role ?? k);
+  };
+  walk(P, null);
+  return { name, colors, looksFor: (zs, rowOf) => {
+    const biggest = n => zs.filter(x => x.role === n && x.w === W).sort((a, b) => b.cov - a.cov)[0];
+    const any = biggest('primary') ?? biggest('secondary') ?? zs.find(x => x.w === W && x.role !== 'unused');
+    const looks = {};
+    for (const [n, L] of Object.entries(P)) {
+      const x = n === 'hardware' ? biggest('hardware') : biggest(n) ?? any;
+      if (x) looks[n] = presetRow(rowOf(x), n === 'hardware' && metal ? { ...L, c: metal } : L);
+    }
+    if (metal && !P.hardware) {
+      const x = biggest('hardware');
+      if (x) { const row = rowOf(x), c = unhexc(metal); for (const col of [0, 5, 6]) for (let k = 0; k < 3; k++) row[col * 4 + k] = c[k]; looks.hardware = row; }
+    }
+    return looks;
+  } };
+}
 // a look on a zone, as the server applies it (theme.go): a zone that is cloth in the game but has another role takes
 // the look's colors only (paint, secondary, wear, camo), keeping its cloth finish
 export function putLook(px, l, z, look, role) {
@@ -295,7 +320,8 @@ export async function themeDialog(app) {
   const close = openSide(`<h3>Theme everything like this</h3>
     <div class="row"><label>Preset <select id="thPreset" title="A ready-made theme: each role's look from it (over the item's own zones); or your own, from the zones below">
       <option value="">(my own: the zones below)</option>${Object.keys(PRESETS).map(n => `<option>${esc(n)}</option>`).join('')}</select></label>
-      <button id="thPreview" title="Show the theme on the item on screen, without changing anything">Preview on screen</button></div>
+      <button id="thPreview" title="Show the theme on the item on screen, without changing anything">Preview on screen</button>
+      <button id="thShow" title="The theme as key art: three Helldivers with their weapons, gear and vehicles, in the Armory's light (a 4K image to save; nothing in the mod changes)">Showcase image</button></div>
     <p class="hint">Each role's look comes from a zone of the item on screen (all its settings, not only the color);
       a role can also get a camo pattern over it.
       Every zone of that role on the items you choose gets it, in this variant (${esc(app.variant)}). Items not in
@@ -314,6 +340,7 @@ export async function themeDialog(app) {
     <div class="row" id="thReview" hidden><button id="thPrev">◂ Previous</button><button id="thNext">Next ▸</button><span class="hint" id="thAt"></span></div>`, () => {
     R.highlight = { lut: null, zone: -1, piece: -1 };
     unpreview();
+    closeShowcase();
   });
   const info = t => { $('thInfo').textContent = t; };
 
@@ -444,6 +471,80 @@ export async function themeDialog(app) {
     info('Preview: the theme on the item on screen (nothing saved). Apply theme to keep it.');
   }
   $('thPreview').onclick = () => (previewing ? (unpreview(), info('')) : preview());
+
+  // ---- the showcase image: the theme on the scene (scene.js), in the viewport, saved as a 4K PNG
+  let show = null;   // {scene, box, theme}
+  // the looks per item of the scene: a preset's over each item's own zones (as the dev tool), or the looks here on all
+  const showTheme = () => {
+    const name = $('thPreset').value;
+    if (PRESETS[name]) return presetTheme(name, $('thMetal').checked ? $('thMetalColor').value : null);
+    const { looks, error } = lookRows();
+    if (error) return { error };
+    if (!Object.keys(looks).length) return { error: "Pick a preset or at least one role's look." };
+    return { name: 'My theme', looksFor: () => looks, colors: Object.entries(looks).map(([n, row]) => [n, hex(row.slice(0, 3))]) };
+  };
+  function closeShowcase() {
+    if (!show) return;
+    const s = show; show = null;
+    s.box?.remove();
+    s.scene?.dispose().catch(e => console.warn('showcase', e));
+    if ($('thShow')) $('thShow').disabled = false;
+  }
+  const drawShowcase = async () => {
+    const { box, scene } = show, t0 = performance.now();
+    box.querySelector('.scImg').innerHTML = '';
+    box.querySelector('.scMsg').textContent = 'Drawing… (4K: a few seconds)';
+    const c = await scene.render({ ...show.theme, title: box.querySelector('.scTitle').value.trim(), line: box.querySelector('.scLine').value.trim() }, [3840, 2160]);
+    if (show?.box !== box) return;
+    c.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto';
+    box.querySelector('.scImg').append(c);
+    box.querySelector('.scMsg').textContent = scene.notes.join('; ');
+    show.canvas = c;
+    app.track('showcase rendered', { preset: show.theme.name, ms: Math.round(performance.now() - t0) });
+  };
+  $('thShow').onclick = async () => {
+    if (show) return;
+    const theme = showTheme();
+    if (theme.error) return info(theme.error);
+    unpreview();
+    $('thShow').disabled = true;
+    // the box over the viewport: the scene is built in the viewport behind it (seen while it loads), then the image
+    const host = R.gl.canvas.parentElement;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    const box = document.createElement('div');
+    box.style.cssText = 'position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;pointer-events:none';
+    box.innerHTML = `<div class="row" style="pointer-events:auto;background:rgba(10,12,14,0.85);padding:6px 8px;gap:6px;align-items:center">
+        <label title="The big line at the bottom (empty: none)">Title <input class="scTitle" value="${esc(theme.name)}" size="18"></label>
+        <label title="The small line over it (empty: none)">Line <input class="scLine" value="LUT Studio theme" size="16"></label>
+        <button class="scRedraw" disabled>Redraw</button><button class="scSave primary" disabled>Save 4K PNG</button>
+        <button class="scClose">Close</button><span class="hint scMsg grow">Building the scene… (the items load one by one)</span></div>
+      <div class="scImg" style="flex:1;min-height:0;display:flex;padding:8px"></div>`;
+    host.append(box);
+    show = { box, theme };
+    box.querySelector('.scClose').onclick = closeShowcase;
+    box.querySelector('.scRedraw').onclick = async () => {
+      show.theme = showTheme().error ? show.theme : showTheme();
+      box.querySelector('.scRedraw').disabled = box.querySelector('.scSave').disabled = true;
+      try { await drawShowcase(); } catch (e) { box.querySelector('.scMsg').textContent = e.message; }
+      if (show?.box === box) box.querySelector('.scRedraw').disabled = box.querySelector('.scSave').disabled = false;
+    };
+    for (const f of box.querySelectorAll('.scTitle, .scLine')) f.onkeydown = e => { if (e.key === 'Enter' && !box.querySelector('.scRedraw').disabled) box.querySelector('.scRedraw').click(); };
+    box.querySelector('.scSave').onclick = () => {
+      const name = (box.querySelector('.scTitle').value.trim() || 'theme').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      show.canvas?.toBlob(b => {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `lut-studio-${name}-4k.png`;
+        document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      }, 'image/png');
+      app.track('showcase saved', { preset: show.theme.name });
+    };
+    try {
+      const scene = await buildScene(app.scene, { progress: m => { if (show?.box === box) box.querySelector('.scMsg').textContent = m; } });
+      if (show?.box !== box) { await scene.dispose(); return; }   // (closed while it loaded)
+      show.scene = scene;
+      await drawShowcase();
+      box.querySelector('.scRedraw').disabled = box.querySelector('.scSave').disabled = false;
+    } catch (e) { console.warn(e); if (show?.box === box) box.querySelector('.scMsg').textContent = 'Showcase: ' + e.message; }
+  };
 
   $('thApply').onclick = async () => {
     await app.saveAll();   // (edits made while the panel is open: saved before the theme reloads the LUTs)

@@ -240,7 +240,13 @@ whenever it's worn.
   **Eagle & craft**; **only items already in this mod** to stay within it) and
   **Apply theme**: every zone of those roles on those items gets the look, in the current variant. Items not in the
   mod yet are added to it (every variant, with the game's colors), so a theme can make a whole overhaul. Zones with
-  the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
+  the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Showcase image** draws the theme as key art: three
+  Helldivers in warbond poses holding their weapons, a jump pack, a pistol and a grenade at their feet, an exosuit, an
+  FRV and an SOS Beacon behind, in the Armory menu's light with a glow in the theme's color. The scene builds in the
+  viewport (the items load one by one, a few seconds each the first time), then the image shows over it. Edit the
+  **Title** (the big line) and the **Line** over it (either can be empty), **Redraw**, and **Save 4K PNG**
+  (3840 x 2160). With a preset each item takes the preset's looks over its own zones; with your own looks every item
+  takes them as **Apply theme** would. Nothing in the mod changes; **Close** puts the editor back as it was. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
   choice while they keep their metal finish; off, they stay as the game made them. A zone that is cloth in the game but has another role (a cape's panels, padded armor) takes only
   the look's colors and keeps its cloth finish. Capes' trim lines (their cape design) and the items' patterns (stripes,
   camo: a pattern LUT's patterned rows) take the trim look's color; capes' gradient and emblems stay as the game made
