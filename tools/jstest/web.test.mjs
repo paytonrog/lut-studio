@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { slotList, vehicleMount } from '../../server/web/helpers.js';
 import { extractPieces, materialSlot, nodeWorld, transformPrim, skeletonOf, poseSkeleton, avatarWorld, jointWorld, M4 } from '../../server/web/render.js';
 import { BUILTIN, applyPreset, importLooks } from '../../server/web/presets.js';
+import { recolorDecals, decalColors } from '../../server/web/decaltheme.js';
 
 test('slotList merges left/right and names single-body parts', () => {
   const p = (slot, body = 'any') => ({ slot, body });
@@ -166,4 +167,17 @@ test('looks import: Paydex LUT Editor row presets and LUT Studio looks', () => {
 
 test('built-in looks: each in a category', () => {
   assert.ok(BUILTIN.length > 0 && BUILTIN.every(p => typeof p.category === 'string' && p.category));
+});
+
+// the same cases as server/decaltheme_test.go: the preview recolors decals as the Apply does
+test('decals in a theme: recolored as the server does', () => {
+  const px = () => new Uint8Array([255, 255, 255, 200, 0, 0, 0, 255, 128, 128, 128, 0]);
+  const two = recolorDecals(px(), 'two', [1, 0.5, 0], [0, 0, 1]);
+  assert.deepEqual([...two.slice(0, 8)], [255, 128, 0, 200, 0, 0, 255, 255]);
+  assert.equal(two[11], 0);
+  const one = recolorDecals(px(), 'one', [0.8, 0.8, 0.8], [0, 0, 0]);
+  assert.ok(one[0] > one[4] && one[4] > 0 && one[3] === 200);
+  assert.deepEqual(decalColors({ trim: [1, 0, 0, 1], secondary: [0, 0, 1, 1] }), { light: [1, 0, 0], dark: [0, 0, 1] });
+  assert.deepEqual(decalColors({ primary: [0.5, 0.5, 0.5] }).dark, [0.5, 0.5, 0.5]);
+  assert.equal(decalColors({}), null);
 });

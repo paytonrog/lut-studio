@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/xypwn/filediver/stingray"
 	"github.com/xypwn/filediver/stingray/unit/material"
@@ -15,7 +16,14 @@ import (
 func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 	g.editOnce.Do(func() {
 		sheets, designs, masks, patterns := map[uint64]bool{}, map[uint64]bool{}, map[uint64]bool{}, map[uint64]bool{}
+		byLUT := map[uint64][]uint64{}
+		add := func(l, sheet uint64) {
+			if l != 0 && sheet != 0 && !slices.Contains(byLUT[l], sheet) {
+				byLUT[l] = append(byLUT[l], sheet)
+			}
+		}
 		maskSlot, patternSlot := stingray.Sum("id_masks_array").Thin(), stingray.Sum("pattern_masks_array").Thin()
+		lutSlot := stingray.Sum("material_lut").Thin()
 		matType := stingray.Sum("material")
 		sheetSlot, designSlot := stingray.Sum("decal_sheet").Thin(), stingray.Sum("cape_scalar_fields").Thin()
 		for id := range g.data.Files {
@@ -32,6 +40,7 @@ func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 			}
 			if h := m.Textures[sheetSlot].Value; h != 0 {
 				sheets[h] = true
+				add(m.Textures[lutSlot].Value, h)
 			}
 			if h := m.Textures[maskSlot].Value; h != 0 {
 				masks[h] = true
@@ -48,6 +57,9 @@ func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 				for _, p := range k.Pieces {
 					if h, err := lut.ParseHash(p.DecalSheet); err == nil && h != 0 {
 						sheets[h] = true
+						if l, err := lut.ParseHash(p.MaterialLUT); err == nil {
+							add(l, h)
+						}
 					}
 					if h, err := lut.ParseHash(p.DecalScalarFields); err == nil && h != 0 {
 						designs[h] = true
@@ -56,8 +68,16 @@ func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 			}
 		}
 		g.editSheets, g.editDesigns, g.editMasks, g.editPatterns = sheets, designs, masks, patterns
+		g.sheetsByLUT = byLUT
 	})
 	return g.editSheets, g.editDesigns
+}
+
+// DecalSheetsByLUT: the decal sheets drawn with each material LUT (EditableTextures' scan): the materials binding
+// both, and the kits' pieces that bring their own sheet (capes' records, vehicle skins, weapon paint schemes).
+func (g *Game) DecalSheetsByLUT(idx *Index) map[uint64][]uint64 {
+	g.EditableTextures(idx)
+	return g.sheetsByLUT
 }
 
 // noPatternMask: the 1 x 1 black pattern_masks_array most materials bind (no pattern can show on them; not editable)

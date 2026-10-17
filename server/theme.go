@@ -2,10 +2,12 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"image"
 	"image/png"
 	"math"
 	"net/http"
@@ -638,9 +640,14 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		Groups    []string
 		OnlyInMod bool
 		Overwrite bool
+		Decals    string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
 	}
 	if err := decode(r, &in); err != nil {
 		fail(w, 400, err)
+		return
+	}
+	if in.Decals != "" && !slices.Contains(DecalModes, in.Decals) {
+		fail(w, 400, fmt.Errorf("unknown decal mode %q", in.Decals))
 		return
 	}
 	for role, row := range in.Looks {
@@ -883,12 +890,99 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// decals: every decal sheet drawn with the themed LUTs, recolored from the game's artwork in the trim look's color
+	// (light parts) and the secondary's (dark parts); a sheet edited by hand since is kept (unless Overwrite)
+	decalSheets, outside := 0, 0
+	if in.Decals != "" {
+		color := func(roles ...string) ([3]float32, bool) {
+			for _, r := range roles {
+				if l := in.Looks[r]; len(l) >= 3 {
+					return [3]float32{l[0], l[1], l[2]}, true
+				}
+			}
+			return [3]float32{}, false
+		}
+		light, ok := color("trim", "primary", "secondary")
+		dark, okd := color("secondary", "primary")
+		if !okd {
+			dark = [3]float32{light[0] * 0.35, light[1] * 0.35, light[2] * 0.35}
+		}
+		byLUT := s.game().DecalSheetsByLUT(idx)
+		set := map[uint64]bool{}
+		for hs := range seen {
+			if h, err := lut.ParseHash(hs); err == nil {
+				for _, sh := range byLUT[h] {
+					set[sh] = true
+				}
+			}
+		}
+		var order []uint64
+		for sh := range set {
+			order = append(order, sh)
+		}
+		slices.Sort(order)
+		for _, sh := range order {
+			if !ok {
+				break
+			}
+			blob, err := s.assetsOf().TextureBlob(sh)
+			if err != nil || len(blob) < 20 || binary.LittleEndian.Uint32(blob[16:]) != 0 {
+				continue // (not an RGBA image)
+			}
+			tw, th := int(binary.LittleEndian.Uint32(blob[4:])), int(binary.LittleEndian.Uint32(blob[8:]))
+			if tw*th <= 16*16 || len(blob) < 20+tw*th*4 {
+				delete(set, sh) // a dummy (the 1 x 1 "no decal" sheet): nothing to recolor
+				continue
+			}
+			file, key := SheetPath(p, v, sh, "sheet"), "sheet:"+lut.HashString(sh)
+			if cur, err := os.ReadFile(file); err == nil && !in.Overwrite && (len(written[key]) == 0 || fmt.Sprintf("%x", sha1.Sum(cur)) != written[key][0]) {
+				kept++ // edited by hand (the Decals editor) since
+				continue
+			}
+			img := image.NewNRGBA(image.Rect(0, 0, tw, th))
+			copy(img.Pix, blob[20:20+tw*th*4])
+			recolorDecals(img.Pix, in.Decals, light, dark)
+			var buf bytes.Buffer
+			if err := (&png.Encoder{CompressionLevel: png.BestSpeed}).Encode(&buf, img); err != nil {
+				fail(w, 500, err)
+				return
+			}
+			os.MkdirAll(filepath.Dir(file), 0o755)
+			if err := os.WriteFile(file, buf.Bytes(), 0o644); err != nil {
+				fail(w, 500, err)
+				return
+			}
+			written[key] = []string{fmt.Sprintf("%x", sha1.Sum(buf.Bytes()))}
+			decalSheets++
+		}
+		// the items outside the themed groups whose decals come from a recolored sheet (they show the theme's too)
+		for _, k := range idx.Kits {
+			if want[ThemeGroups[k.Type]] {
+				continue
+			}
+			hit := false
+			for _, pc := range k.Pieces {
+				if h, err := lut.ParseHash(pc.DecalSheet); err == nil && set[h] {
+					hit = true
+				}
+				if l, err := lut.ParseHash(pc.MaterialLUT); err == nil {
+					for _, sh := range byLUT[l] {
+						hit = hit || set[sh]
+					}
+				}
+			}
+			if hit {
+				outside++
+			}
+		}
+	}
 	b, _ := json.MarshalIndent(st, "", " ")
 	if err := os.WriteFile(themePath(p), b, 0o644); err != nil {
 		fail(w, 500, err)
 		return
 	}
-	writeJSON(w, map[string]any{"items": items, "luts": len(luts), "changed": changedLUTs, "added": added, "zones": zones, "kept": kept, "roles": byRole})
+	writeJSON(w, map[string]any{"items": items, "luts": len(luts), "changed": changedLUTs, "added": added, "zones": zones, "kept": kept, "roles": byRole,
+		"decal_sheets": decalSheets, "decal_outside": outside})
 }
 
 // addLUT: LUT h (the game's values: van) in every variant of p that doesn't have it yet; how many variants got it.

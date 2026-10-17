@@ -74,6 +74,7 @@ function panel(app, themeOf) {
         <option value="game">As the game has them</option>
         ${show.panelTheme ? `<option value="panel">The Theme panel's looks</option>` : ''}
         <optgroup label="Theme presets">${Object.keys(PRESETS).map(n => `<option value="p:${esc(n)}">${esc(n)}</option>`).join('')}</optgroup></select></label></div>
+      <div class="row"><label class="check" title="The decals (emblems, markings) in the theme's colors too: light parts trim, dark parts secondary"><input type="checkbox" id="scDecals"> theme the decals</label></div>
       <div class="row"><label class="grow">Title <input id="scTitle" value="${esc(show.theme.name)}"></label></div>
       <div class="row"><label class="grow">Line <input id="scLine" value="${esc(lineFor(show.which))}"></label></div>
       <div class="row"><label>Light <input type="color" id="scColor" value="${look.color || sc.showcase.accent}"></label>
@@ -87,6 +88,14 @@ function panel(app, themeOf) {
         <span class="hint" data-sv="${k}" style="width:3em;text-align:right">${(+look[k]).toFixed(2)}</span></div>`).join('')}
       <div class="row"><button id="scCam">Reset camera</button><button id="scReset">Reset look</button></div></section>`;
   $('scShow').value = show.which;
+  const decalBox = () => { const off = show.which === 'mod' || show.which === 'game'; $('scDecals').disabled = off; if (off) $('scDecals').checked = false; };
+  $('scDecals').checked = !!show.theme.decals; decalBox();
+  $('scDecals').onchange = async () => {
+    show.theme = { ...show.theme, decals: $('scDecals').checked ? 'two' : '' };
+    busy(true); msg('Theming…');
+    try { await sc.setTheme(show.theme); msg(''); } catch (e) { msg(e.message); }
+    if (show) busy(false);
+  };
   const msg = t => { if ($('scMsg')) $('scMsg').textContent = t; };
   const busy = on => document.querySelectorAll('#scSide select, #scSave').forEach(x => (x.disabled = on));
   // what the items show
@@ -95,9 +104,10 @@ function panel(app, themeOf) {
     if (title.value === show.theme.name) title.value = t.name;
     if ($('scLine').value === lineFor(show.which)) $('scLine').value = lineFor(which);
     sc.setText(title.value.trim(), $('scLine').value.trim());
-    show.which = which; show.theme = t;
+    show.which = which; decalBox();
+    show.theme = { ...t, decals: $('scDecals').checked ? (t.decals || 'two') : '' };
     busy(true); msg('Theming…');
-    try { await sc.setTheme(t); msg(''); } catch (e) { msg(e.message); }
+    try { await sc.setTheme(show.theme); msg(''); } catch (e) { msg(e.message); }
     if (show) { busy(false); if ($('scAuto').checked) $('scColor').value = sc.showcase.accent; }
   };
   // a slot's item, cape, weapon or pose: swapped in place (the others wait)

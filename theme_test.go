@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"image"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -232,6 +234,89 @@ func TestThemeCapeTrim(t *testing.T) {
 	t.Logf("%s; %d cape design LUTs", b, capes)
 	if capes < 50 {
 		t.Fatalf("only %d cape design LUTs themed", capes)
+	}
+}
+
+// Decals on the real install: a capes theme with decals recolors the capes' decal sheets (light parts in the trim
+// look's color, dark ones in the secondary's), their alpha as the game's; a sheet's pixels are the game's size.
+func TestThemeDecals(t *testing.T) {
+	gameDir := os.Getenv("LUTSTUDIO_GAME")
+	if gameDir == "" {
+		t.Skip("LUTSTUDIO_GAME not set")
+	}
+	scratch := t.TempDir()
+	t.Setenv("LUTSTUDIO_CONFIG_DIR", filepath.Join(scratch, "config"))
+	t.Setenv("LUTSTUDIO_CACHE_DIR", filepath.Join(scratch, "cache"))
+	e := &env{out: io.Discard, gameDir: gameDir}
+	idx, err := e.index()
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := e.game()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(scratch, "capes")
+	p, err := project.Create(dir, "Capes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assets := game.NewAssets(g, filepath.Join(scratch, "assets"))
+	srv := &server.Server{Version: "test"}
+	srv.SetGame(g, idx, assets, nil)
+	if err := srv.SetProject(dir); err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	look := func(v float32) []float32 {
+		r := make([]float32, lut.MaterialWidth*4)
+		for i := range r {
+			r[i] = v
+		}
+		return r
+	}
+	body, _ := json.Marshal(map[string]any{"Variant": p.Variants[0].Folder, "Groups": []string{"Capes"}, "Decals": "two",
+		"Looks": map[string][]float32{"trim": look(0.9), "secondary": look(0.1)}})
+	r, err := http.Post(ts.URL+"/api/theme", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var res struct {
+		DecalSheets  int `json:"decal_sheets"`
+		DecalOutside int `json:"decal_outside"`
+	}
+	b, _ := io.ReadAll(r.Body)
+	r.Body.Close()
+	if r.StatusCode != 200 || json.Unmarshal(b, &res) != nil {
+		t.Fatalf("theme: %d %s", r.StatusCode, b)
+	}
+	files, _ := filepath.Glob(filepath.Join(p.VariantDir(p.Variants[0]), "textures", "*.png"))
+	t.Logf("%s; %d sheet file(s)", b, len(files))
+	if res.DecalSheets < 4 || len(files) != res.DecalSheets {
+		t.Fatalf("%d decal sheets recolored, %d files (the capes have 6 real sheets)", res.DecalSheets, len(files))
+	}
+	for _, f := range files[:1] {
+		h, _ := lut.ParseHash(strings.TrimSuffix(filepath.Base(f), ".png"))
+		blob, err := assets.TextureBlob(h)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fh, _ := os.Open(f)
+		img, err := png.Decode(fh)
+		fh.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		n := img.(*image.NRGBA)
+		for i := 0; i < len(n.Pix); i += 4 * 997 {
+			if n.Pix[i+3] != blob[20+i+3] {
+				t.Fatalf("%s: alpha at %d is %d, the game's %d", f, i/4, n.Pix[i+3], blob[20+i+3])
+			}
+			if c := n.Pix[i]; c != n.Pix[i+1] || c < 25 || c > 230 {
+				t.Fatalf("%s: color at %d: %v, not between the two looks' grays", f, i/4, n.Pix[i:i+4])
+			}
+		}
 	}
 }
 

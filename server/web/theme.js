@@ -5,6 +5,7 @@
 
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { ROLE_INFO } from './roles.js';
+import { decalColors, previewDecals, unpreviewDecals } from './decaltheme.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft'];
 const DEFAULT_GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks'];   // (ticked when the item on screen is none of them)
@@ -330,6 +331,9 @@ export async function themeDialog(app) {
     <div id="thPalette"></div>
     <div class="row"><label class="check" title="Metal parts (barrels, bolts, buckles: the hardware role) take this color and keep their metal finish; off: they keep the game's metal"><input type="checkbox" id="thMetal"> paint metal parts</label>
       <input type="color" id="thMetalColor" value="#2a2a2a" title="the metal parts' color"></div>
+    <div class="row"><label class="check" title="Recolor the decals too (emblems, markings, stencils) in the theme's colors: their decal sheets, which other items may share"><input type="checkbox" id="thDecals"> also theme decals</label>
+      <select id="thDecalMode" title="How decals take the theme's colors"><option value="two">light parts trim, dark parts secondary</option><option value="one">all in the trim color</option></select></div>
+    <p class="hint" id="thDecalNote" hidden>A decal sheet is shared: every item drawing from a recolored sheet shows its decals in the theme's colors, items you didn't theme too. Each recolored sheet adds about 5 MB to the mod.</p>
     <h3>Apply to</h3>
     <div class="row">${GROUPS.map(g => `<label class="check"><input type="checkbox" class="thGroup" value="${g}" ${shownGroups.has(g) || (!shownGroups.size && DEFAULT_GROUPS.includes(g)) ? 'checked' : ''}> ${g}</label>`).join('')}</div>
     <label class="check"><input type="checkbox" id="thOnly"> only items already in this mod</label>
@@ -434,7 +438,9 @@ export async function themeDialog(app) {
   };
   // ---- the theme on the item on screen, without saving: its LUTs in the looks (shown under keys of their own)
   let previewing = null;   // piece -> its LUT keys before
+  let decalShown = [];   // (the decal sheets shown recolored)
   function unpreview() {
+    unpreviewDecals(R, decalShown); decalShown = [];
     if (!previewing) return;
     for (const [p, keys] of previewing) Object.assign(p.lutKeys, keys);
     previewing = null;
@@ -466,20 +472,26 @@ export async function themeDialog(app) {
         p.lutKeys[key] = 'pv' + key + ':' + h;
       }
     }
+    // decals: the sheets on screen recolored in the theme's colors
+    const dc = $('thDecals').checked && decalColors(looks);
+    if (dc) previewDecals(R, R.pieces, $('thDecalMode').value, dc).then(h => { if (previewing) decalShown = h; else unpreviewDecals(R, h); });
     $('thPreview').textContent = 'End preview';
     info('Preview: the theme on the item on screen (nothing saved). Apply theme to keep it.');
   }
+  const decalsChanged = () => { $('thDecalNote').hidden = !$('thDecals').checked; if (previewing) preview(); };
+  $('thDecals').onchange = decalsChanged;
+  $('thDecalMode').onchange = decalsChanged;
   $('thPreview').onclick = () => (previewing ? (unpreview(), info('')) : preview());
 
   // ---- the Showcase with these looks (showcaseui.js)
   // the looks per item of the scene: a preset's over each item's own zones (as the dev tool), or the looks here on all
   const showTheme = () => {
-    const name = $('thPreset').value;
-    if (PRESETS[name]) return presetTheme(name, $('thMetal').checked ? $('thMetalColor').value : null);
+    const name = $('thPreset').value, decals = $('thDecals').checked ? $('thDecalMode').value : '';
+    if (PRESETS[name]) return { ...presetTheme(name, $('thMetal').checked ? $('thMetalColor').value : null), decals };
     const { looks, error } = lookRows();
     if (error) return { error };
     if (!Object.keys(looks).length) return { error: "Pick a preset or at least one role's look." };
-    return { name: 'My theme', looksFor: () => looks, colors: Object.entries(looks).map(([n, row]) => [n, hex(row.slice(0, 3))]) };
+    return { name: 'My theme', decals, looksFor: () => looks, colors: Object.entries(looks).map(([n, row]) => [n, hex(row.slice(0, 3))]) };
   };
   // the Showcase mode (showcaseui.js) with these looks: the panel closes, the right sidebar takes its options
   $('thShow').onclick = async () => {
@@ -502,10 +514,13 @@ export async function themeDialog(app) {
     info('Applying… (the first time reads every item\'s masks: a little while)');
     try {
       const r = await app.api('/api/theme', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Variant: app.variant, Looks: looks, Groups: groups(), OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked }) });
-      app.track('theme applied', { groups: groups(), roles: Object.keys(looks), preset: $('thPreset').value || null, camo: Object.keys(camo), paint_metal: $('thMetal').checked, items: r.items, luts: r.luts, zones: r.zones, kept: r.kept, added: r.added, only_in_mod: $('thOnly').checked });
+        body: JSON.stringify({ Variant: app.variant, Looks: looks, Groups: groups(), OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked,
+          Decals: $('thDecals').checked ? $('thDecalMode').value : '' }) });
+      app.track('theme applied', { groups: groups(), roles: Object.keys(looks), preset: $('thPreset').value || null, camo: Object.keys(camo), paint_metal: $('thMetal').checked, decals: $('thDecals').checked ? $('thDecalMode').value : null, decal_sheets: r.decal_sheets, items: r.items, luts: r.luts, zones: r.zones, kept: r.kept, added: r.added, only_in_mod: $('thOnly').checked });
       await app.refresh();
+      if (r.decal_sheets) await R.refreshDecals();
       info(`Themed ${r.zones} zone(s) in ${r.changed} LUT(s) of ${r.items} item(s)` + (r.added ? `; ${r.added} LUT(s) added to the mod` : '') +
+        (r.decal_sheets ? `; recolored ${r.decal_sheets} decal sheet(s)` + (r.decal_outside ? ` (also drawn on ${r.decal_outside} item(s) outside the groups themed)` : '') : '') +
         (r.kept ? `; kept ${r.kept} zone(s) you changed by hand (tick "also overwrite" to replace them)` : '') + '. Step through them below.');
       const inMod = app.projectLuts();
       review = targets().filter(it => !$('thOnly').checked || it.luts.some(x => inMod.has(x.lut))); ri = -1;
