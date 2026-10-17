@@ -225,6 +225,30 @@ Object.assign(PRESETS, {
   'Inverse Helldiver': T('#1a1a1a', '#e8b81a', '#121212', '#e8b81a', { pf: FIN.satin, sf: FIN.satin }),
 });
 
+// inspired by the shaders players rate highest in another game
+Object.assign(PRESETS, {
+  'Superblack': T('#060606', '#0b0b0c', '#141416', '#070707', { pf: [[6, 3, -1], [10, 0, 0.12], [8, 3, 0.8]], sf: FIN.gloss, tf: FIN.gloss, hw: '#0a0a0a', hwf: [[6, 3, 1], [10, 0, 0.15]] }),
+  'Bitterpearl': T('#eeece6', '#d8d6d0', '#c9ccd1', '#e4e2dc', { pf: [[6, 3, 0.15], [10, 0, 0.2], [8, 3, 0.7]], hw: '#d0d3d8', hwf: FIN.mirror }),
+  "Calus's Selected": T('#f2efe8', '#4a1a7a', '#d9a93c', '#3a1460', { pf: FIN.gloss, tf: FIN.metal, hw: '#d9a93c' }),
+  'Goldleaf': T('#d8a83c', '#f0ede4', '#b88a2c', '#e8e2d4', { pf: FIN.mirror, hw: '#d8a83c' }),
+  'Bergusian Night': T('#3a1a6a', '#1a0a30', '#a070ff', '#24103e', { pc: CM(1, ['#3a1a6a', '#6a2aa8', '#1a0a30', '#9050d8'], 1.0), pf: FIN.gloss }),
+  'Carbon Blood': T('#8a0a12', '#0c0c0d', '#1a1a1c', '#101011', { pf: FIN.gloss, sc: CM(0, ['#0c0c0d', '#1a1a1c', '#141416', '#060606'], 2.6) }),
+  'Regal Daring': T('#f0ede6', '#c8a03a', '#b0141e', '#e6e2da', { pf: FIN.gloss, sf: FIN.metal, hw: '#c8a03a' }),
+  'Ego Malign': T('#e8e2d0', '#14204a', '#0a0e1e', '#101a3a', { pf: FIN.satin, glow: '#f4ecd4', gv: 0.06 }),
+  'Rustberry': T('#e8ded6', '#b0563a', '#6a2a1e', '#d8ccc2', { pf: [[6, 3, 0.15], [10, 0, 0.25]], sf: FIN.brushed }),
+  'Amethyst Veil': T('#121016', '#3a1660', '#7a3ac8', '#0e0c12', { pf: FIN.gloss, sf: FIN.gloss, tf: FIN.metal, hw: '#3a1660' }),
+  'Erebos Glance': T('#16161a', '#2c2c30', '#ff7a14', '#121214', { pf: FIN.satin, tf: FIN.gloss }),
+  'Abyssinian Gold': T('#5a4632', '#3a3430', '#a8863a', '#4a3e30', { pf: FIN.matte, sf: FIN.matte, tf: FIN.brushed, hw: '#8a7040', hwf: FIN.brushed }),
+  'Refurbished Black Armory': T('#0a0b0a', '#0c0a10', '#2a2c2a', '#0a0a0c', { pf: [[6, 3, 0.4], [10, 0, 0.15]], px: IRID(0.6, 0.5, 1.6), sf: [[6, 3, 0.3], [10, 0, 0.2]], sx: IRID(0.85, 0.4, 1.4), hw: '#1a1c1a' }),
+  'Gilded Frost': T('#8a7a4a', '#5a5e64', '#1a2a5a', '#3a4048', { pf: FIN.brushed, tf: FIN.gloss }),
+  'Gambit Jadestone': T('#2a3a24', '#1a2418', '#4aff6a', '#1e2a1a', { pc: CM(1, ['#2a3a24', '#1e2a1a', '#3a4a2e', '#141c10'], 1.2), pf: FIN.matte, glow: '#4aff6a', gv: 0.12 }),
+  'House of Meyrin': T('#8a1018', '#c8a03a', '#e8c050', '#4a0a0e', { pf: FIN.gloss, sf: FIN.metal, tf: FIN.mirror, hw: '#c8a03a' }),
+  'Bloody Tooth': T('#0e0e10', '#b8bcc2', '#b0101a', '#141416', { pf: FIN.gloss, sf: FIN.mirror, hw: '#b8bcc2' }),
+  'Midnight Exigent': T('#14224a', '#2a2c32', '#ffd21a', '#121a30', { glow: '#ffd21a', gv: 0.08 }),
+  'Oiled Gunmetal': T('#14181a', '#0e1210', '#3aff9a', '#101414', { pf: [[6, 3, 0.6], [10, 0, 0.12]], px: IRID(0.45, 0.8, 1.6), glow: '#3aff9a', gv: 0.1, hw: '#2a2e30' }),
+  'Monochromatic': T('#f2f2f2', '#0c0c0c', '#0c0c0c', '#f2f2f2', { pf: FIN.gloss, sf: FIN.gloss }),
+});
+
 const unhexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 // a preset's look of a role over a row on screen: its color (paint, secondary, wear), its fields, its camo
 function presetRow(row, L) {
