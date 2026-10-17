@@ -145,6 +145,86 @@ export const PRESETS = {
     hardware: { c: '#2b2d31', set: [[6, 3, 1], [10, 0, 0.25]] },
   },
 };
+// ---- more presets, from a few finishes: T(primary, secondary, trim, cloth, options)
+const FIN = {
+  matte: [[6, 3, -1], [10, 0, 0.78]], satin: [[6, 3, -1], [10, 0, 0.45]], gloss: [[6, 3, -1], [10, 0, 0.18], [8, 3, 0.65]],
+  plastic: [[6, 3, -1], [10, 0, 0.25], [8, 3, 0.6]], rough: [[6, 3, -1], [10, 0, 0.95], [8, 3, 0.2]],
+  metal: [[6, 3, 1], [10, 0, 0.25]], mirror: [[6, 3, 1], [10, 0, 0.03], [8, 3, 1]], brushed: [[6, 3, 1], [10, 0, 0.45]],
+};
+const IRID = (t, s, str) => [[13, 2, t], [13, 3, s], [14, 0, 0], [14, 1, 0], [14, 2, 0], [14, 3, 1], [15, 0, 0], [15, 1, 0], [15, 2, 0], [15, 3, str]];
+const CM = (layer, colors, tiling = 1.5) => ({ layer: String(layer), colors, tiling });
+// o: pf / sf / tf (finishes), pc / sc / cc (camos), px / sx (extra fields), glow (trim and lights glow in this color),
+// gv (its strength), hw / hwf (metal parts' color and finish), fuzz (cloth sheen color)
+function T(p, s, t, cl, o = {}) {
+  const glow = o.glow ? [[13, 0, o.gv ?? 0.12]] : [];
+  const out = {
+    primary: { c: p, set: [...CLEAN, ...(o.pf ?? FIN.satin), ...(o.px ?? [])], camo: o.pc },
+    secondary: { c: s, set: [...CLEAN, ...(o.sf ?? FIN.satin), ...(o.sx ?? [])], camo: o.sc },
+    trim: { c: o.glow ?? t, set: [...CLEAN, ...(o.tf ?? FIN.satin), ...glow] },
+    cloth: { c: cl, set: o.fuzz ? [[12, 0, o.fuzz[0]], [12, 1, o.fuzz[1]], [12, 2, o.fuzz[2]], [12, 3, 0.3]] : [], camo: o.cc },
+  };
+  if (o.glow) out.glow = { c: o.glow, set: glow };
+  if (o.hw) out.hardware = { c: o.hw, set: o.hwf ?? FIN.metal };
+  return out;
+}
+Object.assign(PRESETS, {
+  // showoff
+  'Liquid Gold': T('#e0b04a', '#0c0b0a', '#141210', '#16130f', { pf: FIN.mirror, tf: FIN.gloss, hw: '#e0b04a', hwf: FIN.mirror, fuzz: [0.5, 0.4, 0.15] }),
+  'Prism Knight': T('#eef0f2', '#0a0a0d', '#ffffff', '#1a1a1e', { pf: FIN.gloss, sf: [[6, 3, 0.3], [10, 0, 0.15]], sx: IRID(0.3, 1, 1.8), glow: '#f4f8ff', gv: 0.1, hw: '#c9ccd1', hwf: FIN.mirror }),
+  'Hologram': T('#1a5ab4', '#0a2a5a', '#38e8ff', '#0a1a3a', { pf: FIN.gloss, glow: '#38e8ff', gv: 0.13, hw: '#1a2a40', fuzz: [0.1, 0.6, 0.8] }),
+  'Nebula': T('#2a0d4a', '#120626', '#f4f0ff', '#1a0a30', { pc: CM(1, ['#2a0d4a', '#d03aa8', '#1a3aa8', '#0a0418'], 1.1), glow: '#f4f0ff', gv: 0.1, fuzz: [0.6, 0.3, 0.9] }),
+  'Molten Chrome': T('#d0d4da', '#121214', '#ff6a10', '#141210', { pf: FIN.mirror, glow: '#ff6a10', gv: 0.13, hw: '#d0d4da', hwf: FIN.mirror }),
+  'Aurora': T('#0e3a34', '#06100f', '#7dffb0', '#0a1a1a', { pf: [[6, 3, 0.3], [10, 0, 0.12], [8, 3, 0.8]], px: IRID(0.55, 1, 2), glow: '#7dffb0', gv: 0.1, fuzz: [0.3, 0.8, 0.6] }),
+  'Black Diamond': T('#08080a', '#0c0c10', '#c9ccd1', '#0a0a0c', { pf: [[6, 3, 0.4], [10, 0, 0.08], [8, 3, 0.9]], px: IRID(0.4, 1, 1.4), sf: [[6, 3, 0.2], [10, 0, 0.2]], sx: IRID(0.2, 0.6, 1), tf: FIN.mirror, hw: '#c9ccd1', hwf: FIN.mirror }),
+  'Ember Lord': T('#3a3230', '#0c0b0b', '#ff4a14', '#1e1614', { pf: FIN.matte, glow: '#ff4a14', gv: 0.15, hw: '#cfa13a', fuzz: [0.6, 0.15, 0.05] }),
+  'Cyber Samurai': T('#a00a14', '#0c0c0d', '#d9a93c', '#e8e4dc', { pf: FIN.gloss, tf: FIN.metal, hw: '#d9a93c' }),
+  'Overcharge': T('#0a4aff', '#e8f0ff', '#ffffff', '#0a1a40', { pf: FIN.gloss, glow: '#d8f0ff', gv: 0.13, hw: '#c9ccd1', hwf: FIN.mirror }),
+  // classic camo
+  'Woodland': T('#4a5a2e', '#2e2a1e', '#1e1e1a', '#4a4a32', { pc: CM(3, ['#4a5a2e', '#2e3a1a', '#5c4a30', '#16160f']), pf: FIN.matte, cc: CM(3, ['#4a4a32', '#2e3a1a', '#5c4a30', '#16160f']) }),
+  'Desert Storm': T('#c2a878', '#6a5034', '#3a3026', '#b09a70', { pc: CM(1, ['#c2a878', '#a8865a', '#d8c49a', '#6a5034']), pf: FIN.matte, cc: CM(1, ['#b09a70', '#8e7250', '#c8b48a', '#5a4430']) }),
+  'Urban Digital': T('#8a8e92', '#2e3034', '#e8e8e8', '#6a6e72', { pc: CM(0, ['#8a8e92', '#3a3c40', '#c8cacc', '#1e2024'], 2.2), pf: FIN.matte, cc: CM(0, ['#6a6e72', '#2e3034', '#a8aaae', '#16181a'], 2.2) }),
+  'Tiger Stripe': T('#4a5a30', '#2a2418', '#141410', '#3e4a2a', { pc: CM(4, ['#4a5a30', '#141410', '#6a5232', '#0c0c0a'], 1.4), pf: FIN.matte, cc: CM(4, ['#3e4a2a', '#141410', '#5a4630', '#0c0c0a'], 1.4) }),
+  'Snow Camo': T('#e8eaec', '#b8bcc0', '#1a1a1c', '#d8dadc', { pc: CM(1, ['#e8eaec', '#c4c8cc', '#ffffff', '#9aa0a6']), pf: FIN.matte, cc: CM(1, ['#d8dadc', '#b4b8bc', '#f4f4f4', '#8a9096']) }),
+  'Night Woodland': T('#141a26', '#0c0e12', '#2a3a2a', '#12161e', { pc: CM(3, ['#141a26', '#0a0c12', '#1e2a22', '#05060a']), pf: FIN.matte, cc: CM(3, ['#12161e', '#0a0c12', '#1a2620', '#05060a']) }),
+  'Flecktarn': T('#5a6440', '#2e3020', '#1a1a14', '#4e5838', { pc: CM(0, ['#5a6440', '#2e3a1e', '#6a5236', '#121210'], 1.8), pf: FIN.matte, cc: CM(0, ['#4e5838', '#2e3a1e', '#5e4a32', '#121210'], 1.8) }),
+  'Jungle': T('#2a4a1e', '#1a1e14', '#8a7a52', '#9a8a62', { pc: CM(4, ['#2a4a1e', '#0e1a0a', '#3e6a24', '#0a0e08'], 1.3), pf: FIN.matte }),
+  'Red Dirt': T('#8a3a1e', '#4a2416', '#1e1612', '#7a3e24', { pc: CM(1, ['#8a3a1e', '#5a2612', '#a8582e', '#2e1810']), pf: FIN.rough, cc: CM(1, ['#7a3e24', '#4a2416', '#94542e', '#2a1610']) }),
+  'Marsh': T('#5a5a32', '#3a3420', '#22261a', '#4a3e2a', { pc: CM(3, ['#5a5a32', '#3a4a26', '#4a3e2a', '#1e2216']), pf: FIN.matte }),
+  // faction and lore
+  'Super Earth Standard': T('#e8b81a', '#121212', '#e8e4dc', '#2a2a2a', { pf: FIN.satin }),
+  'Automaton Slayer': T('#5a5e66', '#16181b', '#ff2a1a', '#1a1b1d', { pf: FIN.satin, sc: CM(1, ['#16181b', '#5a1a14', '#2a2c30', '#0a0a0b']), glow: '#ff2a1a', gv: 0.12, hw: '#2a2c30' }),
+  'Bug Stomper': T('#f2c214', '#121212', '#121212', '#2a2618', { pc: CM(4, ['#f2c214', '#0e0e0e', '#d8a810', '#0a0a0a'], 1.2), pf: FIN.satin }),
+  'Squid Hunter': T('#2a1050', '#0e0818', '#20f0d0', '#140a24', { pf: FIN.gloss, glow: '#20f0d0', gv: 0.12, fuzz: [0.1, 0.7, 0.6] }),
+  'Ministry of Truth': T('#eceae4', '#b0101a', '#0e0e0e', '#1a1a1a', { pf: FIN.satin, sf: FIN.gloss }),
+  'Democracy Officer': T('#1a3a8a', '#e8e4dc', '#d9a93c', '#14244a', { pf: FIN.gloss, tf: FIN.metal, hw: '#cfa13a' }),
+  'Penal Battalion': T('#e8640e', '#e8640e', '#101010', '#2a2a2a', { pf: FIN.rough, sc: CM(4, ['#e8640e', '#101010', '#c85410', '#0a0a0a'], 1.8) }),
+  'Medic Corps': T('#f0f0ee', '#c8c8c6', '#d0101a', '#e0e0de', { pf: FIN.gloss, tf: FIN.gloss }),
+  // flat colors
+  'Matte Black': T('#141414', '#0c0c0c', '#262626', '#121212', { pf: FIN.matte, sf: FIN.matte, tf: FIN.matte, hw: '#1a1a1a', hwf: FIN.brushed }),
+  'Arctic White': T('#f0f2f4', '#dcdfe2', '#6a6e72', '#e4e6e8', { pf: FIN.satin }),
+  'Olive Drab': T('#4e5430', '#3a3e24', '#2a2c1c', '#4a4e30', { pf: FIN.matte, sf: FIN.matte }),
+  'Navy and Steel': T('#16264a', '#8a9098', '#c8ccd2', '#121c34', { pf: FIN.satin, sf: FIN.brushed, tf: FIN.metal, hw: '#8a9098' }),
+  'Sand Monotone': T('#c8b48c', '#b4a07a', '#8a7856', '#bca884', { pf: FIN.matte, sf: FIN.matte }),
+  'Safety Orange': T('#ff6a0e', '#121212', '#121212', '#2a2a2a', { pf: FIN.gloss }),
+  'Hunter Green and Tan': T('#1e3a24', '#c2ac80', '#3a2e1e', '#1a2e1e', { pf: FIN.satin }),
+  'Gunmetal': T('#3a3c40', '#2a2c30', '#5a5e64', '#202224', { pf: FIN.brushed, sf: FIN.brushed, tf: FIN.metal, hw: '#4a4e54', hwf: FIN.brushed }),
+  'Crimson and Black': T('#a00e1a', '#0e0e0e', '#1a1a1a', '#121212', { pf: FIN.gloss, sf: FIN.satin }),
+  'Pastel Mint': T('#a8e8cc', '#f4f8f6', '#ffffff', '#8ad4b4', { pf: FIN.plastic }),
+  // weird
+  'Toy Soldier': T('#4a6a2a', '#4a6a2a', '#3a5420', '#4a6a2a', { pf: FIN.plastic, sf: FIN.plastic, tf: FIN.plastic, hw: '#4a6a2a', hwf: FIN.plastic }),
+  'Candy Cane': T('#f4f4f2', '#d0101a', '#d0101a', '#f4f4f2', { pc: CM(4, ['#f4f4f2', '#d0101a', '#f4f4f2', '#b00e16'], 1.2), pf: FIN.gloss, sf: FIN.gloss }),
+  'Watermelon': T('#2a8a2a', '#ff5a7a', '#0e0e0e', '#1a5a1a', { pf: FIN.gloss, sc: CM(0, ['#ff5a7a', '#0e0e0e', '#ff7a94', '#ff5a7a'], 2.6) }),
+  'Bubblegum': T('#ffa8d0', '#a8d8ff', '#ffffff', '#ff8ac0', { pf: FIN.plastic, sf: FIN.plastic }),
+  'Clown Car': T('#e0141e', '#1a3ae0', '#ffd814', '#1aa82a', { pf: FIN.plastic, sf: FIN.plastic, tf: FIN.plastic }),
+  'Zombie': T('#6a7a5a', '#3a3e30', '#8a0e0e', '#4a4e3a', { pc: CM(1, ['#6a7a5a', '#4a5a3a', '#8a8a6a', '#2a2e22']), pf: FIN.rough, cc: CM(1, ['#4a4e3a', '#6a0e0e', '#5a5e48', '#2a2e22']) }),
+  'Banana': T('#ffe01a', '#ffe01a', '#4a3010', '#f0d014', { pc: CM(0, ['#ffe01a', '#4a3010', '#f4d414', '#ffe01a'], 2.4), pf: FIN.plastic }),
+  'Barbie Corps': T('#ff2a9a', '#f8f4f6', '#e0b04a', '#ff5ab4', { pf: FIN.gloss, tf: FIN.mirror, hw: '#e0b04a' }),
+  'Rubber Duck': T('#ffd400', '#ffd400', '#ff7a00', '#ffd400', { pf: FIN.plastic, sf: FIN.plastic, tf: FIN.plastic }),
+  'Cardboard': T('#a8865a', '#8e7048', '#141414', '#9a7c50', { pf: FIN.rough, sf: FIN.rough, tf: FIN.matte, hw: '#a8865a', hwf: FIN.rough }),
+  'Vaporwave': T('#c8a0ff', '#80f0e8', '#ff7ac8', '#a880e0', { pc: CM(1, ['#c8a0ff', '#80f0e8', '#e8b0ff', '#a080e0'], 1.1), pf: FIN.plastic, glow: '#ff7ac8', gv: 0.1 }),
+  'Inverse Helldiver': T('#1a1a1a', '#e8b81a', '#121212', '#e8b81a', { pf: FIN.satin, sf: FIN.satin }),
+});
+
 const unhexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 // a preset's look of a role over a row on screen: its color (paint, secondary, wear), its fields, its camo
 function presetRow(row, L) {
