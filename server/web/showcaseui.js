@@ -5,7 +5,7 @@
 // bar hide meanwhile; Exit puts the editor back as it was.
 import { $, esc, closeSide } from './texedit.js';
 import { buildScene, LOOK } from './scene.js';
-import { PRESETS, presetTheme } from './theme.js';
+import { PRESETS, presetTheme, presetOptions } from './theme.js';
 
 const SLIDERS = [['bg', 'Background', 0, 3], ['glow', 'Glow', 0, 3], ['glowSize', 'Glow size', 0.3, 2.5], ['rim', 'Rim light', 0, 4],
   ['exposure', 'Exposure', 0.3, 2.5], ['reflect', 'Reflections', 0, 3], ['shadow', 'Floor shadows', 0, 2], ['haze', 'Haze', 0, 3],
@@ -73,7 +73,7 @@ function panel(app, themeOf) {
         <option value="mod">As in this mod (${esc(app.projectName() || 'its edits')})</option>
         <option value="game">As the game has them</option>
         ${show.panelTheme ? `<option value="panel">The Theme panel's looks</option>` : ''}
-        <optgroup label="Theme presets">${Object.keys(PRESETS).map(n => `<option value="p:${esc(n)}">${esc(n)}</option>`).join('')}</optgroup></select></label></div>
+        ${presetOptions(n => 'p:' + n)}</select></label></div>
       <div class="row"><label class="check" title="The decals (emblems, markings) in the theme's colors too: light parts trim, dark parts secondary"><input type="checkbox" id="scDecals"> theme the decals</label></div>
       <div class="row"><label class="grow">Title <input id="scTitle" value="${esc(show.theme.name)}"></label></div>
       <div class="row"><label class="grow">Line <input id="scLine" value="${esc(lineFor(show.which))}"></label></div>

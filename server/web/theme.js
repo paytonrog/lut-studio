@@ -251,6 +251,48 @@ Object.assign(PRESETS, {
   'Monochromatic': T('#f2f2f2', '#0c0c0c', '#0c0c0c', '#f2f2f2', { pf: FIN.gloss, sf: FIN.gloss }),
 });
 
+// planet biomes: field camouflage for each of the game's planet biomes (as the SEAF swap theirs per planet): primary the
+// biome's ground or vegetation, secondary its shadow, rock or bark tone, trim a small accent of it (ember, firefly,
+// flower, water) or a near-black, cloth a muted ground tone; camo of the biome's colors; matte; a faint glow where the
+// biome glows (lava, acid flowers, Automaton or void light). Names: the biomes' own (the wiki's)
+Object.assign(PRESETS, {
+  'Biome: Plains': T('#5f6b45', '#7a7466', '#22251c', '#4b5040', { pf: FIN.matte, pc: CM(3, ['#5f6b45', '#3f4a30', '#7a7466', '#22251c']), cc: CM(3, ['#4b5040', '#3f4a30', '#7a7466', '#22251c']) }),
+  'Biome: Ionic Crimson': T('#8a2a22', '#5a4a44', '#1e1a18', '#6a2a24', { pf: FIN.matte, pc: CM(1, ['#8a2a22', '#5e1c18', '#a8463a', '#2a1a18']), cc: CM(1, ['#6a2a24', '#5e1c18', '#a8463a', '#2a1a18']) }),
+  'Biome: Scorched Moor': T('#7a5a3a', '#2e2622', '#c8641e', '#8a6a44', { pf: FIN.matte, pc: CM(1, ['#7a5a3a', '#4a3626', '#9a7448', '#1e1814']), cc: CM(1, ['#8a6a44', '#4a3626', '#9a7448', '#1e1814']), glow: '#ff6a14', gv: 0.06 }),
+  'Biome: Tundra': T('#b0662a', '#5a5e5a', '#2a2e2a', '#3e4a3a', { pf: FIN.matte, pc: CM(1, ['#b0662a', '#7a4a24', '#5a5e5a', '#2a2e2a']), cc: CM(1, ['#3e4a3a', '#7a4a24', '#5a5e5a', '#2a2e2a']) }),
+  'Biome: Volcanic Jungle': T('#3e6a2a', '#24361a', '#c2a86a', '#5a6a3a', { pf: FIN.matte, pc: CM(4, ['#3e6a2a', '#1a2a12', '#5a8a34', '#0c120a'], 1.3), cc: CM(4, ['#5a6a3a', '#1a2a12', '#5a8a34', '#0c120a'], 1.3) }),
+  'Biome: Ionic Jungle': T('#2a4a8a', '#141e3e', '#e8d24a', '#34507a', { pf: FIN.matte, pc: CM(4, ['#2a4a8a', '#141e3e', '#3e6aa8', '#0a0e1e'], 1.3), cc: CM(4, ['#34507a', '#141e3e', '#3e6aa8', '#0a0e1e'], 1.3) }),
+  'Biome: Ethereal Jungle': T('#c0507a', '#6a1e3a', '#3ab0a8', '#8a3a5a', { pf: FIN.matte, pc: CM(4, ['#c0507a', '#6a1e3a', '#e07aa0', '#2a0e1a'], 1.3), cc: CM(4, ['#8a3a5a', '#6a1e3a', '#e07aa0', '#2a0e1a'], 1.3) }),
+  'Biome: Deadlands': T('#8a8a86', '#4a4a4a', '#9a7ac0', '#6a6a68', { pf: FIN.matte, pc: CM(1, ['#8a8a86', '#5a5a58', '#a8a8a4', '#2e2e2e']), cc: CM(1, ['#6a6a68', '#5a5a58', '#a8a8a4', '#2e2e2e']) }),
+  'Biome: Supercolony': T('#a08a3a', '#4a3e22', '#e0c040', '#7a6a3a', { pf: FIN.rough, pc: CM(1, ['#a08a3a', '#6a5a2a', '#c0a850', '#2a2214']), cc: CM(1, ['#7a6a3a', '#6a5a2a', '#c0a850', '#2a2214']) }),
+  'Biome: Desert Dunes': T('#c8a874', '#8a6a44', '#4a3a2a', '#b49a70', { pf: FIN.matte, pc: CM(1, ['#c8a874', '#a8865a', '#dcc49a', '#6a5034']), cc: CM(1, ['#b49a70', '#a8865a', '#dcc49a', '#6a5034']) }),
+  'Biome: Desert Cliffs': T('#c47a3a', '#7a4a2a', '#3a2a1e', '#b08a5a', { pf: FIN.matte, pc: CM(1, ['#c47a3a', '#9a5a2a', '#d89a5a', '#4a2e1a']), cc: CM(1, ['#b08a5a', '#9a5a2a', '#d89a5a', '#4a2e1a']) }),
+  'Biome: Acidic Badlands': T('#a8a058', '#5a5a34', '#8a4ab0', '#8a8a50', { pf: FIN.matte, pc: CM(0, ['#a8a058', '#7a7a3e', '#c4c070', '#3a3a22'], 2.2), cc: CM(0, ['#8a8a50', '#7a7a3e', '#c4c070', '#3a3a22'], 2.2), glow: '#b4ff3a', gv: 0.05 }),
+  'Biome: Rocky Canyons': T('#9a4e2e', '#5a3020', '#2a1e18', '#a8683e', { pf: FIN.matte, pc: CM(1, ['#9a4e2e', '#6a3420', '#b86a40', '#2e1a12']), cc: CM(1, ['#a8683e', '#6a3420', '#b86a40', '#2e1a12']), hw: '#b87333' }),
+  'Biome: Moon': T('#9a9a96', '#5e5e5c', '#2a2a2c', '#7a7a78', { pf: FIN.matte, pc: CM(0, ['#9a9a96', '#6e6e6c', '#b4b4b0', '#3a3a3a'], 2.2), cc: CM(0, ['#7a7a78', '#6e6e6c', '#b4b4b0', '#3a3a3a'], 2.2) }),
+  'Biome: Desert Oasis': T('#d0b47a', '#5a7a3a', '#3a8aa8', '#c4a870', { pf: FIN.matte, pc: CM(1, ['#d0b47a', '#5a7a3a', '#e4cc96', '#8a6a44']), cc: CM(1, ['#c4a870', '#5a7a3a', '#e4cc96', '#8a6a44']) }),
+  'Biome: Bleak Oasis': T('#8a8884', '#5a5856', '#1e1e1e', '#a4a29e', { pf: FIN.matte, pc: CM(1, ['#8a8884', '#5a5856', '#a4a29e', '#3a3836']), cc: CM(1, ['#a4a29e', '#5a5856', '#a4a29e', '#3a3836']) }),
+  'Biome: Icy Glaciers': T('#e6eaee', '#a8b8c8', '#3a4a5a', '#d0d6dc', { pf: FIN.matte, pc: CM(1, ['#e6eaee', '#c4ccd6', '#ffffff', '#8a9aaa']), cc: CM(1, ['#d0d6dc', '#c4ccd6', '#ffffff', '#8a9aaa']) }),
+  'Biome: Boneyard': T('#6a6e70', '#d8dcde', '#a8642a', '#5a5a4a', { pf: FIN.matte, pc: CM(1, ['#6a6e70', '#d8dcde', '#4a4e50', '#8a7a5a']), cc: CM(1, ['#5a5a4a', '#d8dcde', '#4a4e50', '#8a7a5a']) }),
+  'Biome: Cyberstan Megafactory': T('#3a3c40', '#1e2022', '#d8281a', '#5a5048', { pf: FIN.satin, pc: CM(1, ['#3a3c40', '#1e2022', '#9a9ea2', '#5a5048']), cc: CM(1, ['#5a5048', '#1e2022', '#9a9ea2', '#5a5048']), glow: '#ff2a1a', gv: 0.08 }),
+  'Biome: Basic Swamp': T('#4a5a2e', '#2e3420', '#161a10', '#5a5034', { pf: FIN.matte, pc: CM(3, ['#4a5a2e', '#2e3a1e', '#5a4a30', '#161a10']), cc: CM(3, ['#5a5034', '#2e3a1e', '#5a4a30', '#161a10']) }),
+  'Biome: Haunted Swamp': T('#3e4432', '#1c2018', '#9aa88a', '#4a4636', { pf: FIN.matte, pc: CM(3, ['#3e4432', '#262c1e', '#5a5a44', '#101410']), cc: CM(3, ['#4a4636', '#262c1e', '#5a5a44', '#101410']) }),
+  'Biome: Deciduous Forest': T('#4e6a34', '#3a2e20', '#c8b05a', '#6a7a48', { pf: FIN.matte, pc: CM(3, ['#4e6a34', '#2e4020', '#6a5232', '#14180e']), cc: CM(3, ['#6a7a48', '#2e4020', '#6a5232', '#14180e']) }),
+  'Biome: Autumn Forest': T('#b0582a', '#7a2e1a', '#3a2a1e', '#c8902e', { pf: FIN.matte, pc: CM(3, ['#b0582a', '#7a2e1a', '#c8902e', '#2a1a10']), cc: CM(3, ['#c8902e', '#7a2e1a', '#c8902e', '#2a1a10']) }),
+  'Biome: Crimson Forest': T('#8e1f26', '#6a6468', '#d4c8dc', '#5a2a2e', { pf: FIN.matte, pc: CM(3, ['#8e1f26', '#5a1418', '#c8bccc', '#2a1a1e']), cc: CM(3, ['#5a2a2e', '#5a1418', '#c8bccc', '#2a1a1e']) }),
+  'Biome: Coniferous (unreleased)': T('#2e4a34', '#4a3a2a', '#1a1e1a', '#5a6a5a', { pf: FIN.matte, pc: CM(3, ['#2e4a34', '#1a2a1e', '#4a3a2a', '#0e140e']), cc: CM(3, ['#5a6a5a', '#1a2a1e', '#4a3a2a', '#0e140e']) }),
+  'Biome: Hive World': T('#b8962e', '#5a3a1a', '#8a2a1a', '#a8823a', { pf: FIN.rough, pc: CM(1, ['#b8962e', '#7a5a20', '#d0b04a', '#3a2410']), cc: CM(1, ['#a8823a', '#7a5a20', '#d0b04a', '#3a2410']) }),
+  'Biome: Magma Desert': T('#4a4846', '#262422', '#ff5a14', '#5a5652', { pf: FIN.rough, pc: CM(0, ['#4a4846', '#2a2826', '#6a6662', '#141210'], 2.2), cc: CM(0, ['#5a5652', '#2a2826', '#6a6662', '#141210'], 2.2), glow: '#ff5a14', gv: 0.12 }),
+  'Biome: Void Source Forest': T('#1e2650', '#0c0e1c', '#38e8ff', '#2a2e4a', { pf: FIN.satin, pc: CM(3, ['#1e2650', '#0c0e1c', '#3a4a8a', '#6a1428']), cc: CM(3, ['#2a2e4a', '#0c0e1c', '#3a4a8a', '#6a1428']), glow: '#38e8ff', gv: 0.1 }),
+  'Biome: Super Earth Metropolis': PRESETS['Super Earth Standard'],
+});
+
+// the presets as <option>s: the themes, then the planet biomes in a group of their own (shown without "Biome: ")
+export function presetOptions(value = n => n) {
+  const all = Object.keys(PRESETS), biome = n => n.startsWith('Biome: ');
+  return `<optgroup label="Themes">${all.filter(n => !biome(n)).map(n => `<option value="${esc(value(n))}">${esc(n)}</option>`).join('')}</optgroup>
+    <optgroup label="Planet biomes">${all.filter(biome).map(n => `<option value="${esc(value(n))}">${esc(n.slice(7))}</option>`).join('')}</optgroup>`;
+}
 const unhexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 // a preset's look of a role over a row on screen: its color (paint, secondary, wear), its fields, its camo
 export function presetRow(row, L) {
@@ -271,7 +313,7 @@ export function presetTheme(name, metal = null) {
     else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, role ?? k);
   };
   walk(P, null);
-  return { name, colors, looksFor: (zs, rowOf) => {
+  return { name: name.replace(/^Biome: /, ''), colors, looksFor: (zs, rowOf) => {
     const biggest = n => zs.filter(x => x.role === n && x.w === W).sort((a, b) => b.cov - a.cov)[0];
     const any = biggest('primary') ?? biggest('secondary') ?? zs.find(x => x.w === W && x.role !== 'unused');
     const looks = {};
@@ -320,7 +362,7 @@ export async function themeDialog(app) {
   const shownGroups = new Set((data.items ?? []).filter(it => app.current().includes(it.value)).map(it => it.group));
   const close = openSide(`<h3>Theme everything like this</h3>
     <div class="row"><label>Preset <select id="thPreset" title="A ready-made theme: each role's look from it (over the item's own zones); or your own, from the zones below">
-      <option value="">(my own: the zones below)</option>${Object.keys(PRESETS).map(n => `<option>${esc(n)}</option>`).join('')}</select></label>
+      <option value="">(my own: the zones below)</option>${presetOptions()}</select></label>
       <button id="thPreview" title="Show the theme on the item on screen, without changing anything">Preview on screen</button>
       <button id="thShow" title="Showcase mode with these looks: key art, live in the viewport (three Helldivers with their weapons, gear and vehicles); move the camera, tune the look, save a 4K image (nothing in the mod changes)">Showcase</button></div>
 
