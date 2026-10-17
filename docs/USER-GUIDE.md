@@ -23,6 +23,9 @@ list of items is a small table of ids whose names come from your install (see **
    its own (the start page says when one is taken; an imported project or mod with a taken name gets "name 2"). An armor can start **with its
    matching helmet** (the box under the list); any other helmet can be added or shown later. Some capes share a
    name; the list shows each one with its cape model.
+   **SEAF** soldiers change camouflage by planet: the soldier, the medic and their weapons (the SEAF Rifle, Defender
+   and Machine Gun) are listed in each look: standard, **Jungle camo**, **Desert camo** and **Arctic camo** (the
+   game picks one per planet; each look is a LUT of its own, so recolor every look you want changed).
    Items past SEAF are everything else in the game with colors of its own. The game doesn't name them, so their
    names come from file paths, or from the model's own name inside its file. **Armor pieces** are Helldiver armor
    parts that no armor set uses. **Unnamed** holds armor, helmets and capes the game has no name for (likely

@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -133,16 +134,24 @@ func (s *Server) sheetGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	blob, err := s.assetsOf().TextureBlob(h)
-	if err != nil || len(blob) < 20 || binary.LittleEndian.Uint32(blob[16:]) != 0 {
+	if err != nil || len(blob) < 20 {
 		fail(w, 404, fmt.Errorf("texture %s: no RGBA image", lut.HashString(h)))
 		return
 	}
-	tw, th := int(binary.LittleEndian.Uint32(blob[4:])), int(binary.LittleEndian.Uint32(blob[8:]))
-	if tw <= 0 || th <= 0 || tw > 1<<14 || th > 1<<16 || len(blob) < 20+tw*th*4 { // (a cut-short cache file)
-		fail(w, 404, fmt.Errorf("texture %s: incomplete image data", lut.HashString(h)))
+	tw, th, format := int(binary.LittleEndian.Uint32(blob[4:])), int(binary.LittleEndian.Uint32(blob[8:])), binary.LittleEndian.Uint32(blob[16:])
+	per := map[uint32]int{0: 4, 1: 16}[format]                                                  // (bytes per texel: RGBA8, or 4 floats: a half-float texture, like the 4 x 4 design three capes share)
+	if per == 0 || tw <= 0 || th <= 0 || tw > 1<<14 || th > 1<<16 || len(blob) < 20+tw*th*per { // (a cut-short cache file)
+		fail(w, 404, fmt.Errorf("texture %s: no RGBA image", lut.HashString(h)))
 		return
 	}
 	img := &image.NRGBA{Pix: blob[20 : 20+tw*th*4], Stride: tw * 4, Rect: image.Rect(0, 0, tw, th)}
+	if format == 1 { // floats: to 8 bits (0-1 clamped)
+		img = image.NewNRGBA(image.Rect(0, 0, tw, th))
+		for i := range img.Pix {
+			v := math.Float32frombits(binary.LittleEndian.Uint32(blob[20+4*i:]))
+			img.Pix[i] = uint8(min(max(v, 0), 1)*255 + 0.5)
+		}
+	}
 	var out bytes.Buffer
 	png.Encode(&out, img)
 	w.Header().Set("X-Edited", "0")

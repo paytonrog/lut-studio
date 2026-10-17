@@ -254,11 +254,18 @@ async function themePanel(kind) {
     t.value = 'E2E'; t.dispatchEvent(new Event('input')); l.value = ''; l.dispatchEvent(new Event('input'));
     const c = window.lutstudio.showcase.exportCanvas(3840, 2160), p = c.getContext('2d').getImageData(c.width / 2, c.height * 0.4, 1, 1).data;
     return c.width + 'x' + c.height + ' center ' + [...p].slice(0, 3).join(','); })()`) : '';
+  // the decals themed too (the scene's decal sheets shown recolored), then back
+  const decals = live ? await evaluate(`(async () => {
+    const box = document.getElementById('scDecals'); if (!box || box.disabled) return 'no box';
+    box.checked = true; box.dispatchEvent(new Event('change'));
+    for (let i = 0; i < 300; i++) { const n = window.lutstudio.R.pieces.filter(p => p.decalSheet?.preview).length; if (n) { box.checked = false; box.dispatchEvent(new Event('change')); return 'recolored on ' + n + ' piece(s)'; } await new Promise(r => setTimeout(r, 100)); }
+    return 'none'; })()`) : '';
   await evaluate(`(document.getElementById('scExit')?.click(), 1)`);
   const back = await waitFor(`!window.lutstudio.R.post && window.lutstudio.R.pieces.map(p => p.info.lut).sort().join() === ${JSON.stringify(reviewed)}`, 120000);
   check(`${kind}: theme: showcase live in the viewport, its title and line, a 4K export, the item back on screen after`,
     !!live && /^3840x2160 center /.test(sc || '') && !/center 0,0,0$/.test(sc) && !!back && errors.length === 0,
     `live ${!!live}; ${sc || 'no image'}; back ${!!back}; ${errors.length} page error(s): ${JSON.stringify(errors.slice(0, 3))}`);
+  check(`${kind}: theme: the showcase's decals in the theme's colors`, /^recolored on [1-9]/.test(decals), decals);
   await evaluate(`(document.getElementById('modalClose').click(), 1)`);
   await sleep(500);
   await evaluate(`(() => { const S = window.lutstudio.S; S.look = ${look}; const a = document.getElementById('wearArmor'); a.value = S.look.armor; a.dispatchEvent(new Event('change')); return 1; })()`);

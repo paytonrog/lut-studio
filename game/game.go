@@ -422,8 +422,8 @@ func (idx *Index) Parts() map[string][]Part {
 	return out
 }
 
-// IndexVersion: bump when the index gains data (2: vehicles; 3: Pelican name; 4: vehicle parts; 5: nth arm; 6: standard skins, extra override lists; 7: weapons; 8: weapon slots only; 9: weapon attachments; 10: weapon variants on their base unit; 11: backpacks; 12: SEAF, the Bastion's cannon; 13: no pattern LUT on pieces without a pattern mask; 14: throwables, attachments, stratagems, gear).
-const IndexVersion = 14
+// IndexVersion: bump when the index gains data (2: vehicles; 3: Pelican name; 4: vehicle parts; 5: nth arm; 6: standard skins, extra override lists; 7: weapons; 8: weapon slots only; 9: weapon attachments; 10: weapon variants on their base unit; 11: backpacks; 12: SEAF, the Bastion's cannon; 13: no pattern LUT on pieces without a pattern mask; 14: throwables, attachments, stratagems, gear; 15: SEAF camouflage looks, the SEAF medic and weapons).
+const IndexVersion = 15
 
 // DataDir: the install's archives (tools).
 func (g *Game) DataDir() *stingray.DataDir { return g.data }

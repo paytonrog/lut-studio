@@ -320,6 +320,55 @@ func TestThemeDecals(t *testing.T) {
 	}
 }
 
+// The cape design three capes share (Foesmasher, Drape of Glory, Tyranny's Bane: a 4 x 4 half-float placeholder)
+// opens in the design editor: /api/sheet serves it as an 8-bit PNG (then the editor offers a new design).
+func TestFloatPlaceholderDesign(t *testing.T) {
+	gameDir := os.Getenv("LUTSTUDIO_GAME")
+	if gameDir == "" {
+		t.Skip("LUTSTUDIO_GAME not set")
+	}
+	scratch := t.TempDir()
+	t.Setenv("LUTSTUDIO_CONFIG_DIR", filepath.Join(scratch, "config"))
+	t.Setenv("LUTSTUDIO_CACHE_DIR", filepath.Join(scratch, "cache"))
+	e := &env{out: io.Discard, gameDir: gameDir}
+	idx, err := e.index()
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := e.game()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(scratch, "cape")
+	p, err := project.Create(dir, "Cape")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := &server.Server{Version: "test"}
+	srv.SetGame(g, idx, game.NewAssets(g, filepath.Join(scratch, "assets")), nil)
+	if err := srv.SetProject(dir); err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	r, err := http.Get(ts.URL + "/api/sheet?hash=0xd1114c147542963a&kind=design&variant=" + p.Variants[0].Folder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Body.Close()
+	if r.StatusCode != 200 {
+		b, _ := io.ReadAll(r.Body)
+		t.Fatalf("design: %d %s", r.StatusCode, b)
+	}
+	img, err := png.Decode(r.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b := img.Bounds(); b.Dx() != 4 || b.Dy() != 4 {
+		t.Fatalf("design %v, want 4 x 4", b)
+	}
+}
+
 // Patterns on the real install: the trim look's color goes to every patterned row of the armor's pattern LUTs (column
 // 0's RGB); rows without a pattern (mask layer -1) and the rest of each row stay as the game made them.
 func TestThemePatterns(t *testing.T) {
