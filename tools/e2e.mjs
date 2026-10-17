@@ -243,18 +243,22 @@ async function themePanel(kind) {
   await evaluate(`(document.getElementById('thNext').click(), 1)`);
   const at = await waitFor(`/^1 [/]/.test(document.getElementById('thAt').textContent) && document.getElementById('thAt').textContent`, 60000);
   await sleep(1500);
-  // the Showcase image (a preset on the showcase scene: 4K, drawn in the viewport), then closed: the item back on screen
+  // the Showcase (a preset on the showcase scene, live in the viewport): its title and line, a 4K export, then exited:
+  // the item back on screen
   const reviewed = await evaluate(`window.lutstudio.R.pieces.map(p => p.info.lut).sort().join()`);
   await evaluate(`(() => { const s = document.getElementById('thPreset'); s.value = 'Volcanic'; s.dispatchEvent(new Event('change')); document.getElementById('thShow').click(); return 1; })()`);
-  const sc = await waitFor(`(() => { const b = document.querySelector('.scSave'), c = document.querySelector('.scImg canvas'); if (!b || b.disabled || !c) return '';
-    const p = c.getContext('2d').getImageData(c.width / 2, c.height * 0.4, 1, 1).data; return c.width + 'x' + c.height + ' center ' + [...p].slice(0, 3).join(','); })()`, 300000);
+  const live = await waitFor(`!!document.getElementById('scSave') && !!window.lutstudio.showcase && !!window.lutstudio.R.post`, 300000);
+  await sleep(1500);
   await shot(`${kind}-showcase`);
-  const scTitle = await evaluate(`!!document.querySelector('.scTitle') && !!document.querySelector('.scLine')`);
-  await evaluate(`(document.querySelector('.scClose')?.click(), 1)`);
-  const back = await waitFor(`!document.querySelector('.scImg') && window.lutstudio.R.pieces.map(p => p.info.lut).sort().join() === ${JSON.stringify(reviewed)}`, 120000);
-  check(`${kind}: theme: showcase image (4K), its title and line editable, the item back on screen after`,
-    /^3840x2160 center /.test(sc || '') && !/center 0,0,0$/.test(sc) && scTitle && !!back && errors.length === 0,
-    `${sc || 'no image'}; title fields ${scTitle}; back ${!!back}; ${errors.length} page error(s): ${JSON.stringify(errors.slice(0, 3))}`);
+  const sc = live ? await evaluate(`(() => { const t = document.getElementById('scTitle'), l = document.getElementById('scLine');
+    t.value = 'E2E'; t.dispatchEvent(new Event('input')); l.value = ''; l.dispatchEvent(new Event('input'));
+    const c = window.lutstudio.showcase.exportCanvas(3840, 2160), p = c.getContext('2d').getImageData(c.width / 2, c.height * 0.4, 1, 1).data;
+    return c.width + 'x' + c.height + ' center ' + [...p].slice(0, 3).join(','); })()`) : '';
+  await evaluate(`(document.getElementById('scExit')?.click(), 1)`);
+  const back = await waitFor(`!window.lutstudio.R.post && window.lutstudio.R.pieces.map(p => p.info.lut).sort().join() === ${JSON.stringify(reviewed)}`, 120000);
+  check(`${kind}: theme: showcase live in the viewport, its title and line, a 4K export, the item back on screen after`,
+    !!live && /^3840x2160 center /.test(sc || '') && !/center 0,0,0$/.test(sc) && !!back && errors.length === 0,
+    `live ${!!live}; ${sc || 'no image'}; back ${!!back}; ${errors.length} page error(s): ${JSON.stringify(errors.slice(0, 3))}`);
   await evaluate(`(document.getElementById('modalClose').click(), 1)`);
   await sleep(500);
   await evaluate(`(() => { const S = window.lutstudio.S; S.look = ${look}; const a = document.getElementById('wearArmor'); a.value = S.look.armor; a.dispatchEvent(new Event('change')); return 1; })()`);

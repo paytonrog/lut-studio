@@ -89,13 +89,16 @@ game update: a big part left in a normal military color is metal (hardware), a r
 
 ## Theme preview scene
 
-The Theme panel's **Showcase image** (`server/web/scene.js`) draws a theme as key art: three Helldivers in the
-Armory's warbond poses holding their weapons, the small gear at their feet, an exosuit, an FRV and a beacon behind, in
-the Armory menu lighting with a rim light in the theme's color, composited on a 2D canvas at 3840 x 2160 (backlight,
-haze, floor reflections, contact shadows, embers, bloom, the tone and grain, a vignette, the editable title and line).
-The e2e run checks it once on the armor (a preset, a 4K image that isn't black, the title fields, the item back on
-screen after). `tools/themescene.mjs` drives the same scene headless to render many presets (about 2.5 s each at 4K
-once the scene is built):
+The Theme panel's **Showcase** (`server/web/scene.js` builds the scene, `server/web/showcase.js` draws it) turns the
+viewport into live key art: three Helldivers in the Armory's warbond poses holding their weapons, the small gear at
+their feet, an exosuit, an FRV and a beacon behind, in the Armory menu lighting with a rim light in the theme's color.
+Each frame the renderer draws the scene into a target of its own, upside down for the floor's reflection and from
+under the floor for the contact shadows; GPU passes add the backdrop (a glowing disc behind the squad, bokeh), the
+floor, haze, the glow around the squad, sparks, bloom, the tone and grain, the vignette and the title. Its sliders
+change those live; the camera moves as ever; Save 4K PNG draws the same frame at 3840 x 2160. The e2e run checks it
+once on the armor (live in the viewport, the title and line, a 4K export that isn't black, the item back on screen
+after). `tools/themescene.mjs` drives the same scene headless to render many presets (about 2.5 s each at 4K once
+the scene is built):
 
     node tools/webserve.mjs 8790
     node tools/themescene.mjs <out dir> [preset…] [--no-title] [--line=text] [--size=WxH] [--weapons=A,B,C] [--pose=P,Q,R] [--scene=file.json]

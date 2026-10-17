@@ -5,7 +5,7 @@
 
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { ROLE_INFO } from './roles.js';
-import { buildScene } from './scene.js';
+import { buildScene, LOOK } from './scene.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft'];
 const DEFAULT_GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks'];   // (ticked when the item on screen is none of them)
@@ -321,7 +321,8 @@ export async function themeDialog(app) {
     <div class="row"><label>Preset <select id="thPreset" title="A ready-made theme: each role's look from it (over the item's own zones); or your own, from the zones below">
       <option value="">(my own: the zones below)</option>${Object.keys(PRESETS).map(n => `<option>${esc(n)}</option>`).join('')}</select></label>
       <button id="thPreview" title="Show the theme on the item on screen, without changing anything">Preview on screen</button>
-      <button id="thShow" title="The theme as key art: three Helldivers with their weapons, gear and vehicles, in the Armory's light (a 4K image to save; nothing in the mod changes)">Showcase image</button></div>
+      <button id="thShow" title="The theme as key art, live in the viewport: three Helldivers with their weapons, gear and vehicles, in the Armory's light; move the camera, tune the look, save a 4K image (nothing in the mod changes)">Showcase</button></div>
+    <div id="scPanel" hidden></div>
     <p class="hint">Each role's look comes from a zone of the item on screen (all its settings, not only the color);
       a role can also get a camo pattern over it.
       Every zone of that role on the items you choose gets it, in this variant (${esc(app.variant)}). Items not in
@@ -432,6 +433,7 @@ export async function themeDialog(app) {
     if (P?.hardware) { $('thMetal').checked = true; $('thMetalColor').value = P.hardware.c; }
     else if (P) $('thMetal').checked = false;
     if (previewing) preview();
+    rethemeShowcase();
   };
   // ---- the theme on the item on screen, without saving: its LUTs in the looks (shown under keys of their own)
   let previewing = null;   // piece -> its LUT keys before
@@ -472,8 +474,8 @@ export async function themeDialog(app) {
   }
   $('thPreview').onclick = () => (previewing ? (unpreview(), info('')) : preview());
 
-  // ---- the showcase image: the theme on the scene (scene.js), in the viewport, saved as a 4K PNG
-  let show = null;   // {scene, box, theme}
+  // ---- the showcase: the theme on the scene (scene.js), live in the viewport, saved as a 4K PNG
+  let show = null;   // {scene, theme}
   // the looks per item of the scene: a preset's over each item's own zones (as the dev tool), or the looks here on all
   const showTheme = () => {
     const name = $('thPreset').value;
@@ -483,24 +485,68 @@ export async function themeDialog(app) {
     if (!Object.keys(looks).length) return { error: "Pick a preset or at least one role's look." };
     return { name: 'My theme', looksFor: () => looks, colors: Object.entries(looks).map(([n, row]) => [n, hex(row.slice(0, 3))]) };
   };
+  // the showcase's settings (the sliders), remembered in this browser
+  const SLIDERS = [['bg', 'Background', 0, 3], ['glow', 'Glow', 0, 3], ['glowSize', 'Glow size', 0.3, 2.5], ['rim', 'Rim light', 0, 4],
+    ['exposure', 'Exposure', 0.3, 2.5], ['reflect', 'Reflections', 0, 3], ['shadow', 'Floor shadows', 0, 2], ['haze', 'Haze', 0, 3],
+    ['aura', 'Aura', 0, 3], ['bloom', 'Bloom', 0, 3], ['embers', 'Embers', 0, 4], ['grain', 'Grain', 0, 4], ['vignette', 'Vignette', 0, 1.25],
+    ['punch', 'Punch', 0, 1], ['title', 'Text size', 0.4, 2]];
+  const savedLook = () => { try { return { ...LOOK, ...JSON.parse(localStorage.getItem('lutstudio.showcaseLook') ?? '{}') }; } catch { return { ...LOOK }; } };
+  const keepLook = look => { try { localStorage.setItem('lutstudio.showcaseLook', JSON.stringify(look)); } catch { } };
   function closeShowcase() {
     if (!show) return;
-    const s = show; show = null;
-    s.box?.remove();
+    const s = show; show = null; window.lutstudio.showcase = null;
+    if ($('scPanel')) { $('scPanel').hidden = true; $('scPanel').innerHTML = ''; }
     s.scene?.dispose().catch(e => console.warn('showcase', e));
-    if ($('thShow')) $('thShow').disabled = false;
+    if ($('thShow')) { $('thShow').disabled = false; $('thShow').textContent = 'Showcase'; }
   }
-  const drawShowcase = async () => {
-    const { box, scene } = show, t0 = performance.now();
-    box.querySelector('.scImg').innerHTML = '';
-    box.querySelector('.scMsg').textContent = 'Drawing… (4K: a few seconds)';
-    const c = await scene.render({ ...show.theme, title: box.querySelector('.scTitle').value.trim(), line: box.querySelector('.scLine').value.trim() }, [3840, 2160]);
-    if (show?.box !== box) return;
-    c.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto';
-    box.querySelector('.scImg').append(c);
-    box.querySelector('.scMsg').textContent = scene.notes.join('; ');
-    show.canvas = c;
-    app.track('showcase rendered', { preset: show.theme.name, ms: Math.round(performance.now() - t0) });
+  // the theme on the scene again (the preset or the looks changed)
+  const rethemeShowcase = async () => {
+    if (!show?.scene) return;
+    const t = showTheme();
+    if (t.error) return info(t.error);
+    const title = $('scTitle');
+    if (title && title.value === show.theme.name) { title.value = t.name; show.scene.setText(t.name, $('scLine').value); }
+    show.theme = t;
+    await show.scene.setTheme(t);
+  };
+  const showPanel = () => {
+    const look = show.scene.showcase.look;
+    $('scPanel').innerHTML = `<h3>Showcase</h3>
+      <p class="hint">The scene is live: orbit, pan and zoom in the viewport (the frame is the image's). Change the preset above to see another theme.</p>
+      <div class="row"><label class="grow">Title <input id="scTitle" value="${esc(show.theme.name)}"></label></div>
+      <div class="row"><label class="grow">Line <input id="scLine" value="LUT Studio theme"></label></div>
+      <div class="row"><label>Light <input type="color" id="scColor" value="${look.color || show.scene.showcase.accent}"></label>
+        <label class="check"><input type="checkbox" id="scAuto" ${look.color ? '' : 'checked'}> the theme's</label></div>
+      ${SLIDERS.map(([k, t, lo, hi]) => `<div class="row"><label class="grow">${t}</label>
+        <input type="range" data-sk="${k}" min="${lo}" max="${hi}" step="0.01" value="${look[k]}" style="flex:2">
+        <span class="hint" data-sv="${k}" style="width:3em;text-align:right">${(+look[k]).toFixed(2)}</span></div>`).join('')}
+      <div class="row"><button id="scCam">Reset camera</button><button id="scReset">Reset look</button></div>
+      <div class="row"><button id="scSave" class="primary">Save 4K PNG</button><button id="scExit">Exit showcase</button></div>
+      <p class="hint" id="scMsg">${esc(show.scene.notes.join('; '))}</p>`;
+    const text = () => show.scene.setText($('scTitle').value.trim(), $('scLine').value.trim());
+    $('scTitle').oninput = text; $('scLine').oninput = text;
+    const set = patch => { show.scene.setLook(patch); keepLook(show.scene.showcase.look); };
+    document.querySelectorAll('#scPanel input[data-sk]').forEach(r => (r.oninput = () => {
+      set({ [r.dataset.sk]: +r.value }); document.querySelector(`#scPanel [data-sv="${r.dataset.sk}"]`).textContent = (+r.value).toFixed(2);
+    }));
+    $('scColor').oninput = () => { $('scAuto').checked = false; set({ color: $('scColor').value }); };
+    $('scAuto').onchange = () => set({ color: $('scAuto').checked ? '' : $('scColor').value });
+    $('scCam').onclick = () => show.scene.resetCamera();
+    $('scReset').onclick = () => { set({ ...LOOK }); showPanel(); };
+    $('scExit').onclick = closeShowcase;
+    $('scSave').onclick = async () => {
+      $('scSave').disabled = true; $('scMsg').textContent = 'Saving the 4K image…';
+      await new Promise(r => setTimeout(r, 30));
+      try {
+        const c = show.scene.exportCanvas(3840, 2160), name = ($('scTitle').value.trim() || 'theme').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `lut-studio-${name}-4k.png`;
+        document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+        $('scMsg').textContent = 'Saved.';
+        app.track('showcase saved', { preset: show.theme.name });
+      } catch (e) { $('scMsg').textContent = e.message; }
+      $('scSave').disabled = false;
+    };
   };
   $('thShow').onclick = async () => {
     if (show) return;
@@ -508,44 +554,24 @@ export async function themeDialog(app) {
     if (theme.error) return info(theme.error);
     unpreview();
     $('thShow').disabled = true;
-    // the box over the viewport: the scene is built in the viewport behind it (seen while it loads), then the image
-    const host = R.gl.canvas.parentElement;
-    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
-    const box = document.createElement('div');
-    box.style.cssText = 'position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;pointer-events:none';
-    box.innerHTML = `<div class="row" style="pointer-events:auto;background:rgba(10,12,14,0.85);padding:6px 8px;gap:6px;align-items:center">
-        <label title="The big line at the bottom (empty: none)">Title <input class="scTitle" value="${esc(theme.name)}" size="18"></label>
-        <label title="The small line over it (empty: none)">Line <input class="scLine" value="LUT Studio theme" size="16"></label>
-        <button class="scRedraw" disabled>Redraw</button><button class="scSave primary" disabled>Save 4K PNG</button>
-        <button class="scClose">Close</button><span class="hint scMsg grow">Building the scene… (the items load one by one)</span></div>
-      <div class="scImg" style="flex:1;min-height:0;display:flex;padding:8px"></div>`;
-    host.append(box);
-    show = { box, theme };
-    box.querySelector('.scClose').onclick = closeShowcase;
-    box.querySelector('.scRedraw').onclick = async () => {
-      show.theme = showTheme().error ? show.theme : showTheme();
-      box.querySelector('.scRedraw').disabled = box.querySelector('.scSave').disabled = true;
-      try { await drawShowcase(); } catch (e) { box.querySelector('.scMsg').textContent = e.message; }
-      if (show?.box === box) box.querySelector('.scRedraw').disabled = box.querySelector('.scSave').disabled = false;
-    };
-    for (const f of box.querySelectorAll('.scTitle, .scLine')) f.onkeydown = e => { if (e.key === 'Enter' && !box.querySelector('.scRedraw').disabled) box.querySelector('.scRedraw').click(); };
-    box.querySelector('.scSave').onclick = () => {
-      const name = (box.querySelector('.scTitle').value.trim() || 'theme').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      show.canvas?.toBlob(b => {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `lut-studio-${name}-4k.png`;
-        document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-      }, 'image/png');
-      app.track('showcase saved', { preset: show.theme.name });
-    };
+    const panel = $('scPanel');
+    panel.hidden = false; panel.innerHTML = '<h3>Showcase</h3><p class="hint" id="scMsg">Building the scene… (the items load one by one)</p>';
+    show = { theme };
+    const mine = show, t0 = performance.now();
     try {
-      const scene = await buildScene(app.scene, { progress: m => { if (show?.box === box) box.querySelector('.scMsg').textContent = m; } });
-      if (show?.box !== box) { await scene.dispose(); return; }   // (closed while it loaded)
+      const scene = await buildScene(app.scene, { progress: m => { if (show === mine && $('scMsg') && m) $('scMsg').textContent = m; } });
+      if (show !== mine) { await scene.dispose(); return; }   // (closed while it loaded)
       show.scene = scene;
-      await drawShowcase();
-      box.querySelector('.scRedraw').disabled = box.querySelector('.scSave').disabled = false;
-    } catch (e) { console.warn(e); if (show?.box === box) box.querySelector('.scMsg').textContent = 'Showcase: ' + e.message; }
+      window.lutstudio.showcase = scene;   // (for headless checks: e2e)
+      scene.setLook(savedLook());
+      scene.setText(theme.name, 'LUT Studio theme');
+      await scene.setTheme(theme);
+      if (show !== mine) return;
+      showPanel();
+      $('thShow').textContent = 'Showcase on';
+      app.track('showcase opened', { preset: theme.name, ms: Math.round(performance.now() - t0) });
+    } catch (e) { console.warn(e); if (show === mine && $('scMsg')) $('scMsg').textContent = 'Showcase: ' + e.message; }
   };
-
   $('thApply').onclick = async () => {
     await app.saveAll();   // (edits made while the panel is open: saved before the theme reloads the LUTs)
     const { looks, error } = lookRows();

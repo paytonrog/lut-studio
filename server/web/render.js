@@ -942,8 +942,10 @@ export class Renderer {
 
   // draws the scene; pick: {x, y} in canvas pixels -> returns {piece, zone} or null
   draw(time = 0, pick = null, size = null) {
-    const gl = this.gl, cv = this.canvas;
-    const W = size ? size[0] : cv.width, H = size ? size[1] : cv.height;
+    // the showcase (showcase.js): its passes draw the scene through here (into its own targets) and finish the frame
+    if (!pick && this.post && !this.postInner) return this.post.draw(this, time, size);
+    const gl = this.gl, cv = this.canvas, tg = !pick ? this.target : null;   // (target: {fbo, w, h}, an offscreen one)
+    const W = tg ? tg.w : size ? size[0] : cv.width, H = tg ? tg.h : size ? size[1] : cv.height;
     const m = this.matrices(W / H);
     const { vp, inv } = m, eye = this.eyeOverride ?? m.eye;
     const e = this.env;
@@ -966,7 +968,7 @@ export class Renderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
-    }
+    } else if (tg) gl.bindFramebuffer(gl.FRAMEBUFFER, tg.fbo);
     gl.viewport(0, 0, W, H);
     gl.enable(gl.DEPTH_TEST);
     const bd = Array.isArray(e.backdrop) ? e.backdrop : [0, 0, 0];   // (backdrop 'black': the showroom's black box; or a color)
@@ -995,6 +997,7 @@ export class Renderer {
     gl.uniform3fv(u.uSkyZenith, e.zenith); gl.uniform3fv(u.uSkyHorizon, e.horizon); gl.uniform3fv(u.uGround, e.ground);
     gl.uniform1f(u.uExposure, e.exposure); gl.uniform1f(u.uEmissiveScale, e.emissive ?? 1);
     gl.uniform1i(u.uFlashlight, e.flashlight ? 1 : 0);
+    gl.uniform1i(u.uMirror, this.mirror && !pick ? 1 : 0);
     // the side lights: around the model relative to the camera (0 deg = from the camera, 90 = its right, 270 = its
     // left), at their height (el), so they stay on the same side of the screen as the view turns
     const t = this.cam.target, cd = norm([eye[0] - t[0], 0, eye[2] - t[2]]), rd = [cd[2], 0, -cd[0]];

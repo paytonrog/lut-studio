@@ -1,15 +1,17 @@
-// The showcase scene: a theme as key art. Three Helldivers in the Armory's warbond poses holding their weapons, the
-// small gear at their feet, an exosuit, an FRV and a beacon behind, in the game's Armory menu lighting with a rim
-// light in the theme's color; drawn in layers (behind, the squad, in front) and item by item, then composited on a 2D
-// canvas: a glowing disc behind the squad, the back hazed, floor reflections and contact shadows, a glow around the
-// squad, embers, bloom, the tone and grain, a vignette and the theme's name. Used by the Theme panel's Showcase image
-// and by tools/themescene.mjs (window.lutstudio.scene).
+// The showcase scene: a theme as key art, live in the viewport. Three Helldivers in the Armory's warbond poses holding
+// their weapons, the small gear at their feet, an exosuit, an FRV and a beacon behind, in the game's Armory menu
+// lighting with a rim light in the theme's color; showcase.js draws the key-art look around it each frame (the
+// backdrop, the floor's reflection and shadows, haze, glow, bloom, the tone, the title). Used by the Theme panel's
+// Showcase and by tools/themescene.mjs (window.lutstudio.scene).
 //
 // buildScene(app, opts) shows each item in the editor one by one, keeps its pieces and places them (on the ground,
-// at its spot, turned; Helldivers posed, weapons in their hands); scene.render(theme, size) draws a theme on it;
-// scene.dispose() puts the editor back as it was. app: { R, api, kits() (the item list), poses(), clip(hash),
-// showItem(value), statusText(), setEnv(name) -> previous, snapshot() -> state, restore(state) }.
+// at its spot, turned; Helldivers posed, weapons in their hands), then turns the showcase on. The scene it returns:
+// setTheme(theme), setLook(settings), setText(title, line), resetCamera(), exportCanvas(w, h) (the frame as it is
+// on screen, at that size), render(theme, size) (a theme, then its export), dispose() (the editor back as it was).
+// app: { R, api, kits() (the item list), poses(), clip(hash), showItem(value), statusText(), setEnv(name) ->
+// previous, snapshot() -> state, restore(state) }.
 import { poseSkeleton, M4 } from './render.js';
+import { Showcase, LOOK, tone8 } from './showcase.js';
 
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
 // [x, z], its lowest point to the ground (lift: above it); yaw turns it about the vertical, pitch about the camera's
@@ -30,7 +32,7 @@ export const SCENE = [
   { group: 'Weapons', name: 'P-2 Peacemaker', at: [-0.8, -0.95], yaw: -1.9, layer: 'front' },
   { group: 'Equipment', name: 'Throwable: Frag Grenade', at: [0.45, -1.05], yaw: 0, layer: 'front' },
 ];
-// the camera (fov: vertical, of a 16:9 frame)
+// the camera (fov: vertical, of the 16:9 frame)
 export const CAM = { pitch: -0.05, fov: 0.5, target: [0, 0.78, 0.35], dist: 7.0 };
 const ENV = 'game:Armory (menu)';
 const RIM = 3;                  // the rim lights' strength
@@ -123,29 +125,51 @@ export async function buildScene(app, opts = {}) {
   }
   R.pieces = items.flatMap(s => s.pieces); R.pose = null;
   const prevEnv = await app.setEnv(ENV);
-  await sleep(800);
-  const baseExposure = R.env.exposure;
-  let n = 0;
-  return {
-    notes, items,
-    // a theme drawn on the scene: { title, line (the small one over it), looksFor(zones, rowOf) -> {role: LUT row},
-    // colors: [[role, hex]] } at
-    // size [w, h] (16:9). Returns a canvas.
-    async render(theme, size = [3840, 2160]) {
+  await sleep(500);
+  const baseExposure = R.env.exposure, sc = new Showcase(R);
+  // the glow behind the squad, the pool of light at its feet (world: x is the scene's mirrored)
+  const squad = scene.filter(it => it.group === 'Armor');
+  const cx = squad.length ? -squad.reduce((a, it) => a + it.at[0], 0) / squad.length : 0, cz = squad.length ? squad.reduce((a, it) => a + it.at[1], 0) / squad.length : 0;
+  sc.anchor = [cx, 1.25, cz + 1.4]; sc.floorC = [cx, 0, cz];
+  const camera = () => { const c = { ...CAM, ...opts.cam }; Object.assign(R.cam, { yaw: Math.PI, pitch: c.pitch, fov: c.fov, shiftX: 0, target: [...c.target], dist: c.dist }); };
+  camera();
+  R.post = sc;
+  let n = 0, auto = 1, theme = null;
+  const rimLight = () => {
+    const lin = hexRGB(sc.look.color || sc.accent).map(c => Math.pow(c / 255, 2.2)), top = Math.max(...lin, 1e-3), I = RIM * sc.look.rim * (0.35 + 0.65 * sc.sat);
+    R.rim = [{ on: true, az: 200, el: 22, color: lin.map(c => c / top), intensity: I }, { on: true, az: 160, el: 22, color: lin.map(c => c / top), intensity: I }];
+  };
+  const out = {
+    notes, items, showcase: sc,
+    // a theme on the scene: { name, looksFor(zones, rowOf) -> {role: LUT row}, colors: [[role, hex]] }: the items'
+    // LUTs, the light's color, the exposure (lowered while the squad's lit parts would clip: a white or pastel theme)
+    async setTheme(t) {
+      theme = t;
       say('Theming…');
-      await themeItems(app, items, theme, 'sc' + n++ + ':');
-      const pal = palette(theme.colors);
-      const lin = hexRGB(pal.accent).map(c => Math.pow(c / 255, 2.2)), top = Math.max(...lin, 1e-3), I = RIM * (0.35 + 0.65 * pal.sat);
-      R.rim = [{ on: true, az: 200, el: 22, color: lin.map(c => c / top), intensity: I }, { on: true, az: 160, el: 22, color: lin.map(c => c / top), intensity: I }];
-      const c = { ...CAM, ...opts.cam };
-      R.cam.yaw = Math.PI; R.cam.pitch = c.pitch; R.cam.fov = c.fov; R.cam.shiftX = 0; R.cam.target = [...c.target]; R.cam.dist = c.dist;
-      await sleep(300);   // (the LUTs uploaded)
-      say('Drawing…');
-      const out = compose(R, items, pal, theme.title ?? '', theme.line ?? 'LUT Studio theme', size, baseExposure);
-      R.env.exposure = baseExposure;
-      return out;
+      await themeItems(app, items, t, 'sc' + n++ + ':');
+      const pal = palette(t.colors);
+      sc.accent = pal.accent; sc.text = pal.text; sc.k = pal.k; sc.sat = pal.sat; sc.titleKey = null;
+      rimLight();
+      await sleep(200);   // (the LUTs uploaded)
+      auto = autoExposure(R, items, baseExposure);
+      R.env.exposure = baseExposure * auto * sc.look.exposure;
+      say('');
+    },
+    setLook(look) {
+      Object.assign(sc.look, look); sc.titleKey = null;
+      rimLight();
+      R.env.exposure = baseExposure * auto * sc.look.exposure;
+    },
+    setText(title, line) { sc.title = title ?? ''; sc.line = line ?? ''; },
+    resetCamera: camera,
+    exportCanvas: (w = 3840, h = 2160) => sc.exportCanvas(w, h),
+    async render(t, size = [3840, 2160]) {
+      if (t !== theme) await this.setTheme(t);
+      if (t.title !== undefined || t.line !== undefined) this.setText(t.title, t.line);
+      return sc.exportCanvas(size[0], size[1]);
     },
     async dispose() {
+      R.post = null; sc.dispose();
       R.rim = rim; R.env.exposure = baseExposure;
       Object.assign(R.cam, cam); R.pose = pose;
       R.pieces = items.flatMap(s => s.pieces);   // (freed by the next load)
@@ -153,6 +177,24 @@ export async function buildScene(app, opts = {}) {
       await app.restore(state);
     },
   };
+  return out;
+}
+export { LOOK };
+
+// the exposure (a factor) the squad's lit parts stop clipping at after the tone: its 70th percentile below 236
+function autoExposure(R, items, base) {
+  const want = items.filter(it => it.layer === 'squad').map(it => it.n);
+  let f = 1;
+  for (let i = 0; i < 4; i++) {
+    R.env.exposure = base * f;
+    const px = shot(R, items, want, 480, 270).getContext('2d').getImageData(0, 0, 480, 270).data;
+    const hist = new Uint32Array(256); let on = 0;
+    for (let j = 0; j < px.length; j += 4) if (px[j + 3] > 200) { on++; hist[tone8(Math.max(px[j], px[j + 1], px[j + 2]))]++; }
+    let p70 = 0; for (let v = 0, k = 0; v < 256; v++) { k += hist[v]; if (k >= on * 0.7) { p70 = v; break; } }
+    if (!on || p70 < 236) break;
+    f *= 0.7;
+  }
+  return f;
 }
 
 // a held weapon put in its Helldiver's hands: the weapon's root on the posed avatar's attach_hand_r (as the game links
@@ -273,167 +315,16 @@ export function palette(colors) {
   return { accent: hex(best.h, s, 0.52), text: hex(best.h, s, 0.68), sat: Math.min(1, best.s), k: 1 };
 }
 
-// the tone: a gentle S-curve, then the midtones lifted (as tools/themescene.mjs had it from ImageMagick:
-// -sigmoidal-contrast 1.8x40%, then a 50% grey soft-lit over it), 8-bit in, 8-bit out
-const TONE = Uint8Array.from([0, 2, 4, 6, 8, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 125, 127, 129, 131, 133, 135, 137, 139, 141, 144, 146, 148, 150, 152, 154, 156, 158, 161, 163, 165, 167, 169, 171, 173, 175, 178, 180, 182, 184, 186, 188, 190, 193, 195, 197, 199, 201, 203, 206, 208, 210, 212, 214, 216, 218, 221, 223, 225, 227, 229, 231, 233, 236, 238, 240, 242, 244, 246, 248, 251, 253]);
-const tone = v => (v < TONE.length ? TONE[v] : 255);
-const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
 // some of the scene's items alone (no sky: transparent around them) at w x h -> a 2D canvas
 function shot(R, items, want, w, h) {
-  const cv = R.gl.canvas, keep = [cv.width, cv.height, R.noSky, R.pieces];
-  cv.width = w; cv.height = h; R.noSky = true;
+  const cv = R.gl.canvas, keep = [cv.width, cv.height, R.noSky, R.pieces, R.postInner];
+  cv.width = w; cv.height = h; R.noSky = true; R.postInner = true;   // (the plain scene: not through the showcase)
   R.pieces = items.filter(s => want.includes(s.n)).flatMap(s => s.pieces);
   R.draw(0);
   const out = canvas(w, h);
   out.getContext('2d').drawImage(cv, 0, 0);
-  [cv.width, cv.height, R.noSky, R.pieces] = keep;
-  return out;
-}
-// an item's outline: its box and its footprint (the span of its lowest rows), or null
-function extent(px, w, h) {
-  let x0 = w, x1 = -1, y0 = h, y1 = -1;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; }
-  if (x1 < 0) return null;
-  let f0 = w, f1 = -1;
-  for (let y = Math.max(y0, y1 - Math.max(2, Math.round((y1 - y0) * 0.04))); y <= y1; y++) for (let x = x0; x <= x1; x++) if (px[(y * w + x) * 4 + 3] > 24) { f0 = Math.min(f0, x); f1 = Math.max(f1, x); }
-  return { x0, x1, y0, y1, f0, f1 };
-}
-// a disc blurred by sigma, as a radial gradient (alpha: its strength)
-function softDisc(ctx, x, y, r, sigma, color, alpha) {
-  const [cr, cg, cb] = hexRGB(color), far = r + 3 * sigma, g = ctx.createRadialGradient(0, 0, 0, 0, 0, far);
-  const erfc = z => { const t = 1 / (1 + 0.5 * Math.abs(z)), e = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277))))))))); return z >= 0 ? e : 2 - e; };
-  for (let i = 0; i <= 16; i++) { const d = far * i / 16, a = alpha * 0.5 * erfc((d - r) / (sigma * Math.SQRT2)); g.addColorStop(i / 16, `rgba(${cr},${cg},${cb},${Math.max(0, Math.min(1, a)).toFixed(4)})`); }
-  ctx.save(); ctx.translate(x, y); ctx.fillStyle = g; ctx.fillRect(-far, -far, 2 * far, 2 * far); ctx.restore();
-}
-
-// the composite (see the top), at size [W, H]
-function compose(R, items, pal, title, line, [W, H], baseExposure) {
-  const s = W / 2560, accent = pal.accent, k = pal.k, [ar, ag, ab] = hexRGB(accent);
-  const inLayer = L => items.filter(it => it.layer === L).map(it => it.n);
-  const hw = Math.round(W / 2), hh = Math.round(H / 2);   // (items alone, for reflections and shadows: half size)
-  // exposure: lowered while the squad's lit parts clip after the tone (a white or pastel theme washes out to flat white)
-  let exp = baseExposure;
-  for (let i = 0; i < 4; i++) {
-    R.env.exposure = exp;
-    const px = shot(R, items, inLayer('squad'), hw, hh).getContext('2d').getImageData(0, 0, hw, hh).data;
-    const hist = new Uint32Array(256); let on = 0;
-    for (let j = 0; j < px.length; j += 4) if (px[j + 3] > 200) { on++; hist[tone(Math.max(px[j], px[j + 1], px[j + 2]))]++; }
-    let p70 = 0; for (let v = 0, n = 0; v < 256; v++) { n += hist[v]; if (n >= on * 0.7) { p70 = v; break; } }
-    if (!on || p70 < 236) break;
-    exp *= 0.7;
-  }
-  const layer = {};
-  for (const L of ['back', 'squad', 'front']) layer[L] = shot(R, items, inLayer(L), W, H);
-  // each item: its reflection on the floor (mirrored at its lowest row, fading) and its contact shadow
-  const refl = { back: new ImageData(hw, hh), fore: new ImageData(hw, hh) }, shadows = [];
-  let floor = 0;
-  for (const it of items) {
-    const px = shot(R, items, [it.n], hw, hh).getContext('2d').getImageData(0, 0, hw, hh).data, e = extent(px, hw, hh);
-    if (!e) continue;
-    if (it.layer === 'squad') floor = Math.max(floor, e.y1 * 2);
-    const out = (it.layer === 'back' ? refl.back : refl.fore).data, D = Math.round((e.y1 - e.y0) * 0.45), strength = it.layer === 'back' ? 0.18 : 0.3;
-    for (let r = 1; r <= D && e.y1 + r < hh; r++) {
-      const src = e.y1 - r; if (src < 0) break;
-      const fade = strength * Math.pow(1 - r / D, 1.6);
-      for (let x = e.x0; x <= e.x1; x++) {
-        const si = (src * hw + x) * 4, di = ((e.y1 + r) * hw + x) * 4, a = px[si + 3] / 255 * fade;
-        if (a <= 0) continue;
-        const da = out[di + 3] / 255, oa = a + da * (1 - a);
-        for (let c = 0; c < 3; c++) out[di + c] = Math.round((px[si + c] * a + out[di + c] * da * (1 - a)) / oa);
-        out[di + 3] = Math.round(255 * oa);
-      }
-    }
-    const rx = Math.max(10, (e.f1 - e.f0) / 2 * 1.25) * 2;
-    shadows.push([(e.f0 + e.f1), e.y1 * 2, rx, rx * 0.16 + 6 * s]);
-  }
-  floor ||= Math.round(H * 0.8);
-  const reflCanvas = d => { const c = canvas(hw, hh); c.getContext('2d').putImageData(d, 0, 0); return c; };
-  const out = canvas(W, H), ctx = out.getContext('2d');
-  const over = (img, blur = 0, alpha = 1, op = 'source-over') => {
-    ctx.save(); ctx.globalAlpha = alpha; ctx.globalCompositeOperation = op; if (blur) ctx.filter = `blur(${blur}px)`;
-    ctx.drawImage(img, 0, 0, W, H); ctx.restore();
-  };
-  ctx.fillStyle = '#060709'; ctx.fillRect(0, 0, W, H);
-  // the light behind: a wide soft glow, a brighter core, a hot center; a faint pool of light on the floor
-  const cx = W / 2, cy = H * 0.4;
-  softDisc(ctx, cx, cy, H * 0.55, 160 * s, accent, 0.32 * k);
-  softDisc(ctx, cx, cy, H * 0.3, 70 * s, accent, 0.8 * k);
-  softDisc(ctx, cx, cy, H * 0.15, 80 * s, '#ffffff', 0.45 * k * k);
-  { // (an ellipse blurred alike both ways: drawn small, blurred, scaled up)
-    const q = 4, c = canvas(W / q, H / q), g = c.getContext('2d');
-    g.filter = `blur(${60 * s / q}px)`; g.fillStyle = accent; g.globalAlpha = 0.35;
-    g.beginPath(); g.ellipse(cx / q, floor / q, W * 0.42 / q, H * 0.07 / q, 0, 0, Math.PI * 2); g.fill();
-    ctx.drawImage(c, 0, 0, W, H);
-  }
-  // embers: big soft bokeh, later small sharp sparks, rising in the light (the same for a title every time)
-  const rand = rng([...title].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261));
-  const sparks = [], bokeh = [];
-  for (let i = 0; i < 140; i++) {
-    const x = rand() * W, y = Math.pow(rand(), 0.8) * floor, r = (0.8 + rand() * 2.6) * s, a = 0.25 + rand() * 0.7;
-    sparks.push([x, y, r, a, rand() < 0.3 ? '#fff0dc' : '#' + [ar, ag, ab].map(c => Math.min(255, Math.round(c * 1.25 + 30)).toString(16).padStart(2, '0')).join('')]);
-  }
-  for (let i = 0; i < 26; i++) bokeh.push([rand() * W, rand() * floor * 0.9, (10 + rand() * 34) * s, 0.05 + rand() * 0.12]);
-  ctx.save(); ctx.globalCompositeOperation = 'screen';
-  for (const [x, y, r, a] of bokeh) softDisc(ctx, x, y, r, 8 * s, accent, a);
-  ctx.restore();
-  // the back: its reflection, then it, hazed into the light and a little soft; fog over its feet
-  over(reflCanvas(refl.back), 4 * s);
-  { const c = canvas(W, H), g = c.getContext('2d'); g.drawImage(layer.back, 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = 0.12; g.fillStyle = accent; g.fillRect(0, 0, W, H); over(c, 1.6 * s); }
-  {
-    const top = floor - H * 0.12, bot = floor + H * 0.03, sg = 70 * s, g = ctx.createLinearGradient(0, top - 2 * sg, 0, bot + 2 * sg);
-    const span = bot - top + 4 * sg;
-    for (let i = 0; i <= 12; i++) {
-      const y = top - 2 * sg + span * i / 12, inside = Math.min(1, Math.max(0, (Math.min(y - top, bot - y) / sg + 1) / 2));
-      g.addColorStop(i / 12, `rgba(${ar},${ag},${ab},${(0.16 * inside).toFixed(4)})`);
-    }
-    ctx.fillStyle = g; ctx.fillRect(0, top - 2 * sg, W, span);
-  }
-  // contact shadows, the squad's and the gear's reflections, a glow around the squad (the light bleeding past it)
-  { const c = canvas(W, H), g = c.getContext('2d'); g.fillStyle = 'rgba(0,0,0,0.85)'; for (const [x, y, rx, ry] of shadows) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill(); } over(c, 10 * s); }
-  over(reflCanvas(refl.fore), 3 * s);
-  {
-    const q = 4, c = canvas(W / q, H / q), g = c.getContext('2d');
-    g.filter = `blur(${28 * s / q}px)`; g.drawImage(layer.squad, 0, 0, W / q, H / q); g.filter = 'none';
-    g.globalCompositeOperation = 'source-in'; g.fillStyle = accent; g.fillRect(0, 0, W / q, H / q);
-    over(c, 0, 0.45 * k, 'screen');
-  }
-  over(layer.squad); over(layer.front);
-  ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.filter = `blur(${0.7 * s}px)`;
-  for (const [x, y, r, a, c] of sparks) { ctx.globalAlpha = a; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
-  ctx.restore();
-  // bloom: the bright parts (70-100%), blurred, at 45%, screened (small: a quarter size)
-  {
-    const q = 4, w = W / q, h = H / q, c = canvas(w, h), g = c.getContext('2d');
-    g.drawImage(out, 0, 0, w, h);
-    const d = g.getImageData(0, 0, w, h), p = d.data;
-    for (let i = 0; i < p.length; i += 4) for (let c2 = 0; c2 < 3; c2++) p[i + c2] = Math.max(0, (p[i + c2] - 178.5) / 76.5) * 255 * 0.45;
-    g.putImageData(d, 0, 0);
-    const b = canvas(w, h), bg = b.getContext('2d'); bg.filter = `blur(${22 * s / q}px)`; bg.drawImage(c, 0, 0);
-    over(b, 0, 1, 'screen');
-  }
-  // the tone, grain, the vignette (to 20% at the sides: a circle of half the width)
-  {
-    const d = ctx.getImageData(0, 0, W, H), p = d.data, r0 = W / 2, grain = rng(7);
-    for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i += 4) {
-      const v = 1 - 0.8 * Math.min(1, Math.hypot(x - W / 2, y - H / 2) / r0);
-      const n = (grain() + grain() + grain() - 1.5) * 2;   // (about a unit normal)
-      for (let c = 0; c < 3; c++) { const t = tone(p[i + c]); p[i + c] = Math.max(0, Math.min(255, (t + n * (1 + 0.014 * t)) * v)); }
-    }
-    ctx.putImageData(d, 0, 0);
-  }
-  // the title (the theme's name), glowing, and a small line over it; either may be empty
-  if (title || line) {
-    const font = (px) => `bold ${px}px "Agency FB", "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", sans-serif`;
-    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    const y = H - H * 0.035 - 6 * s;
-    ctx.font = font(Math.round(110 * s)); ctx.letterSpacing = `${Math.round(22 * s)}px`;
-    ctx.shadowColor = accent; ctx.shadowBlur = 28 * s; ctx.fillStyle = '#f4f1ea';
-    if (title) { ctx.fillText(title.toUpperCase(), W / 2, y); ctx.fillText(title.toUpperCase(), W / 2, y); }
-    ctx.shadowBlur = 0; ctx.font = font(Math.round(28 * s)); ctx.letterSpacing = `${Math.round(10 * s)}px`; ctx.fillStyle = pal.text;
-    if (line) ctx.fillText(line.toUpperCase(), W / 2, title ? y - 122 * s : y);
-    ctx.restore();
-  }
+  [cv.width, cv.height, R.noSky, R.pieces, R.postInner] = keep;
   return out;
 }

@@ -1377,6 +1377,7 @@ function pickUV(e) {
 }
 
 function pickAt(e) {
+  if (R.post) return;   // (the showcase: nothing to pick)
   const cv = $('canvas'), dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect();
   const hit = R.draw(0, { x: Math.round((e.clientX - r.left) * dpr), y: Math.round((e.clientY - r.top) * dpr) });
   if (!hit) return;
