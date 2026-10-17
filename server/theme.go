@@ -869,9 +869,8 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	if trim, ok := in.Looks["trim"]; ok && len(trim) >= 3 {
 		capeLUTs, patterns := map[string]bool{}, map[string]bool{}
-		groupOf := ThemeGroups
 		for _, k := range idx.Kits {
-			if !want[groupOf[k.Type]] {
+			if !want[ThemeGroupOf(k)] {
 				continue
 			}
 			for _, pc := range k.Pieces {
@@ -957,7 +956,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		// the items outside the themed groups whose decals come from a recolored sheet (they show the theme's too)
 		for _, k := range idx.Kits {
-			if want[ThemeGroups[k.Type]] {
+			if want[ThemeGroupOf(k)] {
 				continue
 			}
 			hit := false

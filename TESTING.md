@@ -85,7 +85,7 @@ contact sheets. Run it after changing the role rules or the built-in `server/rol
 game update: a big part left in a normal military color is metal (hardware), a role a theme leaves alone, or a miss.
 
     node tools/webserve.mjs 8790
-    node tools/rolecheck.mjs <out dir> <Armor|Helmets|Capes|Backpacks|Weapons|Vehicles|Equipment|Stratagems|"Eagle & craft"> [name…]
+    node tools/rolecheck.mjs <out dir> <Armor|Helmets|Capes|Backpacks|Weapons|Vehicles|Equipment|Stratagems|"Eagle & craft"|SEAF|"Super Destroyer"|"Ship interior"|"Ship crew"> [name…]
 
 ## Theme preview scene
 

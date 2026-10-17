@@ -5,7 +5,8 @@
 // after the recolor is metal, a role left alone, or a miss. Dev tool, not shipped.
 //   node tools/webserve.mjs 8790          (in another terminal; serves dist/web with the install at ?devgame=1)
 //   node tools/rolecheck.mjs <out dir> <group> [name…]
-// group: Armor, Helmets, Capes, Backpacks, Weapons, Vehicles, Equipment, Stratagems or "Eagle & craft"; names: those
+// group: Armor, Helmets, Capes, Backpacks, Weapons, Vehicles, Equipment, Stratagems, "Eagle & craft", SEAF,
+// "Super Destroyer", "Ship interior" or "Ship crew"; names: those
 // items (as listed in the item menu), else every item of the group (weapons: not the paint-scheme variants). Writes one image per item and contact sheets
 // (sheet-1.jpg, …; 12 items each). Needs Chrome or Edge, and ImageMagick (magick) on the PATH.
 import { spawn, execFileSync } from 'node:child_process';
@@ -14,7 +15,8 @@ import { tmpdir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
 
 const [outDir, group, ...names] = process.argv.slice(2);
-const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft'];
+const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft',
+  'SEAF', 'Super Destroyer', 'Ship interior', 'Ship crew'];
 if (!outDir || !GROUPS.includes(group)) {
   console.error(`usage: node tools/rolecheck.mjs <out dir> <${GROUPS.join('|')}> [name…]`);
   process.exit(2);

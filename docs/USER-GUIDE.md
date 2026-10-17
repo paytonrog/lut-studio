@@ -247,7 +247,7 @@ whenever it's worn.
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,
-  **Eagle & craft**; **only items already in this mod** to stay within it) and
+  **Eagle & craft**, **SEAF** (the soldier, medic and their weapons in every camo look, their backpacks and shells), **Super Destroyer** (the ship, its support cannons, the Eagle ordnance on display, the emblems, the cryo pods), **Ship interior** (terminals, screens, lamps, floors, walls…) or **Ship crew**; **only items already in this mod** to stay within it). In the last four, a LUT the game shares with something outside the group stays as it is (a cryo pod's frozen Helldiver wears B-01 armor; generic metals) and
   **Apply theme**: every zone of those roles on those items gets the look, in the current variant. Items not in the
   mod yet are added to it (every variant, with the game's colors), so a theme can make a whole overhaul. Zones with
   the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Also theme decals** recolors the decals too (emblems, markings, stencils): their decal sheets, in the

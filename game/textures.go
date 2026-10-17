@@ -16,7 +16,7 @@ import (
 func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 	g.editOnce.Do(func() {
 		sheets, designs, masks, patterns := map[uint64]bool{}, map[uint64]bool{}, map[uint64]bool{}, map[uint64]bool{}
-		byLUT := map[uint64][]uint64{}
+		byLUT, mats := map[uint64][]uint64{}, map[uint64]int{}
 		add := func(l, sheet uint64) {
 			if l != 0 && sheet != 0 && !slices.Contains(byLUT[l], sheet) {
 				byLUT[l] = append(byLUT[l], sheet)
@@ -41,6 +41,9 @@ func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 			if h := m.Textures[sheetSlot].Value; h != 0 {
 				sheets[h] = true
 				add(m.Textures[lutSlot].Value, h)
+			}
+			if h := m.Textures[lutSlot].Value; h != 0 {
+				mats[h]++
 			}
 			if h := m.Textures[maskSlot].Value; h != 0 {
 				masks[h] = true
@@ -68,7 +71,7 @@ func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 			}
 		}
 		g.editSheets, g.editDesigns, g.editMasks, g.editPatterns = sheets, designs, masks, patterns
-		g.sheetsByLUT = byLUT
+		g.sheetsByLUT, g.lutMaterials = byLUT, mats
 	})
 	return g.editSheets, g.editDesigns
 }
@@ -78,6 +81,13 @@ func (g *Game) EditableTextures(idx *Index) (sheets, designs map[uint64]bool) {
 func (g *Game) DecalSheetsByLUT(idx *Index) map[uint64][]uint64 {
 	g.EditableTextures(idx)
 	return g.sheetsByLUT
+}
+
+// LUTMaterials: how many of the install's materials bind each LUT as their material_lut (EditableTextures' scan): a
+// LUT bound by many is a shared one (a generic metal, the common pattern LUT).
+func (g *Game) LUTMaterials(idx *Index) map[uint64]int {
+	g.EditableTextures(idx)
+	return g.lutMaterials
 }
 
 // noPatternMask: the 1 x 1 black pattern_masks_array most materials bind (no pattern can show on them; not editable)

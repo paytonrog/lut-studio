@@ -53,7 +53,7 @@ export async function rolesDialog(app) {
     <label class="check"><input type="checkbox" id="rlView" checked> show roles on the model</label>
     <div id="rlLuts"></div>
     <div class="row"><button id="rlConfirm" class="primary">Confirm this item</button><button id="rlNext">Next unconfirmed ▸</button>
-      <select id="rlGroup" title="What to review: armor (its undersuit hidden), undersuits on their own (each one is shared by many armors), helmets, capes, backpacks, weapons"><option>Armor</option><option>Undersuits</option><option>Helmets</option><option>Capes</option><option>Backpacks</option><option>Weapons</option><option>Vehicles</option><option>Equipment</option><option>Stratagems</option><option>Eagle &amp; craft</option></select></div>
+      <select id="rlGroup" title="What to review: armor (its undersuit hidden), undersuits on their own (each one is shared by many armors), helmets, capes, backpacks, weapons"><option>Armor</option><option>Undersuits</option><option>Helmets</option><option>Capes</option><option>Backpacks</option><option>Weapons</option><option>Vehicles</option><option>Equipment</option><option>Stratagems</option><option>Eagle &amp; craft</option><option>SEAF</option><option>Super Destroyer</option><option>Ship interior</option><option>Ship crew</option></select></div>
     <p class="hint" id="rlProgress"></p>
     <div class="row"><button id="rlExport" title="The built-in roles with yours on top, as a roles.json to ship with LUT Studio">Export roles.json</button>
       <button id="rlForget" title="Your roles of the LUTs on screen go back to the built-in ones (or suggestions)">Forget mine here</button></div>

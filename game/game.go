@@ -38,6 +38,7 @@ type Game struct {
 	editOnce                sync.Once // EditableTextures (textures.go)
 	editSheets, editDesigns map[uint64]bool
 	sheetsByLUT             map[uint64][]uint64 // DecalSheetsByLUT (textures.go)
+	lutMaterials            map[uint64]int      // LUTMaterials (textures.go)
 	editMasks, editPatterns map[uint64]bool
 
 	maskMu   sync.Mutex // MasksOfLUT (lutmasks.go)

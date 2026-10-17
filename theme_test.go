@@ -369,6 +369,70 @@ func TestFloatPlaceholderDesign(t *testing.T) {
 	}
 }
 
+// The theme groups on the real install that share materials with other things: SEAF (every camo look), the Super
+// Destroyer (its showpieces) and its interior, the ship's crew; a LUT another group's item uses stays out (the cryo
+// chamber's frozen Helldiver wears B-01 armor), as does one many materials bind.
+func TestThemeGroupsShared(t *testing.T) {
+	gameDir := os.Getenv("LUTSTUDIO_GAME")
+	if gameDir == "" {
+		t.Skip("LUTSTUDIO_GAME not set")
+	}
+	scratch := t.TempDir()
+	t.Setenv("LUTSTUDIO_CONFIG_DIR", filepath.Join(scratch, "config"))
+	t.Setenv("LUTSTUDIO_CACHE_DIR", filepath.Join(scratch, "cache"))
+	e := &env{out: io.Discard, gameDir: gameDir}
+	idx, err := e.index()
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := e.game()
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := &server.Server{Version: "test"}
+	srv.SetGame(g, idx, game.NewAssets(g, filepath.Join(scratch, "assets")), nil)
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	r, err := http.Get(ts.URL + "/api/roles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var res struct {
+		Items []struct {
+			Label, Group string
+			LUTs         []struct{ LUT string }
+		}
+	}
+	json.NewDecoder(r.Body).Decode(&res)
+	r.Body.Close()
+	per, luts := map[string]int{}, map[string]map[string]bool{}
+	for _, it := range res.Items {
+		per[it.Group]++
+		if luts[it.Group] == nil {
+			luts[it.Group] = map[string]bool{}
+		}
+		for _, l := range it.LUTs {
+			luts[it.Group][l.LUT] = true
+		}
+	}
+	t.Logf("items: %v", per)
+	if per["SEAF"] < 20 || per["Super Destroyer"] < 10 || per["Ship interior"] < 20 || per["Ship crew"] != 1 {
+		t.Fatalf("items per group: %v", per)
+	}
+	for _, h := range []string{"0xc9bd4e13150f36da", "0xf18dfbb5346732c1", "0xcf0cc31b981786c9", "0xd1c943c12a564150", "0xf423260be468ede1"} {
+		for _, grp := range []string{"SEAF", "Super Destroyer", "Ship interior"} {
+			if luts[grp][h] {
+				t.Errorf("%s themes the shared LUT %s", grp, h)
+			}
+		}
+	}
+	for _, h := range []string{"0xe30e1a683a4d81d7", "0xae9a2b6624af894b", "0xa7a3711cc5ff9ff8"} { // jungle soldier, medic, jungle weapons
+		if !luts["SEAF"][h] {
+			t.Errorf("SEAF lacks %s", h)
+		}
+	}
+}
+
 // Patterns on the real install: the trim look's color goes to every patterned row of the armor's pattern LUTs (column
 // 0's RGB); rows without a pattern (mask layer -1) and the rest of each row stay as the game made them.
 func TestThemePatterns(t *testing.T) {

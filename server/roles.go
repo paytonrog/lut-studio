@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 
@@ -96,21 +97,84 @@ type roleLUT struct {
 	Type string `json:"type"` // the piece type (armor, undergarment, accessory…)
 }
 
-// ThemeGroups: the kit types themes cover, by their group (the item menu's: home.go)
+// ThemeGroups: the kit types themes cover, by their group (the item menu's: home.go); a kit's own group:
+// ThemeGroupOf (the Super Destroyer's props split in two)
 var ThemeGroups = map[string]string{"Armor": "Armor", "Helmet": "Helmets", "Cape": "Capes", game.BackpackType: "Backpacks",
 	game.WeaponType: "Weapons", game.VehicleType: "Vehicles", game.ThrowableType: "Equipment", game.GearType: "Equipment",
-	game.AttachmentType: "Equipment", game.StratagemType: "Stratagems", game.CraftType: "Eagle & craft"}
+	game.AttachmentType: "Equipment", game.StratagemType: "Stratagems", game.CraftType: "Eagle & craft",
+	game.SEAFType: "SEAF", game.ShipType: "Super Destroyer", game.CrewType: "Ship crew"}
+
+// shipShowpieces: the Super Destroyer's props that make up the ship itself and its hangar showpieces (its body and
+// hub, the support cannons, the Eagle's ordnance on display, the emblems, the cryo pods; by unit path); the rest of
+// the ship's props (terminals, screens, lamps, floors, walls, cranes...) are the "Ship interior" group
+var shipShowpieces = regexp.MustCompile(`/(se_destroyer|eagle_weapons/|helldiver_emblem|cryo_)`)
+
+// ThemeGroupOf: the theme group a kit belongs to ("": none)
+func ThemeGroupOf(k game.Kit) string {
+	g := ThemeGroups[k.Type]
+	if k.Type == game.ShipType {
+		unitPath := ""
+		if len(k.Units) > 0 {
+			unitPath = k.Units[0].Name
+		}
+		// (a unit with no known path, named by a clue: by its kit name)
+		if !shipShowpieces.MatchString(unitPath) && !regexp.MustCompile(`(?i)SE Destroyer|Eagle|Emblem|Cryo`).MatchString(k.Name) {
+			return "Ship interior"
+		}
+	}
+	return g
+}
+
+// exclusiveGroups: groups whose items share materials with other things in the game (a cryo pod's frozen Helldiver
+// wears B-01 armor; generic metals): a LUT of theirs is themed only when no item of another group uses it (the Super
+// Destroyer's Eagle ordnance shares the Eagle & craft group's LUTs: allowed) and at most maxSharedMaterials of the
+// game's materials bind it
+var exclusiveGroups = map[string][]string{"SEAF": nil, "Super Destroyer": {"Eagle & craft"}, "Ship interior": {"Eagle & craft"}, "Ship crew": nil}
+
+const maxSharedMaterials = 12
 
 // roleItems: the items themes cover, in /api/kits order (named kits only)
 func (s *Server) roleItems(idx *game.Index) []roleItem {
-	groups := ThemeGroups
 	order := map[string]int{"Armor": 0, "Helmets": 1, "Capes": 2, "Backpacks": 3, "Weapons": 4, "Vehicles": 5,
-		"Equipment": 6, "Stratagems": 7, "Eagle & craft": 8}
+		"Equipment": 6, "Stratagems": 7, "Eagle & craft": 8, "SEAF": 9, "Super Destroyer": 10, "Ship interior": 11, "Ship crew": 12}
+	// the groups each LUT's items are in (any item: a theme group, else its type), and how many materials bind it
+	lutGroups := map[string]map[string]bool{}
+	for _, k := range idx.Kits {
+		g := ThemeGroupOf(k)
+		if g == "" {
+			g = "type:" + k.Type
+		}
+		for _, p := range k.Pieces {
+			if p.MaterialLUT != "" {
+				if lutGroups[p.MaterialLUT] == nil {
+					lutGroups[p.MaterialLUT] = map[string]bool{}
+				}
+				lutGroups[p.MaterialLUT][g] = true
+			}
+		}
+	}
+	var mats map[uint64]int
+	if gm := s.game(); gm != nil {
+		mats = gm.LUTMaterials(idx)
+	}
+	shared := func(g, h string) bool {
+		allowed, ok := exclusiveGroups[g]
+		if !ok {
+			return false
+		}
+		for o := range lutGroups[h] {
+			if o != g && !slices.Contains(allowed, o) {
+				return true
+			}
+		}
+		v, _ := lut.ParseHash(h)
+		return mats[v] > maxSharedMaterials
+	}
 	var out []roleItem
 	done := map[string]bool{}
 	for _, k := range idx.Kits {
-		g, ok := groups[k.Type]
-		if !ok || unnamedKit(k.Name) {
+		g := ThemeGroupOf(k)
+		if g == "" || unnamedKit(k.Name) {
 			continue
 		}
 		v := "kit:" + k.ID
@@ -125,7 +189,7 @@ func (s *Server) roleItems(idx *game.Index) []roleItem {
 		seen := map[roleLUT]bool{}
 		for _, p := range k.Pieces {
 			l := roleLUT{p.MaterialLUT, p.Body, p.PieceType}
-			if p.MaterialLUT == "" || seen[l] {
+			if p.MaterialLUT == "" || seen[l] || shared(g, p.MaterialLUT) {
 				continue
 			}
 			seen[l] = true

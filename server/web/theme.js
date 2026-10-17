@@ -7,7 +7,8 @@ import { $, esc, openSide, closeSide } from './texedit.js';
 import { ROLE_INFO } from './roles.js';
 import { decalColors, previewDecals, unpreviewDecals } from './decaltheme.js';
 
-const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft'];
+const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft',
+  'SEAF', 'Super Destroyer', 'Ship interior', 'Ship crew'];
 const DEFAULT_GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks'];   // (ticked when the item on screen is none of them)
 const at = (l, z, col, ch) => (z * l.w + col) * 4 + ch;
 // camo on a role's look (the material LUT's camo fields, lut/schema.go): layer (col 21 .a), colors 1-4 (cols 16-19
