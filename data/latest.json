@@ -1,0 +1,14 @@
+{
+  "app": {
+    "url": "https://github.com/paytonrog/lut-studio/releases/latest",
+    "version": "0.5.0"
+  },
+  "table": {
+    "bytes": 170173,
+    "file": "table.json.gz",
+    "format": 1,
+    "game_build": "25480438",
+    "generated": "2026-10-17T05:30:18Z",
+    "sha256": "2bd5c834823d64a54555c2d0eba3239f899031625d779a2fd137aac1bc68b46a"
+  }
+}

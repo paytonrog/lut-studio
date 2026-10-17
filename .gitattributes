@@ -1,0 +1,5 @@
+# LF everywhere (gofmt and the tests expect it), whatever core.autocrlf says
+* text=auto eol=lf
+*.png binary
+*.zip binary
+*.7z binary

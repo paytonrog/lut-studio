@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LUT Studio</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23f2c14e%22/%3E%3Crect x=%224%22 y=%224%22 width=%228%22 height=%228%22 fill=%22%2315171b%22/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="home" hidden></div>
+<header id="top">
+  <button id="projects" title="Back to your projects (everything is saved)">☰ Projects</button>
+  <div class="brand">LUT Studio <span id="projName"></span></div>
+  <button id="projectBtn" title="Save as, export">Project…</button>
+  <button id="modPageBtn" title="The mod's name, description, icon, variants and their pictures, as the mod managers show them">Mod page…</button>
+  <label>Variant <select id="variant"></select></label>
+  <button id="newVariant" title="Copy the current variant as a new color scheme">+ Variant</button>
+  <label title="What the preview shows: one of this mod's items (an armor, helmet or cape goes on the Helldiver; a vehicle, weapon, backpack or SEAF item on its own), or one that shares its LUTs">Show <select id="kit"></select></label>
+  <button id="addArmor" title="Add another armor, helmet, cape, vehicle, weapon, backpack or SEAF item to this mod (its LUTs, in every variant)">+ Item</button>
+  <span class="armorOnly loadout" title="Any armor with any helmet and any cape: click a piece and change it to add its LUTs to the mod">
+    <label>Armor <select id="wearArmor"><option value="">None</option></select></label>
+    <label>Helmet <select id="wearHelmet"><option value="match">Matching</option><option value="none">None</option></select></label>
+    <label>Cape <select id="wearCape"><option value="">None</option></select></label>
+    <label>Body <select id="body"><option value="slim">Slim</option><option value="stocky">Stocky</option></select></label>
+  </span>
+  <span class="spacer"></span>
+  <label class="check" title="Write changes to the project files automatically"><input type="checkbox" id="autosave" checked> Autosave</label>
+  <button id="save" title="Save (Ctrl+S)">Save</button>
+  <button id="build" class="primary" title="Build the mod zip for HD2Arsenal / HD2 Mod Manager and download it">Build &amp; download mod</button>
+</header>
+<main>
+  <aside id="left">
+    <section>
+      <h2>LUTs</h2>
+      <div id="lutList" class="list"></div>
+    </section>
+    <section>
+      <h2>Zones <span class="hint">click the model to pick</span></h2>
+      <div id="zoneList" class="list"></div>
+    </section>
+  </aside>
+  <div id="view">
+    <canvas id="canvas"></canvas>
+    <div id="viewBar">
+      <!-- Lighting: the preset on the bar, the rest of its settings in one panel -->
+      <span class="barGroup">
+        <label title="The lighting: the game's own (its captures and light rigs) or LUT Studio's presets">Light <select id="env"></select></label>
+        <details class="pop" id="lightPop"><summary title="Exposure, the sun, shadows and the side lights">Adjust ▾</summary>
+          <div class="popBody">
+            <label class="popRow" title="Brighter or darker, in stops">Exposure <input type="range" id="exposure" min="-3" max="3" step="0.1" value="0"></label>
+            <div class="popHead">Sun</div>
+            <label class="check popRow" title="The sun (in a game environment: its key light)"><input type="checkbox" id="sunOn" checked> On</label>
+            <label class="popRow" title="Sun direction around the model">Direction <input type="range" id="sunAz" min="-180" max="180" value="35"></label>
+            <label class="popRow" title="Sun height: 0° = level with the model, 90° = overhead (a lighting preset sets its own)">Height <input type="range" id="sunEl" min="-30" max="90" value="43"></label>
+            <label class="check popRow" title="Shadows (LUT Studio's own shadow maps, not the game's shadow filtering)"><input type="checkbox" id="shadowsOn" checked> Shadows</label>
+            <div class="popHead">Side lights <span class="hint">(LUT Studio's own)</span></div>
+            <label class="check popRow" title="A cool light from the left side"><input type="checkbox" id="rim0"> Blue light</label>
+            <label class="popRow" title="Blue light direction around the model: 0° = from the camera, 90° = right, 180° = behind, 270° = left">Direction <input type="range" id="rim0Az" min="0" max="360" value="250"></label>
+            <label class="popRow" title="Blue light height: 0° = level with the model, 90° = overhead, below 0 = from underneath">Height <input type="range" id="rim0El" min="-60" max="90" value="17"></label>
+            <label class="check popRow" title="A warm light from the right side"><input type="checkbox" id="rim1"> Yellow light</label>
+            <label class="popRow" title="Yellow light direction around the model: 0° = from the camera, 90° = right, 180° = behind, 270° = left">Direction <input type="range" id="rim1Az" min="0" max="360" value="110"></label>
+            <label class="popRow" title="Yellow light height: 0° = level with the model, 90° = overhead, below 0 = from underneath">Height <input type="range" id="rim1El" min="-60" max="90" value="17"></label>
+          </div></details>
+      </span>
+      <!-- Camera -->
+      <span class="barGroup">
+        <label title="Fixed views, the game's Armory cameras among them">Camera <select id="camera"></select></label>
+        <button id="frame" title="Frame the model (double-click the view)">Frame</button>
+        <label class="check" title="Rotate the model"><input type="checkbox" id="turntable"> Turntable</label>
+      </span>
+      <!-- Pose (the Helldiver) / attachments (weapons) -->
+      <span class="barGroup armorOnly">
+        <label title="The game's animations: armory poses, moves, emotes">Pose <select id="pose"><option value="">T-pose</option></select></label>
+        <button id="posePlay" title="Play / pause">❚❚</button>
+        <input type="range" id="poseTime" min="0" max="1" step="0.01" value="0" disabled title="Animation time" style="width:90px">
+      </span>
+      <span id="attachRow" class="barGroup weaponOnly" title="The weapon's attachments in the preview: the ones the game offers it, with their unlock levels"></span>
+      <!-- What the view shows -->
+      <span class="barGroup">
+        <label title="The final look, or one ingredient of it (zones, masks, normals...)">View <select id="debugView"></select></label>
+        <label class="check" title="The left half as the game has it, the right half with your edits"><input type="checkbox" id="split"> Before | after</label>
+        <label id="decalNumRow" hidden title="The decal number the game sets per model (the material variable decal_id, set per entity type): inside the sheet's first decal cell the shader moves to the cell this many steps along. Only the SEAF soldier uses it: its shoulder badge shows its role. Off where the material moves nothing (vehicles, most armor)">Decal number <input type="number" id="decalNum" min="0" max="0" step="1" value="0"> <span id="decalNumRole" class="hint"></span></label>
+      </span>
+      <span class="spacer"></span>
+      <!-- Pictures and editors -->
+      <span class="barGroup">
+        <details class="pop up-right" id="snapPop"><summary title="Use this view as the mod's pictures">Snapshot ▾</summary>
+          <div class="popBody">
+            <button id="snapIcon" title="Use this view as the mod icon">Use as the mod icon</button>
+            <button id="snapVariant" title="Use this view as the image of this variant">Use as this variant's picture</button>
+          </div></details>
+        <select id="tools" title="The editors: decal sheets, cape designs, masks, themes (the ones this item has)">
+          <option value="">Tools…</option><option value="decals">Decals…</option><option value="design">Cape design…</option>
+          <option value="masksBtn">Masks…</option><option value="themeBtn">Theme…</option><option value="rolesBtn">Roles… (review)</option></select>
+        <button id="decals" hidden title="Replace emblems, numbers and markings on this model's decal sheet with your own images">Decals…</button>
+        <button id="design" hidden title="Paint where the cape's zones are and where its cloth is cut out">Cape design…</button>
+        <button id="masksBtn" hidden title="Paint where each zone of a part is (its ID mask) and where its pattern shows (its pattern mask), on the model or on the flat view">Masks…</button>
+        <button id="rolesBtn" title="What each zone is on its item (primary, trim, cloth...), so a theme can restyle many items alike">Roles…</button>
+        <button id="themeBtn" title="Give every armor, helmet, cape or weapon the looks of the item on screen, one per zone role">Theme…</button>
+      </span>
+    </div>
+    <div id="worldBar">
+      <span class="title" id="worldToggle" title="Show or hide the mission wear sliders" role="button" tabindex="0">Mission wear <span id="worldArrow">▾</span></span>
+      <span id="worldSliders"></span>
+      <span id="worldNote" class="hint"></span>
+    </div>
+    <div id="status"></div>
+  </div>
+  <aside id="right">
+    <div id="fieldsHead"></div>
+    <div id="fields"></div>
+  </aside>
+</main>
+<div id="modal" hidden><div class="box"><div id="modalBody"></div><div class="actions"><button id="modalClose">Close</button></div></div></div>
+<script src="shell.js"></script>
+<script src="bridge.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

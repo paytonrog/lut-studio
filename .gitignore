@@ -1,0 +1,11 @@
+# build outputs
+/lutstudio.exe
+*.exe
+/dist/
+*.zip
+__pycache__/
+# game-derived inputs and outputs (dumps, reports): never in this repo
+/local/
+lutscan-report.json
+# the data-table decryption key: never in this repo
+*sealed_keys*

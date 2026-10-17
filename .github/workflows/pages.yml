@@ -1,0 +1,41 @@
+# The website: built from main (tools/web.py: the Go program as WebAssembly plus the editor's files) and published
+# with GitHub Pages. Runs on every push to main, or by hand.
+name: Website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history: the version is the commit count (tools/web.py)
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: python3 -I tools/web.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/web
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
