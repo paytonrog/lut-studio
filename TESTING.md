@@ -61,7 +61,7 @@ The game is found through `LUTSTUDIO_GAME` or Steam's default path; without it t
 
 **E2E** (`tools/e2e.mjs`: the built app on a random port, headless Chrome over CDP):
 The e2e tier builds the app as it is released (`-tags noembed`: no data-library tables, items from the item
-table). It also checks that the editor fits a 1000x650 window without page scrolling, and that the side lights
+table). It also checks that the editor fits a 1000x650 window without page scrolling, and that the side lights (on by default, with the Armory menu light)
 switch and turn, and that **+ Item** picks by category (armor: the matching-helmet box) and adds a cape; it removes
 its scratch folder when done. The start page lists every group (armor sets, helmets, capes, vehicles, weapons, attachments, gear, backpacks,
 throwables, stratagems, SEAF, Eagle & craft, ship crew, Automatons, Illuminate, objectives, Super Destroyer,

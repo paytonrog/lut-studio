@@ -476,7 +476,8 @@ async function main() {
         await shot(`${kind}-small-window`);
         await send('Emulation.clearDeviceMetricsOverride');
         await sleep(500);
-        // the lights: the side lights off by default, switched on and turned both ways; the sun off and on again
+        // the lights: the side lights on by default (the Armory menu's light), switched on and turned both ways; the sun
+        // off and on again
         const lights = await evaluate(`(async () => { const R = window.lutstudio.R, ev = (id, v, t) => { const e = document.getElementById(id);
             if (t === 'change') e.checked = v; else e.value = v; e.dispatchEvent(new Event(t)); };
           const r = R.rim.map(l => l.on).join(',');
@@ -487,7 +488,7 @@ async function main() {
           const out = r + ' / ' + R.rim.map(l => l.on + '@' + l.az + '/' + l.el).join(',') + ' / sun ' + sunOff + ',' + R.sunOn + '@' + R.sunElevUser;
           for (const i of [0, 1]) ev('rim' + i, false, 'change');
           ev('rim0Az', 250, 'input'); ev('rim0El', 17, 'input'); return out; })()`);
-        check(`${kind}: the lights switch and turn`, lights === 'false,false / true@90/40,true@110/17 / sun false,true@60' && errors.length === 0, `${lights}; ${errors.slice(0, 2).join(' | ')}`);
+        check(`${kind}: the lights switch and turn`, lights === 'true,true / true@90/40,true@110/17 / sun false,true@60' && errors.length === 0, `${lights}; ${errors.slice(0, 2).join(' | ')}`);
         // the helmet picker: none, another set's helmet, back to the matching one
         const loaded = `/: \\d+ parts\\./.test(document.getElementById('status').textContent)`;
         const helmetParts = async v => {
