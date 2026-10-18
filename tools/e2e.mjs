@@ -286,6 +286,9 @@ async function patternEditor(kind) {
   await waitFor(`/used by: .*hips/.test(document.getElementById('mkInfo').textContent)`, 30000);
   const tools = await evaluate(`[...document.querySelectorAll('#mkZones .dzTool')].map(b => b.textContent.trim()).join(',')`);
   const warned = await evaluate(`!document.getElementById('mkWarn').hidden`);
+  // (the strokes land on the hips where the T-pose has them: the editor starts in an idle pose)
+  await evaluate(`(() => { const p = document.getElementById('pose'); p.value = ''; p.dispatchEvent(new Event('change')); return 1; })()`);
+  await sleep(500);
   await evaluate(`(document.querySelector('#mkZones .dzTool[data-z="0"]').click(), document.getElementById('mkSize').value = 40, 1)`);
   let painted = false;
   for (const y of [0.5, 0.53, 0.56, 0.47]) {
