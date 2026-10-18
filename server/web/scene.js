@@ -170,6 +170,7 @@ export async function buildScene(app, opts = {}) {
   }
   sync(); R.pose = null;
   const prevEnv = await app.setEnv(opts.env ?? ENV);   // (opts.env: another lighting, e.g. a planet's: 'planet:<id>')
+  await R.env.ready;
   await sleep(500);
   let baseExposure = R.env.exposure;
   sc = new Showcase(R);
@@ -188,7 +189,7 @@ export async function buildScene(app, opts = {}) {
   const out = {
     notes, items, slots, showcase: sc,
     // another lighting for the scene (a Light menu value, e.g. 'planet:<id>'); the next setTheme exposes for it
-    async setEnv(name) { await app.setEnv(name); await sleep(300); baseExposure = R.env.exposure; },
+    async setEnv(name) { await app.setEnv(name); await R.env.ready; await sleep(300); baseExposure = R.env.exposure; },
     // a theme on the scene: { name, looksFor(zones, rowOf) -> {role: LUT row}, colors: [[role, hex]], base } (no
     // looksFor: the items as they are; base 'vanilla': as the game has them, else as in the mod): the items' LUTs, the
     // light's color (the theme's colors, else the squad's), the exposure (lowered while the squad's lit parts would

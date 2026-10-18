@@ -15,6 +15,7 @@ import { track, trackErrors } from './analytics.js';
 import { modPage } from './modpage.js';
 import { closeSide } from './texedit.js';
 import { groundTile } from './planet.js';
+import { buildScenery } from './planetscene.js';
 
 const $ = id => document.getElementById(id);
 const api = async (url, opts) => {
@@ -156,6 +157,7 @@ async function loadGameEnvs() {
 S.planets = [];
 const gradeCache = new Map();   // planet id -> promise of {tex, n}
 const groundCache = new Map();  // planet id -> promise of its ground tile (planet.js)
+const sceneryCache = new Map(); // planet id -> promise of its scene (planetscene.js)
 async function loadPlanets() {
   try { S.planets = (await (await fetch('planets/planets.json')).json()).planets; } catch { S.planets = []; }
   if (!S.planets.length) return;
@@ -202,11 +204,15 @@ function planetEnv(p, w = null) {
   const E = sunI * Math.sin(elev) * lum709(sun) / Math.PI + lum709(zenith.map((z, k) => 0.6 * z + 0.4 * horizon[k]));
   const e = { ...ENVS['Studio'], sun, sunIntensity: sunI, sunElev: elev, zenith, horizon,
     ground: gnd.map(v => v * E), exposure: p.exposureTarget / Math.max(lum709(gnd) * E, 1e-4), planet: p, weather: w, grade: {},
-    fogDist: Math.min(120, Math.max(8, 40 / Math.max(w?.fogDensity ?? 0.5, 0.3))) };
+    fogDist: Math.min(150, Math.max(15, 60 / Math.max(w?.fogDensity ?? 0.5, 0.3))) };
   if (!gradeCache.has(p.id)) gradeCache.set(p.id, R.loadGrade('planets/' + p.id + '.png'));
   gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => status('Planet light: ' + err.message, true));
   if (!groundCache.has(p.id)) groundCache.set(p.id, groundTile(p));
   groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => { });
+  if (!sceneryCache.has(p.id)) sceneryCache.set(p.id, buildScenery(R, p, async h => parseGLB(await (await api('/api/unit?hash=' + h)).arrayBuffer())));
+  sceneryCache.get(p.id).then(s => { e.scenery = s; }).catch(err => console.warn('scenery', err));
+  // (all of it in place: for a picture taken right after the switch)
+  e.ready = Promise.allSettled([gradeCache.get(p.id), groundCache.get(p.id), sceneryCache.get(p.id)]).then(() => new Promise(r => setTimeout(r, 50)));
   return e;
 }
 
@@ -1284,6 +1290,7 @@ function wire() {
   $('frame').onclick = () => R.frame();
   $('env').onchange = () => { R.sunElevUser = null; setEnv(); showSunElev(); };
   $('weather').onchange = () => setEnv();
+  $('sceneryOn').onchange = e => { R.sceneryOn = e.target.checked; };
   $('sunAz').oninput = () => { if (R.env.game) setEnv(); else R.env.sunAz = +$('sunAz').value * Math.PI / 180; };
   $('exposure').oninput = setEnv;
   // Mission wear: the sliders fold away (remembered in this browser; folded at first in a short window)
