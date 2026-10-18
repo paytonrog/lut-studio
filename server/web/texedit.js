@@ -17,6 +17,7 @@ export function openSide(html, onClose, isDirty = null, tab = '') {
   host.hidden = false; $('partsPane').hidden = true;
   document.body.classList.add('sideOpen');
   tabsOn(tab);
+  btn.hidden = !!tab;   // (a tab's panel closes through the Parts tab; an editor from Tools keeps its Close)
   const close = async (force = false) => {
     if (!force && (await onClose?.()) === false) return false;
     host.hidden = true; $('partsPane').hidden = false; $('sideBody').innerHTML = '';
