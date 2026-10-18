@@ -241,6 +241,16 @@ Object.assign(PRESETS, {
         [5, 0, H[0]], [5, 1, H[1]], [5, 2, H[2]], [1, 0, 0], [1, 1, 2], [22, 0, 2.5]] },
     };
   })(),
+  // (one shade of pink on everything, glowing as hard as it can while it stays pink (stronger turns white; the
+  // glow needs a smooth surface: roughness 0, no
+  // highlights), no wear, camo or bumps: a pink hole where a Helldiver was)
+  'Pink Void': (() => {
+    const P = '#ff2bd6', flat = [...CLEAN, [21, 3, -1], [6, 3, -1], [0, 3, 0], [1, 1, 0], [22, 0, 0], [10, 0, 0], [9, 0, 0], [9, 1, 0], [9, 2, 0],
+      [9, 3, 0], [8, 3, 0], [8, 0, 0], [8, 1, 0], [8, 2, 0], [10, 2, 0], [13, 0, 0.006], [14, 3, 0], [15, 3, 0],
+      [3, 0, 0], [3, 1, 0], [3, 2, 0], [3, 3, 0], [1, 2, -2], [7, 0, 0], [7, 1, 0], [7, 2, 0], [7, 3, 0]];
+    return { primary: { c: P, set: flat }, secondary: { c: P, set: flat }, trim: { c: P, set: flat }, glow: { c: P, set: flat },
+      cloth: { c: P, set: [...flat, [12, 0, 1], [12, 1, 0.17], [12, 2, 0.84], [12, 3, 0], [13, 1, 0]] }, hardware: { c: P, set: flat } };
+  })(),
   'Banana': T('#ffe01a', '#ffe01a', '#4a3010', '#f0d014', { pc: CM(0, ['#ffe01a', '#4a3010', '#f4d414', '#ffe01a'], 2.4), pf: FIN.plastic }),
   'Barbie Corps': T('#ff2a9a', '#f8f4f6', '#e0b04a', '#ff5ab4', { pf: FIN.gloss, tf: FIN.mirror, hw: '#e0b04a' }),
   'Rubber Duck': T('#ffd400', '#ffd400', '#ff7a00', '#ffd400', { pf: FIN.plastic, sf: FIN.plastic, tf: FIN.plastic }),
