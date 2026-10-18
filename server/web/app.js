@@ -1941,6 +1941,9 @@ async function boot() {
   const idle = [...$('pose').options].find(o => o.text === 'Armory idle 1');
   if (idle && S.mode === 'char') { $('pose').value = idle.value; await setPose(idle.value, { quiet: true }); updateHeld(); }
   setCamera('Front ¾');
+  // the theme panel's item list, made once in the background (its first time reads every game material: seconds),
+  // a little after the project shows so it doesn't slow the first load
+  setTimeout(() => api('/api/roles').catch(() => { }), 5000);
   let report = null;       // a mod was just imported (start page): say what came in
   try { report = sessionStorage.getItem('lutstudio.importReport'); sessionStorage.removeItem('lutstudio.importReport'); } catch { }
   if (report) showModal('Mod imported', report);
