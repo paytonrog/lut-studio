@@ -13,7 +13,6 @@
   <button id="projects" title="Back to your projects (everything is saved)">☰ Projects</button>
   <div class="brand">LUT Studio <span id="projName"></span></div>
   <button id="projectBtn" title="Save as, export">Project…</button>
-  <button id="modPageBtn" title="The mod's name, description, icon, variants and their pictures, as the mod managers show them">Mod page…</button>
   <label>Variant <select id="variant"></select></label>
   <button id="newVariant" title="Copy the current variant as a new color scheme">+ Variant</button>
   <label title="What the preview shows: one of this mod's items (an armor, helmet or cape goes on the Helldiver; a vehicle, weapon, backpack or SEAF item on its own), or one that shares its LUTs">Show <select id="kit"></select></label>
@@ -31,14 +30,22 @@
 </header>
 <main>
   <aside id="left">
-    <section>
-      <h2>LUTs</h2>
-      <div id="lutList" class="list"></div>
-    </section>
-    <section>
-      <h2>Zones <span class="hint">click the model to pick</span></h2>
-      <div id="zoneList" class="list"></div>
-    </section>
+    <nav id="leftTabs" role="tablist">
+      <button id="partsTab" class="on" role="tab" title="The mod's LUTs and the zones of the one picked">Parts</button>
+      <button id="themeBtn" role="tab" title="Give every armor, helmet, cape or weapon the looks of the item on screen, one per zone role">Theme</button>
+      <button id="modPageBtn" role="tab" title="The mod's name, description, icon, variants and their pictures, as the mod managers show them">Mod page</button>
+    </nav>
+    <div id="partsPane">
+      <section>
+        <h2>LUTs</h2>
+        <div id="lutList" class="list"></div>
+      </section>
+      <section>
+        <h2>Zones <span class="hint">click the model to pick</span></h2>
+        <div id="zoneList" class="list"></div>
+      </section>
+    </div>
+    <div id="sidePanel" hidden><div id="sideBody"></div><div class="actions"><button id="sideClose">Close</button></div></div>
   </aside>
   <div id="view">
     <canvas id="canvas"></canvas>
@@ -97,12 +104,11 @@
         <button id="showcaseBtn" title="Showcase mode: the viewport as key art of this mod (or a theme): three Helldivers with their weapons, gear and vehicles, live; move the camera, pick the items, tune the look, save a 4K image">Showcase</button>
         <select id="tools" title="The editors: decal sheets, cape designs, masks, themes (the ones this item has)">
           <option value="">Tools…</option><option value="decals">Decals…</option><option value="design">Cape design…</option>
-          <option value="masksBtn">Masks…</option><option value="themeBtn">Theme…</option><option value="rolesBtn">Roles… (review)</option></select>
+          <option value="masksBtn">Masks…</option><option value="rolesBtn">Roles… (review)</option></select>
         <button id="decals" hidden title="Replace emblems, numbers and markings on this model's decal sheet with your own images">Decals…</button>
         <button id="design" hidden title="Paint where the cape's zones are and where its cloth is cut out">Cape design…</button>
         <button id="masksBtn" hidden title="Paint where each zone of a part is (its ID mask) and where its pattern shows (its pattern mask), on the model or on the flat view">Masks…</button>
         <button id="rolesBtn" title="What each zone is on its item (primary, trim, cloth...), so a theme can restyle many items alike">Roles…</button>
-        <button id="themeBtn" title="Give every armor, helmet, cape or weapon the looks of the item on screen, one per zone role">Theme…</button>
       </span>
     </div>
     <div id="worldBar">

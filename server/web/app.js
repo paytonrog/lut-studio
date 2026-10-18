@@ -1528,7 +1528,9 @@ function wire() {
   window.addEventListener('keydown', e => { if (e.key === 'Escape') pops.forEach(d => { d.open = false; }); });
   for (const id of ['snapIcon', 'snapVariant']) $(id).addEventListener('click', () => { $('snapPop').open = false; });
   $('tools').onchange = () => { const v = $('tools').value; $('tools').value = ''; if (v) $(v)?.click(); };
+  $('partsTab').onclick = () => closeSide();
   $('themeBtn').onclick = () => {
+    if ($('themeBtn').classList.contains('on')) return;   // (already open)
     track('editor opened', { editor: 'theme' });
     themeDialog({
       R, api, variant: S.variant, lut: h => S.luts.get(h), showItem, saveAll, status, track,
@@ -1565,7 +1567,7 @@ function wire() {
     location.reload();
   };
   $('projectBtn').onclick = projectDialog;
-  $('modPageBtn').onclick = () => modPage({
+  $('modPageBtn').onclick = () => !$('modPageBtn').classList.contains('on') && modPage({
     api, shot, state: () => S.state, variant: () => S.variant,
     kitType: id => (S.kitList ?? []).find(e => e.value === 'kit:' + id)?.type,
     useVariant: async f => {

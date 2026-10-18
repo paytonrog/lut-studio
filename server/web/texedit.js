@@ -4,21 +4,25 @@
 export const $ = id => document.getElementById(id);
 export const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// Open the modal as a panel on the left (no backdrop: the model can be turned while editing). onClose() runs when
-// it is closed; returning false keeps it open. Returns close(); close.signal ends with the panel (pass it to the
-// panel's own listeners: { signal: close.signal }). Open another panel or dialog only after closeSide().
+// Open a panel in the left column, in place of the Parts list (the model stays in view and can be turned while
+// editing). tab: the left tab it is ('themeBtn', 'modPageBtn'; none: an editor from Tools). onClose() runs when it is
+// closed; returning false keeps it open. Returns close(); close.signal ends with the panel (pass it to the panel's own
+// listeners: { signal: close.signal }). Open another panel or dialog only after closeSide().
 let current = null;   // the open panel's close()
 // isDirty(): the panel has unsaved changes (the tab's close asks first: sideDirty)
-export function openSide(html, onClose, isDirty = null) {
-  const modal = $('modal'), btn = $('modalClose'), prev = current ? null : btn.onclick, ac = new AbortController();
-  $('modalBody').innerHTML = html;
-  modal.classList.add('side');
-  modal.hidden = false;
+const tabsOn = id => document.querySelectorAll('#leftTabs button').forEach(b => b.classList.toggle('on', b.id === id));
+export function openSide(html, onClose, isDirty = null, tab = '') {
+  const modal = $('modal'), host = $('sidePanel'), btn = $('sideClose'), ac = new AbortController();
+  $('sideBody').innerHTML = html;
+  host.hidden = false; $('partsPane').hidden = true;
+  document.body.classList.add('sideOpen');
+  tabsOn(tab);
   const close = async (force = false) => {
     if (!force && (await onClose?.()) === false) return false;
-    modal.classList.remove('side');
-    modal.hidden = true;
-    btn.onclick = prev;
+    host.hidden = true; $('partsPane').hidden = false; $('sideBody').innerHTML = '';
+    document.body.classList.remove('sideOpen');
+    tabsOn('partsTab');
+    btn.onclick = null;
     window.removeEventListener('keydown', keys, true);
     ac.abort();
     if (current === close) current = null;
@@ -30,10 +34,10 @@ export function openSide(html, onClose, isDirty = null) {
   btn.onclick = () => close();
   // Ctrl+Z / Ctrl+Y in the panel undo its edits, not the LUT edits behind it
   const keys = e => {
-    if (!(e.ctrlKey || e.metaKey) || modal.hidden) return;
+    if (!(e.ctrlKey || e.metaKey) || host.hidden) return;
     const a = document.activeElement;   // (typing in a field, or a field outside the panel: its own undo)
-    if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && !(a.type === 'range' && modal.contains(a))) return;
-    if (a && a !== document.body && !modal.contains(a)) return;
+    if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && !(a.type === 'range' && host.contains(a))) return;
+    if (a && a !== document.body && !host.contains(a)) return;
     const k = e.key.toLowerCase();
     const undo = k === 'z' && !e.shiftKey, redo = k === 'y' || (k === 'z' && e.shiftKey);
     if (!undo && !redo) return;

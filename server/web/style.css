@@ -33,7 +33,15 @@ label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap
 .spacer { flex: 1; }
 main { display: grid; grid-template-columns: 250px minmax(0, 1fr) 380px; grid-template-rows: minmax(0, 1fr); flex: 1; min-height: 0; }
 aside { background: var(--panel); overflow: auto; }
-#left { border-right: 1px solid var(--line); }
+#left { border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+#partsPane, #sidePanel { flex: 1; min-height: 0; overflow: auto; }
+#sidePanel { padding: 8px 12px; }
+#sidePanel .row { flex-wrap: wrap; row-gap: 6px; }
+#sidePanel .actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+#leftTabs { display: flex; border-bottom: 1px solid var(--line); flex: none; }
+#leftTabs button { flex: 1; border: none; border-radius: 0; background: none; padding: 9px 4px; color: var(--muted, #9aa3b2); border-bottom: 2px solid transparent; }
+#leftTabs button.on { color: inherit; border-bottom-color: var(--accent, #f2c94c); }
+body.sideOpen main { grid-template-columns: min(560px, 42vw) minmax(0, 1fr) 380px; }
 #right { border-left: 1px solid var(--line); }
 section { padding: 8px 10px; border-bottom: 1px solid var(--line); }
 h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 2px 0 6px; }
@@ -123,9 +131,7 @@ body.weapon .weaponOnly { display: inline-flex !important; gap: 8px; align-items
 .notice.warn { border-left-color: #e67e22; }
 p.warn { color: #f0b46a; line-height: 1.6; }
 /* the texture editors (decals.js, designs.js): a panel on the left, the model stays in view and can be turned */
-#modal.side { background: none; pointer-events: none; place-items: start; }
-#modal.side .box { pointer-events: auto; margin: 48px 0 0 8px; width: min(560px, 96vw); max-height: calc(100vh - 60px); }
-#modal.side .row { flex-wrap: wrap; row-gap: 6px; }
+/* (the side panels open in the left column: #sidePanel) */
 #dsScroll { max-width: 512px; max-height: 512px; overflow: auto; margin: 8px 0; }
 #dsView, #dzView { display: block; cursor: crosshair; width: auto; max-width: none;
   background: repeating-conic-gradient(#333 0 25%, #444 0 50%) 0 0 / 16px 16px; }
@@ -178,7 +184,7 @@ p.warn { color: #f0b46a; line-height: 1.6; }
 .list .item.disabled:hover { background: none; }
 .btnlike.disabled { opacity: 0.5; cursor: default; pointer-events: none; }
 /* the editors' buttons: reached through the Tools menu (#tools); the buttons stay for code and keyboard */
-#decals, #design, #masksBtn, #rolesBtn, #themeBtn { display: none !important; }
+#decals, #design, #masksBtn, #rolesBtn { display: none !important; }
 /* the view bar: groups of related controls, settings in pop-up panels (opening upward: the bar is at the bottom) */
 #viewBar { gap: 6px 14px; }
 .barGroup { display: inline-flex; align-items: center; gap: 8px; }

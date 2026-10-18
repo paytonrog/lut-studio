@@ -496,7 +496,7 @@ export async function themeDialog(app) {
     <div class="row" id="thReview" hidden><button id="thPrev">◂ Previous</button><button id="thNext">Next ▸</button><span class="hint" id="thAt"></span></div>`, () => {
     R.highlight = { lut: null, zone: -1, piece: -1 };
     unpreview();
-  });
+  }, null, 'themeBtn');
   const info = t => { $('thInfo').textContent = t; };
 
   const zoneName = x => `${app.lutLabel(x.lut)} · ${app.lut(x.lut).labels?.[x.z] || 'zone ' + x.z}`;

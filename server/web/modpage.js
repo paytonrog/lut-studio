@@ -16,7 +16,7 @@ export async function modPage(app) {
     <p class="hint">What the mod managers (HD2 Mod Manager, HD2 Arsenal) show: the mod's name, description and icon,
       and with several variants the choice between them, each with its own name, description and picture. A picture
       left empty is rendered when you build.</p>
-    <div id="mpBody"></div>`);
+    <div id="mpBody"></div>`, null, null, 'modPageBtn');
   const api = app.api;
   const put = (url, body) => api(url, { method: url.includes('order') ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 

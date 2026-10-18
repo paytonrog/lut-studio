@@ -112,7 +112,7 @@ export async function rolesDialog(app) {
     document.querySelectorAll('#rlBrush .dzTool').forEach(b => (b.onclick = () => { brush = b.dataset.r; brushButtons(); }));
   };
   const keys = e => {
-    if ($('modal').hidden || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+    if ($('sidePanel').hidden || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
     const i = +e.key - 1;
     if (i >= 0 && i < names.length) { brush = names[i]; brushButtons(); }
   };

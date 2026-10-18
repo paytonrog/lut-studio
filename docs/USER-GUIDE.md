@@ -59,7 +59,7 @@ list of items is a small table of ids whose names come from your install (see **
    backpacks, equipment, stratagems, SEAF…), LUTs of game materials no listed item uses (in the LUT list, shown on
    no model), and the mod's decal sheets, cape designs, ID masks and pattern masks (for the **Decals…**, **Cape design…** and **Masks…** editors). The mod's
    identity (its GUID) comes in too, so building it again updates the installed mod instead of adding a second copy.
-   Its icon, the variants' descriptions and pictures and the name of the choice come along to the **Mod page…**.
+   Its icon, the variants' descriptions and pictures and the name of the choice come along to the **Mod page** tab.
    A mod with several options keeps them as the project's options (their parts, choices and pictures).
    Left out, and LUT Studio tells you what: models and other textures, and the LUTs of models the mod adds (the game
    has nothing to show them on). An option that only changed such files changes nothing in the project; the build
@@ -248,7 +248,7 @@ whenever it's worn.
   for every item sharing those LUTs; **Next unconfirmed ▸** shows the next item of the chosen group (the menu)
   with LUTs left to confirm, and the progress line counts them. LUT Studio ships reviewed roles; yours come on top.
   **Export roles.json** saves the built-in roles with yours on top; **Forget mine here** drops yours on screen.
-- **Theme…**: pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
+- **Theme** (a tab of the left column, beside **Parts** and **Mod page**; its panel takes the column while open, **Parts** or **Close** goes back): pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
   Legion and Neon Circuit, some very silly ones (Turd: all brown, rusted and grimed as far as it goes; Pink Void: one glowing pink shade, a pink hole where a Helldiver was), looks after Destiny 2's shaders (Bitterpearl, Gilded Frost, Metro Shift, Calus's Selected, Jacarina…), and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
@@ -271,7 +271,7 @@ whenever it's worn.
   themed items. Roles that are only suggested (not confirmed in **Roles…**) can put a look on the wrong zone: the
   panel says how many LUTs on screen are unconfirmed.
 - **Variants**: **+ Variant** copies the current color scheme. Players pick one variant in the mod manager.
-- **Mod page…**: everything the mod managers (HD2 Mod Manager, HD2 Arsenal) show of your mod, beside the model:
+- **Mod page** tab: everything the mod managers (HD2 Mod Manager, HD2 Arsenal) show of your mod, beside the model:
   - the mod's **name**, **description** and **icon**;
   - with several variants, the **choice** between them (its name, "Color scheme" if you leave it empty, its
     description and its own picture; the icon if none), and each **variant's name, description and picture**, their
@@ -321,7 +321,7 @@ the viewport is the image's, 16:9). The editor's lists and bars step aside and t
 ## Build and install
 
 1. **Build & download mod** renders the mod icon and the variant pictures, builds the zip and downloads it (a
-   copy also stays in the project's `dist` folder). To choose the pictures yourself, use the **Mod page…** (or the
+   copy also stays in the project's `dist` folder). To choose the pictures yourself, use the **Mod page** tab (or the
    quick **Snapshot ▾** → *Use as the mod icon* / *Use as this variant's picture*); the build keeps those. A variant that changes nothing is left
    out of the mod. The zip is the mod managers' format (manifest v1): the variants are one option's sub-options,
    or with several options (Mod page), each option is a switch or a choice of sub-options.

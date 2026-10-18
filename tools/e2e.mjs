@@ -150,7 +150,7 @@ async function modPageChecks(kind) {
   check(`${kind}: mod page: several options (split by item), each offering every variant`, !!opts && JSON.parse(opts).every(o => o[1] === 2 && o[2] > 0) && errors.length === 0,
     `${opts}; ${errors.slice(0, 2).join(' | ')}`);
   await shot(`${kind}-modpage`);
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
 }
 
@@ -185,7 +185,7 @@ async function maskEditor(kind) {
     return r.headers.get('X-Edited') + ' ' + dv.getUint32(12, true); })()`);
   check(`${kind}: ID masks: ${zones} zones from the LUT, painted on the model and the flat view, saved`,
     !!opened && zones >= 2 && before !== after && !!saved && /^1 [12]$/.test(tex) && errors.length === 0, `${opened}; ${tex}; ${errors.slice(0, 2).join(' | ')}`);
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
 }
 
@@ -216,7 +216,7 @@ async function rolesPanel(kind) {
   await evaluate(`(document.getElementById('rlNext').click(), 1)`);
   const next = await waitFor(`window.lutstudio.R.pieces.length > 0 && window.lutstudio.R.pieces.map(p => p.info.lut).sort().join() !== ${JSON.stringify(before)} && document.querySelectorAll('#rlLuts .rlZone').length`, 120000);
   const progress = await evaluate(`document.getElementById('rlProgress').textContent`);
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
   const restored = await evaluate(`window.lutstudio.R.pieces.every(p => !p.lutKeys.edited?.startsWith('r:'))`);
   // back to the project's armor for the checks after this one
@@ -266,7 +266,7 @@ async function themePanel(kind) {
     !!live && /^3840x2160 center /.test(sc || '') && !/center 0,0,0$/.test(sc) && !!back && errors.length === 0,
     `live ${!!live}; ${sc || 'no image'}; back ${!!back}; ${errors.length} page error(s): ${JSON.stringify(errors.slice(0, 3))}`);
   check(`${kind}: theme: the showcase's decals in the theme's colors`, /^recolored on [1-9]/.test(decals), decals);
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
   await evaluate(`(() => { const S = window.lutstudio.S; S.look = ${look}; const a = document.getElementById('wearArmor'); a.value = S.look.armor; a.dispatchEvent(new Event('change')); return 1; })()`);
   await waitFor(`window.lutstudio.R.pieces.map(p => p.info.lut).sort().join() === ${JSON.stringify(shown)}`, 120000);
@@ -302,7 +302,7 @@ async function patternEditor(kind) {
   const saved = await waitFor(`/^Saved/.test(document.getElementById('mkInfo').textContent)`, 30000);
   check(`${kind}: pattern mask: the hips' pattern (on), painted on the model, saved`, tools === 'no pattern,pattern' && !warned && painted && !!saved && errors.length === 0,
     `${tools}; warned ${warned}; painted ${painted}; ${errors.slice(0, 2).join(' | ')}`);
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
 }
 
@@ -310,7 +310,7 @@ async function patternEditor(kind) {
 async function designEditor(kind) {
   await evaluate(`(document.getElementById('design').click(), 1)`);
   const opened = await waitFor(`/512 × 512|256 × 256|128 × 128/.test(document.getElementById('dzInfo')?.textContent ?? '') && document.getElementById('dzInfo').textContent`, 30000);
-  check(`${kind}: the cape design editor opens beside the model`, !!opened && await evaluate(`document.getElementById('modal').classList.contains('side')`), opened || 'not opened');
+  check(`${kind}: the cape design editor opens beside the model`, !!opened && await evaluate(`!document.getElementById('sidePanel').hidden`), opened || 'not opened');
   const red = () => countColor('#dzView', [224, 64, 64]), green = () => countColor('#dzView', [64, 192, 64]);
   const r0 = await red();
   await drag(await where('#dzView', 0.2, 0.3), await where('#dzView', 0.8, 0.35));
@@ -334,7 +334,7 @@ async function designEditor(kind) {
   const h = await evaluate(`window.lutstudio.R.pieces.find(p => p.scalarHash)?.scalarHash`);
   const edited = await evaluate(`fetch('/api/tex?hash=${h}&variant=' + encodeURIComponent(window.lutstudio.S.variant)).then(r => r.headers.get('X-Edited'))`);
   check(`${kind}: design saved and shown`, !!saved && edited === '1' && errors.length === 0, `${edited}; ${errors.slice(0, 2).join(' | ')}`);
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
 }
 
@@ -371,7 +371,7 @@ async function decalEditor(kind) {
   await evaluate(`(document.getElementById('dsSave').click(), 1)`);
   const saved = await waitFor(`/^Saved/.test(document.getElementById('dsInfo').textContent)`, 60000);
   check(`${kind}: decal sheet saved`, !!saved && errors.length === 0, errors.slice(0, 2).join(' | '));
-  await evaluate(`(document.getElementById('modalClose').click(), 1)`);
+  await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
 }
 // a new project opened in the editor: created through the page, remembered for the tab, the page reloaded
