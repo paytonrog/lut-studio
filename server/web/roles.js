@@ -64,7 +64,7 @@ export async function rolesDialog(app) {
     document.removeEventListener('lutstudio:pieces', refresh);
     setView(false);
     R.pieceFilter = null;
-  });
+  }, null, 'rolesBtn');
   const info = t => { $('rlInfo').textContent = t; };
 
   // the review's view: the Armor group without the undersuit, the Undersuits group the undersuit only

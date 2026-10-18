@@ -57,7 +57,7 @@ list of items is a small table of ids whose names come from your install (see **
    its `.gpu_resources` and `.stream`). Each option of the mod becomes a variant. Everything LUT Studio can edit
    comes in: the LUTs of every kind of item (armor, helmets, capes, vehicles, weapons and their attachments,
    backpacks, equipment, stratagems, SEAF…), LUTs of game materials no listed item uses (in the LUT list, shown on
-   no model), and the mod's decal sheets, cape designs, ID masks and pattern masks (for the **Decals…**, **Cape design…** and **Masks…** editors). The mod's
+   no model), and the mod's decal sheets, cape designs, ID masks and pattern masks (for the **Decals**, **Cape design** and **Masks** editors). The mod's
    identity (its GUID) comes in too, so building it again updates the installed mod instead of adding a second copy.
    Its icon, the variants' descriptions and pictures and the name of the choice come along to the **Mod page** tab.
    A mod with several options keeps them as the project's options (their parts, choices and pictures).
@@ -195,9 +195,14 @@ whenever it's worn.
   nothing), so the box is off there.
 - **The right panel** keeps its place when you pick another zone: same scroll position, and the sections you
   opened or closed stay that way.
-- **Tools…** (the menu under the view) opens the editors below; it lists the ones the item on screen has.
-- **Decals…** (models with decals: armor, vehicles, the hellpod…): edits the decal sheet, the picture the
-  model's emblems, numbers and markings are cut from. It opens on the left, so you can keep turning the model,
+- **The sidebars' tabs**: each sidebar has its own pane (**Parts** on the left: the LUTs and zones; **Zone** on the
+  right: the picked zone's settings) and the editors' tabs: **Theme**, **Mod page**, **Decals**, **Cape design**,
+  **Masks** on the left, **Showcase** on the right (only the editors the item on screen has are shown). An editor
+  opens in the sidebar its tab is in, in place of that sidebar's pane; the pane's own tab (**Parts** or **Zone**)
+  closes it. One editor is open at a time. To put a tab in the other sidebar, drag it there (or to another place in
+  the same strip), or right-click it; where the tabs are is kept in this browser.
+- **Decals** (models with decals: armor, vehicles, the hellpod…): edits the decal sheet, the picture the
+  model's emblems, numbers and markings are cut from. It opens in a sidebar, so you can keep turning the model,
   which shows your edit as you go. Drag to select an area (snapped to the **Grid**, or free with *none*), then
   **Place an image…**: it's fitted into the area and stays movable: drag it, scale it by its corner (or the mouse
   wheel), **Turn** / **Size** / **Flip** it, then **Apply** (the area is cleared first unless you untick it). **Erase
@@ -207,7 +212,7 @@ whenever it's worn.
   PNG…** to edit the whole sheet in another program. **Save**: the next build includes it. Each variant has its
   own sheet, and **Back to the game's sheet** undoes it. A sheet is shared by many items: your change shows on every
   one that uses it while the mod is on.
-- **Cape design…** (capes): where the cape's zones are and where its cloth is cut out (the zones' colors, trim
+- **Cape design** (capes): where the cape's zones are and where its cloth is cut out (the zones' colors, trim
   lines and emblems are in the cape's LUTs). Pick **Zone 0-3**, **Cut out** or **Restore cloth** and paint with the
   brush, or tick **fill an area instead** and click an area. **Import a picture…** gives each main color of an image
   a zone (or cuts it out); **Export template** saves the design in the editor's colors (gray zone 0, red 1, green 2,
@@ -218,7 +223,7 @@ whenever it's worn.
   shared by several capes. For those, **Start a 512 × 512 design** makes a full design to paint, starting as the
   placeholder looks; the editor lists the capes that share the placeholder, since the new design shows on all of
   them.
-- **Masks…** (armor, helmets, vehicles, weapons…): **Edit** *zones (ID mask)* or *pattern areas (pattern mask)*. Zones: where each **zone** of a part is: the painted mask that decides
+- **Masks** (armor, helmets, vehicles, weapons…): **Edit** *zones (ID mask)* or *pattern areas (pattern mask)*. Zones: where each **zone** of a part is: the painted mask that decides
   which row of the part's LUT each spot uses. Pick the **Part** (named by its LUT: "Armor: left arm, right arm", or
   the undersuit under it), pick a zone (the buttons show the zones' LUT colors and names), and paint: on the model
   itself (**paint on the model**: left drag paints, right drag turns the view, the wheel zooms) or on the flat view
@@ -231,7 +236,7 @@ whenever it's worn.
   its hips): paint **pattern** or **no pattern** the same ways. Only parts that have a pattern mask are listed (most
   parts share the game's empty one, which can't be edited without touching them all); when the part's pattern is
   switched off (its pattern LUT is the game's "off" LUT), the editor says so and nothing shows until it's on.
-- **Roles…** (for reviewing LUT Studio's built-in roles: shown when the site is opened with `?review` at the end of its address, `?review=0` hides it again; the **Armor** group hides the undersuit, **Undersuits** shows only the undersuit, confirmed once for every armor sharing it): what each zone is on its item: **primary** (main plates), **secondary**, **trim** (edges, stripes,
+- **Roles** tab (for reviewing LUT Studio's built-in roles: shown when the site is opened with `?review` at the end of its address, `?review=0` hides it again; the **Armor** group hides the undersuit, **Undersuits** shows only the undersuit, confirmed once for every armor sharing it): what each zone is on its item: **primary** (main plates), **secondary**, **trim** (edges, stripes,
   accents), **cloth**, **hardware** (bare metal), **glow**, **keep** (a theme leaves it as it is: suggested for glass, like visors and lenses) or **unused** (a
   row the part never shows). Themes use them to give many items the same look per role. The model shows each zone in
   its role's color (**show roles on the model**); pick a role (the buttons, or keys 1-8) and click a zone on the
@@ -248,7 +253,7 @@ whenever it's worn.
   for every item sharing those LUTs; **Next unconfirmed ▸** shows the next item of the chosen group (the menu)
   with LUTs left to confirm, and the progress line counts them. LUT Studio ships reviewed roles; yours come on top.
   **Export roles.json** saves the built-in roles with yours on top; **Forget mine here** drops yours on screen.
-- **Theme** (a tab of the left column, beside **Parts** and **Mod page**; its panel takes the column while open, the **Parts** tab goes back): pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
+- **Theme** (a sidebar tab: on the left at first; its panel takes the sidebar while open, the **Parts** tab goes back): pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
   Legion and Neon Circuit, some very silly ones (Turd: all brown, rusted and grimed as far as it goes; Pink Void: one glowing pink shade, a pink hole where a Helldiver was), looks after Destiny 2's shaders (Bitterpearl, Gilded Frost, Metro Shift, Calus's Selected, Jacarina…), and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
@@ -261,14 +266,14 @@ whenever it's worn.
   their shapes stay. A decal sheet is shared: every item drawing from it shows the recolored decals, items you
   didn't theme too (Apply says how many), and each recolored sheet adds about 5 MB to the mod. Pattern trims work the same: a
   pattern LUT other items share changes on them too, and Apply says how many. A sheet you edited
-  in **Decals…** is kept unless *also overwrite* is ticked. **Preview on screen** shows it too. **Showcase** opens Showcase mode (below) with these looks. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
+  in **Decals** is kept unless *also overwrite* is ticked. **Preview on screen** shows it too. **Showcase** opens Showcase mode (below) with these looks. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
   choice while they keep their metal finish; off, they stay as the game made them. A zone that is cloth in the game but has another role (a cape's panels, padded armor) takes only
   the look's colors and keeps its cloth finish. Capes' trim lines (their cape design) and the items' patterns (stripes,
   camo: a pattern LUT's patterned rows) take the trim look's color; capes' gradient and emblems stay as the game made
   them. Applying again (after changing the item on screen) updates every
   themed zone; a zone you changed by hand since is kept, unless **also overwrite zones I changed by hand** is ticked.
   For another color scheme, make a variant, restyle the item, apply again. **◂ Previous / Next ▸** steps through the
-  themed items. Roles that are only suggested (not confirmed in **Roles…**) can put a look on the wrong zone: the
+  themed items. Roles that are only suggested (not confirmed in **Roles**) can put a look on the wrong zone: the
   panel says how many LUTs on screen are unconfirmed.
 - **Variants**: **+ Variant** copies the current color scheme. Players pick one variant in the mod manager.
 - **Mod page** tab: everything the mod managers (HD2 Mod Manager, HD2 Arsenal) show of your mod, beside the model:
@@ -298,11 +303,12 @@ whenever it's worn.
 
 ## Showcase
 
-**Showcase** (on the view bar, or the Theme panel's button) turns the viewport into key art, live: three Helldivers in
+**Showcase** (a sidebar tab, on the right at first, or the Theme panel's button) turns the viewport into key art, live: three Helldivers in
 warbond poses holding their weapons (backpacks on when you pick them), two vehicles and a stratagem behind them, in
 the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
 a title. The items load one by one (a few seconds each the first time); then orbit, pan and zoom as ever (the frame in
-the viewport is the image's, 16:9). The editor's lists and bars step aside and the right sidebar holds the options:
+the viewport is the image's, 16:9). The other sidebar and the bars step aside and the Showcase tab's sidebar holds the options (its own tab,
+**Parts** or **Zone**, or **Exit showcase** goes back):
 
 - **Show**: the items as in this mod (its edits, this variant), as the game has them, the Theme panel's looks (when
   opened from there), or any theme preset.

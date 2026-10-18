@@ -36,7 +36,7 @@ export async function decalDialog(R, variant, only = null) {
     <p class="hint" id="dsInfo"></p>`, async () => {
     if ((dirty || layer) && !confirm('Close without saving your changes to this sheet?')) return false;
     await R.refreshDecals(hash);
-  });
+  }, null, 'decals');
   close.isDirty = () => dirty || !!layer;   // (unsaved changes: the tab's close asks first)
   const view = $('dsView'), vg = view.getContext('2d');
   let hash = hashes[0], full = null, sel = null, drag = null, dirty = false, layer = null;

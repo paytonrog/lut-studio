@@ -41,7 +41,7 @@ export async function designDialog(R, variant) {
     <p class="hint" id="dzInfo"></p>`, async () => {
     if (dirty && !confirm('Close without saving your changes to the design?')) return false;
     await R.refreshDecals(hash);
-  });
+  }, null, 'design');
   close.isDirty = () => dirty;   // (unsaved changes: the tab's close asks first)
   const info = t => { $('dzInfo').textContent = t; };
   const view = $('dzView'), vg = view.getContext('2d');

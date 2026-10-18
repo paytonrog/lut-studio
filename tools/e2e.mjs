@@ -508,7 +508,7 @@ async function main() {
         check(`${kind}: the helmet picker (none, ${other}, matching)`, without < withOwn && withOther > without && back === withOwn && errors.length === 0,
           `${withOwn} parts with its own helmet, ${without} with none, ${withOther} with ${other}, ${back} back; ${errors.slice(0, 2).join(' | ')}`);
         // the right panel stays put when another zone is picked: its scroll and the sections opened / closed
-        const panel = await evaluate(`(async () => { const p = document.getElementById('right'); const d = [...p.querySelectorAll('details.group')];
+        const panel = await evaluate(`(async () => { const p = document.getElementById('zonePane'); const d = [...p.querySelectorAll('details.group')];
           d[0].open = !d[0].open; await new Promise(r => setTimeout(r, 100)); p.scrollTop = 200; const before = [p.scrollTop, d[0].open];
           const zones = document.querySelectorAll('#zoneList .item'); zones[Math.min(2, zones.length - 1)].click(); await new Promise(r => setTimeout(r, 300));
           const after = [p.scrollTop, p.querySelectorAll('details.group')[0].open];

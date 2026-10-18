@@ -1,9 +1,10 @@
-// Showcase mode: the viewport as key art (scene.js builds the scene, showcase.js draws it), its options in the right
-// sidebar in place of the LUT fields: what the items show (as in this mod, as the game has them, the Theme panel's
+// Showcase mode: the viewport as key art (scene.js builds the scene, showcase.js draws it), its options in the sidebar
+// of its tab (tabs.js; the right one at first) in place of that sidebar's pane: what the items show (as in this mod, as the game has them, the Theme panel's
 // looks, a preset), the title and the line over it, the scene's items (each Helldiver's armor, cape, weapon and pose;
-// the vehicles, stratagem, backpack, sidearm, throwable), the look's sliders, Save 4K PNG. The left lists and the view
-// bar hide meanwhile; Exit puts the editor back as it was.
+// the vehicles, stratagem, backpack, sidearm, throwable), the look's sliders, Save 4K PNG. The other sidebar and the
+// view bar hide meanwhile; Exit (or the sidebar's own tab) puts the editor back as it was.
 import { $, esc, closeSide } from './texedit.js';
+import { dock, tabsOn } from './tabs.js';
 import { buildScene, LOOK } from './scene.js';
 import { PRESETS, presetTheme, presetOptions } from './theme.js';
 
@@ -25,7 +26,7 @@ export async function openShowcase(app, opts = {}) {
   if (!(await closeSide())) return;   // (an open panel first)
   const side = $('scSide'), mine = show = { panelTheme: opts.theme ?? null }, t0 = performance.now();
   document.body.classList.add('showcase');
-  side.hidden = false;
+  side.hidden = false; dock(side, 'showcaseBtn'); tabsOn('showcaseBtn');
   side.innerHTML = '<section><h2>Showcase</h2><p class="hint" id="scMsg">Building the scene… (the items load one by one)</p></section>';
   // what the items show: as in this mod, as the game has them, the Theme panel's looks, a preset
   const themes = { mod: { name: app.projectName() || 'My mod' }, game: { name: 'Helldivers 2', base: 'vanilla' } };
@@ -50,11 +51,12 @@ export async function openShowcase(app, opts = {}) {
   }
 }
 
+export const showcaseOpen = () => !!show;
 export function closeShowcase() {
   if (!show) return;
   const s = show; show = null; window.lutstudio.showcase = null;
   const side = $('scSide'); side.hidden = true; side.innerHTML = '';
-  document.body.classList.remove('showcase');
+  document.body.classList.remove('showcase'); dock(null); tabsOn(null);
   s.scene?.dispose().catch(e => console.warn('showcase', e));
 }
 

@@ -1,7 +1,8 @@
 // LUT Studio editor UI. Talks to the API (server.go, in a worker: bridge.js); renders with render.js.
 import { SLOT_ORDER, slotList, vehicleMount } from './helpers.js';
 import { buildScene, SCENE, holdsWeapon, holdWeapon } from './scene.js';
-import { openShowcase } from './showcaseui.js';
+import { openShowcase, closeShowcase, showcaseOpen } from './showcaseui.js';
+import { setupTabs } from './tabs.js';
 import { Renderer, parseGLB, extractPieces, DEBUG_VIEWS, WORLD, decalNumbers, prepareClip, skeletonOf, nodeWorld, transformPrim, mountMatrix } from './render.js';
 import { importLooks } from './presets.js';
 import { looksPanel } from './looks.js';
@@ -38,7 +39,7 @@ const ENVS = {
   'Night (flashlight)': { sun: [0.6, 0.7, 1], sunIntensity: 0.15, sunElev: 0.9, zenith: [0.02, 0.03, 0.06], horizon: [0.04, 0.05, 0.08], ground: [0.02, 0.02, 0.025], exposure: 1.4, flashlight: true },
 };
 
-// the zone roles review (Roles…): for the one reviewing the built-in roles, not every user: ?review turns it on
+// the zone roles review (the Roles tab): for the one reviewing the built-in roles, not every user: ?review turns it on
 // (remembered in this browser), ?review=0 off
 const REVIEW = (() => {
   const q = new URLSearchParams(location.search);
@@ -826,7 +827,6 @@ function renderLists() {
   $('masksBtn').hidden = !R.pieces.some(p => p.idMaskHash || p.patMaskHash);
   $('rolesBtn').hidden = !REVIEW;
   // the Tools menu offers the editors this item has (its buttons stay out of the bar: they don't fit a small window)
-  for (const o of $('tools').options) if (o.value) { o.hidden = !!$(o.value)?.hidden; o.disabled = o.hidden; }
   // the decal number (shown with a decal sheet; off when no material on screen moves its first cell) and the
   // damage slider (pieces on the vehicle base material)
   const sheets = R.pieces.filter(p => p.decalSheet && p.kind !== 'cape');
@@ -1024,7 +1024,7 @@ const OPEN = (() => {
 // The right panel for the selected zone. Picking another zone or LUT only changes the values shown: the panel keeps
 // its scroll position and the sections the user opened or closed.
 function renderFields() {
-  const box = $('fields'), head = $('fieldsHead'), panel = $('right'), top = panel.scrollTop;
+  const box = $('fields'), head = $('fieldsHead'), panel = $('zonePane'), top = panel.scrollTop;
   try { renderFieldsInto(box, head); } finally { panel.scrollTop = top; }
 }
 function renderFieldsInto(box, head) {
@@ -1527,8 +1527,14 @@ function wire() {
   document.addEventListener('pointerdown', e => pops.forEach(d => { if (d.open && !d.contains(e.target)) d.open = false; }));
   window.addEventListener('keydown', e => { if (e.key === 'Escape') pops.forEach(d => { d.open = false; }); });
   for (const id of ['snapIcon', 'snapVariant']) $(id).addEventListener('click', () => { $('snapPop').open = false; });
-  $('tools').onchange = () => { const v = $('tools').value; $('tools').value = ''; if (v) $(v)?.click(); };
-  $('partsTab').onclick = () => closeSide();
+  setupTabs();
+  // a sidebar's own tab (Parts, Zone): the editor open in that sidebar closed
+  $('partsTab').onclick = $('zoneTab').onclick = () => (showcaseOpen() ? closeShowcase() : closeSide());
+  // another editor's tab while the showcase is up: out of it first
+  for (const nav of ['leftTabs', 'rightTabs']) $(nav).addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b && b.id !== 'showcaseBtn' && showcaseOpen() && !b.classList.contains('on')) closeShowcase();
+  }, true);
   $('themeBtn').onclick = () => {
     if ($('themeBtn').classList.contains('on')) return;   // (already open)
     track('editor opened', { editor: 'theme' });

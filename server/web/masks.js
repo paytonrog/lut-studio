@@ -64,7 +64,7 @@ export async function maskDialog(app) {
     if (dirty && !confirm('Close without saving your changes to the mask?')) return false;
     app.setPaint(null);
     await R.refreshDecals(cur.hash);
-  });
+  }, null, 'masksBtn');
   close.isDirty = () => dirty;   // (unsaved changes: the tab's close asks first)
   const info = t => { $('mkInfo').textContent = t; };
   const view = $('mkView'), vg = view.getContext('2d');

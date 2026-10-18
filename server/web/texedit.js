@@ -1,28 +1,27 @@
 // What the texture editors (decals.js: decal sheets, designs.js: cape designs) share: the side panel they open in
 // (the model stays in view and live), an undo stack, the model's UV outline, raw texture transfer and file helpers.
 
+import { dock, tabsOn } from './tabs.js';
+
 export const $ = id => document.getElementById(id);
 export const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// Open a panel in the left column, in place of the Parts list (the model stays in view and can be turned while
-// editing). tab: the left tab it is ('themeBtn', 'modPageBtn'; none: an editor from Tools). onClose() runs when it is
-// closed; returning false keeps it open. Returns close(); close.signal ends with the panel (pass it to the panel's own
+// Open a panel in a sidebar, in place of its pane (Parts or Zone; the model stays in view and can be turned while
+// editing). tab: its tab ('themeBtn', 'masksBtn'...: tabs.js), the panel opens in the sidebar that tab is in (none:
+// the left one, with a Close button). onClose() runs when it is closed; returning false keeps it open. Returns close(); close.signal ends with the panel (pass it to the panel's own
 // listeners: { signal: close.signal }). Open another panel or dialog only after closeSide().
 let current = null;   // the open panel's close()
 // isDirty(): the panel has unsaved changes (the tab's close asks first: sideDirty)
-const tabsOn = id => document.querySelectorAll('#leftTabs button').forEach(b => b.classList.toggle('on', b.id === id));
 export function openSide(html, onClose, isDirty = null, tab = '') {
   const modal = $('modal'), host = $('sidePanel'), btn = $('sideClose'), ac = new AbortController();
   $('sideBody').innerHTML = html;
-  host.hidden = false; $('partsPane').hidden = true;
-  document.body.classList.add('sideOpen');
+  host.hidden = false; dock(host, tab);
   tabsOn(tab);
-  btn.hidden = !!tab;   // (a tab's panel closes through the Parts tab; an editor from Tools keeps its Close)
+  btn.hidden = !!tab;   // (a tab's panel closes through its sidebar's own tab, Parts or Zone)
   const close = async (force = false) => {
     if (!force && (await onClose?.()) === false) return false;
-    host.hidden = true; $('partsPane').hidden = false; $('sideBody').innerHTML = '';
-    document.body.classList.remove('sideOpen');
-    tabsOn('partsTab');
+    host.hidden = true; dock(null); $('sideBody').innerHTML = '';
+    tabsOn(null);
     btn.onclick = null;
     window.removeEventListener('keydown', keys, true);
     ac.abort();
