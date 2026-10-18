@@ -451,7 +451,9 @@ async function showItem(key) {
 // editor back as it was after
 function sceneApp() {
   return {
-    R, api, kits: () => S.kitList ?? [], poses: () => POSE.list, clip: loadClip, showItem,
+    R, api, kits: () => S.kitList ?? [], poses: () => POSE.list, clip: loadClip,
+    // (the scene's items, each on its own: without the editor's held weapon, which the scene gives its Helldivers itself)
+    showItem: async k => { S.inScene = true; try { return await showItem(k); } finally { S.inScene = false; } },
     statusText: () => $('status').textContent,
     // a lighting picked (a game one: until its cube map is in), the one before returned
     setEnv: async name => {
@@ -464,7 +466,7 @@ function sceneApp() {
     snapshot: () => ({ mode: S.mode, kit: S.kit, look: { ...S.look } }),
     restore: async st => {
       if (st.mode === 'other' && st.kit) return loadKit(st.kit);
-      S.look = { ...st.look }; saveLook(); return loadCharacter();
+      S.look = { ...st.look }; saveLook(); return loadCharacter();   // (the held weapon back with it)
     },
   };
 }
@@ -510,7 +512,7 @@ async function loadCharacter() {
   if (gen !== S.loadGen) return;
   await loadCharPieces(pieces, label, gen);
   HELD.pieces = []; HELD.kit = null;   // (the pieces were cleared: the weapon again, if the pose holds one)
-  if (gen === S.loadGen) updateHeld();
+  if (gen === S.loadGen && !S.inScene) updateHeld();
 }
 
 async function loadKit(name) {
