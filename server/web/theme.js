@@ -219,6 +219,25 @@ Object.assign(PRESETS, {
   'Bubblegum': T('#ffa8d0', '#a8d8ff', '#ffffff', '#ff8ac0', { pf: FIN.plastic, sf: FIN.plastic }),
   'Clown Car': T('#e0141e', '#1a3ae0', '#ffd814', '#1aa82a', { pf: FIN.plastic, sf: FIN.plastic, tf: FIN.plastic }),
   'Zombie': T('#6a7a5a', '#3a3e30', '#8a0e0e', '#4a4e3a', { pc: CM(1, ['#6a7a5a', '#4a5a3a', '#8a8a6a', '#2a2e22']), pf: FIN.rough, cc: CM(1, ['#4a4e3a', '#6a0e0e', '#5a5e48', '#2a2e22']) }),
+  // (no camo; worn and filthy: rust-brown chipped edges and patches, near-black grime in the hollows and crevices,
+  // a grimy surface texture, shine in blotches)
+  'Turd': (() => {
+    const grime = (paint, rust, heavy, crud) => [[21, 3, -1], [6, 3, -1],
+      [1, 0, 0], [1, 1, 1.2], [22, 0, 3],                                                  // grime texture, bumpy
+      [4, 0, 4], [4, 1, 3], [4, 2, 5], [4, 3, 0], [1, 3, 0.35], [5, 3, 1.5],              // worn: chips, edges, grunge
+      [6, 0, rust[0]], [6, 1, rust[1]], [6, 2, rust[2]], [5, 0, heavy[0]], [5, 1, heavy[1]], [5, 2, heavy[2]],
+      [3, 0, 2.5], [3, 1, -1.5], [3, 2, -3], [3, 3, 5], [1, 2, 0.25],                    // grime in the hollows
+      [2, 0, crud[0]], [2, 1, crud[1]], [2, 2, crud[2]], [22, 1, 0.95], [22, 2, 1],
+      [10, 0, 0.5], [9, 0, 0.7], [9, 1, -0.4], [9, 2, 0], [9, 3, 0.4], [8, 3, 0.45], [10, 2, 0]];
+    return {
+      primary: { c: '#4e3018', set: grime(null, [0.42, 0.2, 0.08], [0.28, 0.12, 0.05], [0.08, 0.05, 0.03]) },
+      secondary: { c: '#3a2210', set: grime(null, [0.38, 0.18, 0.07], [0.22, 0.1, 0.04], [0.06, 0.04, 0.02]) },
+      trim: { c: '#2c1a0c', set: grime(null, [0.34, 0.16, 0.06], [0.2, 0.09, 0.04], [0.05, 0.03, 0.02]) },
+      cloth: { c: '#43291a', set: [[21, 3, -1], [12, 0, 0.3], [12, 1, 0.2], [12, 2, 0.1], [12, 3, 0.15], [1, 0, 0], [1, 1, 1], [22, 0, 3],
+        [3, 0, 2], [3, 3, 4], [2, 0, 0.07], [2, 1, 0.05], [2, 2, 0.03], [1, 2, 0.2]] },
+      hardware: { c: '#5a3a1c', set: [[6, 3, 0.6], [10, 0, 0.6], [4, 0, 4], [4, 2, 6], [1, 3, 0.4], [6, 0, 0.45], [6, 1, 0.22], [6, 2, 0.08]] },
+    };
+  })(),
   'Banana': T('#ffe01a', '#ffe01a', '#4a3010', '#f0d014', { pc: CM(0, ['#ffe01a', '#4a3010', '#f4d414', '#ffe01a'], 2.4), pf: FIN.plastic }),
   'Barbie Corps': T('#ff2a9a', '#f8f4f6', '#e0b04a', '#ff5ab4', { pf: FIN.gloss, tf: FIN.mirror, hw: '#e0b04a' }),
   'Rubber Duck': T('#ffd400', '#ffd400', '#ff7a00', '#ffd400', { pf: FIN.plastic, sf: FIN.plastic, tf: FIN.plastic }),

@@ -58,15 +58,16 @@ export function closeShowcase() {
 function panel(app, themeOf) {
   const sc = show.scene, look = sc.showcase.look;
   const opt = (list, cur) => list.map(v => `<option ${v === cur ? 'selected' : ''}>${esc(v)}</option>`).join('');
+  const none = (cur, label) => `<option value="" ${cur ? '' : 'selected'}>${label}</option>`;   // (an empty slot)
   const poses = sc.poses(), groupOf = { Armory: 'Armory poses (hold the weapon)', Moves: 'Moves', Emotes: 'Emotes (weapon put away)' };
   const poseOpts = cur => Object.entries(groupOf).map(([g, t]) => `<optgroup label="${t}">${opt(poses.filter(p => p.group === g).map(p => p.name), cur)}</optgroup>`).join('');
   const rows = sc.slots.map((it, si) => it.group === 'Armor'
     ? `<div class="row"><b class="grow">${esc(it.label ?? 'Helldiver')}</b></div>
-      <div class="row"><select data-slot="${si}" data-f="name" title="Armor (its own helmet)" style="flex:1;min-width:0">${opt(sc.choices(si), it.name)}</select>
-        <select data-slot="${si}" data-f="cape" title="Cape" style="flex:1;min-width:0">${opt(sc.capes(), it.cape)}</select></div>
+      <div class="row"><select data-slot="${si}" data-f="name" title="Armor (its own helmet); none: no Helldiver here" style="flex:1;min-width:0">${none(it.name, '(none)')}${opt(sc.choices(si), it.name)}</select>
+        <select data-slot="${si}" data-f="cape" title="Cape" style="flex:1;min-width:0">${none(it.cape, '(no cape)')}${opt(sc.capes(), it.cape)}</select></div>
       <div class="row"><select data-slot="${si}" data-f="weapon" title="The weapon they hold (when the pose holds one)" style="flex:1;min-width:0"><option value="" ${it.weapon ? '' : 'selected'}>(no weapon)</option>${opt(sc.weapons(), it.weapon)}</select>
         <select data-slot="${si}" data-f="pose" title="Pose (the Armory's hold the weapon; an emote puts it away)" style="flex:1;min-width:0">${poseOpts(it.pose)}</select></div>`
-    : `<div class="row"><span style="width:6.5em">${esc(it.label ?? it.group)}</span><select data-slot="${si}" data-f="name" title="${esc(it.group)}" style="flex:1;min-width:0">${opt(sc.choices(si), it.name)}</select></div>`).join('');
+    : `<div class="row"><span style="width:6.5em">${esc(it.label ?? it.group)}</span><select data-slot="${si}" data-f="name" title="${esc(it.group)}" style="flex:1;min-width:0">${none(it.name, '(none)')}${opt(sc.choices(si), it.name)}</select></div>`).join('');
   $('scSide').innerHTML = `<section><h2>Showcase</h2>
       <p class="hint">Live: orbit, pan and zoom in the viewport (the frame there is the image's). Nothing in the mod changes.</p>
       <div class="row"><label class="grow">Show <select id="scShow" style="max-width:220px">

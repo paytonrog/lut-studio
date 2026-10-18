@@ -28,10 +28,10 @@ export const SCENE = [
   { label: 'Back left', group: 'Vehicles', name: 'Patriot Exosuit: Standard Exosuit Pattern', at: [-3.35, 2.6], yaw: -0.6, layer: 'back' },
   { label: 'Back right', group: 'Vehicles', name: 'Gunner FRV: Standard Vehicle Pattern', at: [4.1, 3.0], yaw: 1.0, layer: 'back' },
   { label: 'Stratagem', group: 'Stratagems', name: 'Stratagem: SOS Beacon', at: [-2.25, 4.6], yaw: 0.3, layer: 'back' },
-  // the small gear at the squad's feet
-  { label: 'Backpack', group: 'Backpacks', name: 'LIFT-850 Jump Pack', at: [1.65, -1.05], yaw: 0.7, layer: 'front' },
-  { label: 'Sidearm', group: 'Weapons', name: 'P-2 Peacemaker', at: [-0.8, -0.95], yaw: -1.9, layer: 'front' },
-  { label: 'Throwable', group: 'Equipment', name: 'Throwable: Frag Grenade', at: [0.45, -1.05], yaw: 0, layer: 'front' },
+  // the small gear at the squad's feet (none at first: pick one in the Showcase; name '' = the slot empty)
+  { label: 'Backpack', group: 'Backpacks', name: '', at: [1.65, -1.05], yaw: 0.7, layer: 'front' },
+  { label: 'Sidearm', group: 'Weapons', name: '', at: [-0.8, -0.95], yaw: -1.9, layer: 'front' },
+  { label: 'Throwable', group: 'Equipment', name: '', at: [0.45, -1.05], yaw: 0, layer: 'front' },
 ];
 // the camera (fov: vertical, of the 16:9 frame)
 export const CAM = { pitch: -0.05, fov: 0.5, target: [0, 0.78, 0.35], dist: 7.0 };
@@ -146,7 +146,7 @@ export async function buildScene(app, opts = {}) {
     for (const e of old) items.splice(items.indexOf(e), 1);
     let freed = false;
     const take = async keys => { const ps = await fetch(keys, freed ? [] : oldPieces); freed = true; return ps; };
-    if (parts === 'all') {
+    if (parts === 'all' && it.name) {
       const kit = kitIn(it.group, it.name);
       if (!kit) notes.push(`not found: ${it.name}`);
       else {
@@ -156,7 +156,7 @@ export async function buildScene(app, opts = {}) {
         items.push({ n: ids++, slot: si, kind: it.group === 'Armor' ? 'diver' : 'item', layer: it.layer, pieces: ps, pose: pz, rot, shift });
       }
     }
-    if (it.group === 'Armor' && it.weapon) {
+    if (it.group === 'Armor' && it.name && it.weapon) {
       const kit = kitIn('Weapons', it.weapon);
       if (!kit) notes.push(`not found: ${it.weapon}`);
       else items.push({ n: ids++, slot: si, kind: 'weapon', layer: it.layer, pieces: await take([kit.value]) });
@@ -290,7 +290,7 @@ function autoExposure(R, items, base) {
 // it two-handed (its hand sockets within 40 cm, or the left hand within 30 cm of this weapon's grip), the left arm bent
 // (two-bone IK: shoulder, elbow) so attach_hand_l meets the weapon's IK_left, the hand turned as IK_left; the
 // Helldiver's pieces take those bones (pose.world). In the avatar's space, then the Helldiver's turn and place.
-function holdWeapon(R, h, n, it, ps) {
+export function holdWeapon(R, h, n, it, ps) {
   const S = R.avatarSkel;
   if (!h || !S) return null;
   const at = nm => S.names.indexOf(nm);   // (n, it: the weapon's id and layer; unused but for the key)

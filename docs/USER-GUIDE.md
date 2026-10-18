@@ -153,7 +153,7 @@ whenever it's worn.
   cape** are the game's Armory screen cameras (its per-tab distances and heights, a narrow 22.5° view, the
   character turned 20° to its right; the cape tab from behind); switching between them glides over 0.25 s, as the
   game's tabs do.
-- **Light**: *From the game* uses the game's own lighting captures and lights. **Armory (menu)** is how the game's
+- **Light**: *From the game* uses the game's own lighting captures and lights. **Armory (menu)**, the default, is how the game's
   Armory screen lights the character: its four lights that turn with the camera (a warm key from the front left, a
   strong cool rim from behind, a dim cool fill, a warm bounce from below; each casts a soft shadow when **Shadows** is
   on), the ship's reflections, the dimmed backdrop behind the menu and the screen's
@@ -167,10 +167,12 @@ whenever it's worn.
   snow), so you can judge a camo against it (in the editor too, under the armor, with soft shadows). Next to it, **Weather** picks one of the planet's weathers (clear, misty, overcast, rainstorm, snowstorm…; the share of missions it is estimated at): its sun, sky light and fog, and it sets Mission wear's **Wetness** and **Snow** as the weather does; armor snow takes the planet's snow color. **Adjust ▾ > Planet scenery** (on by default) puts a simple stand-in for the planet around it: gentle hills of its ground, flat where you stand, and its big props as the game's map pieces place them, by how much of the view each takes: the game's own rocks, rock formations, moss and roots in their colors (their surface from the biome's rock texture), its own trees and palms, and around your feet tufts of its grass, moss and heather and small stones in their colors. It is not the game's terrain (made as a mission loads) or layout. The sky is LUT Studio's (the game's is computed as it runs), tinted
   toward the planet's fog. The other presets are LUT Studio's own light setups (snow, jungle, night…), lit the same way. **Adjust ▾** next to it holds the rest:
   **Exposure**; the **Sun** (in a game environment: a key light at the capture's brightest spot) with **On**, its
-  **Direction** around the armor and **Height** (each lighting preset sets its own height until you move it);
+  **Direction** around the armor (at first from the front) and **Height** (45° at first; each lighting preset sets its own height until you move it);
   **Shadows**; and LUT Studio's two side lights, **Blue light** and **Yellow light** (cool on the left, warm on the
   right), off at first: tick them on and set each one's direction (0° = from the camera, 90° = right, 180° =
-  behind, 270° = left) and height. LUT Studio remembers your side lights.
+  behind, 270° = left) and height. LUT Studio remembers your side lights. **Reset** puts the whole menu back as it starts.
+- **Pose**: with a pose that holds a weapon (the Armory's, the moves), a menu beside it picks the weapon in the Helldiver's hands (or none); click the weapon to edit its LUTs like any piece's. Picking a planet's light turns the sun on and the side lights off; the Armory menu's turns the side lights on and the sun off.
+- **Pose**: with a pose that holds a weapon (the Armory's, the moves), a menu beside it picks the weapon in the Helldiver's hands (or none); click the weapon to edit its LUTs like any piece's. Picking a planet's light turns the sun on and the side lights off; the Armory menu's turns the side lights on and the sun off.
 - **Camera** presets, **Frame** and **Turntable**; **View**: the final look, or debug views that show
   each mask on its own (zones, wear, metalness, roughness, dirt, wetness…); **Before | after** splits the screen
   (the game's look on the left: its colors, patterns, masks, decals and cape designs; your edits on the right).
@@ -247,7 +249,7 @@ whenever it's worn.
   with LUTs left to confirm, and the progress line counts them. LUT Studio ships reviewed roles; yours come on top.
   **Export roles.json** saves the built-in roles with yours on top; **Forget mine here** drops yours on screen.
 - **Theme…**: pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
-  Legion and Neon Circuit, some very silly ones, and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
+  Legion and Neon Circuit, some very silly ones (Turd: rusty, grimy brown) (Turd: yes, really), and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,
@@ -296,8 +298,8 @@ whenever it's worn.
 ## Showcase
 
 **Showcase** (on the view bar, or the Theme panel's button) turns the viewport into key art, live: three Helldivers in
-warbond poses holding their weapons, two vehicles and a stratagem behind them, a backpack, a sidearm and a throwable at
-their feet, in the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
+warbond poses holding their weapons, two vehicles and a stratagem behind them (a backpack, a sidearm and a throwable at
+their feet when you pick them), in the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
 a title. The items load one by one (a few seconds each the first time); then orbit, pan and zoom as ever (the frame in
 the viewport is the image's, 16:9). The editor's lists and bars step aside and the right sidebar holds the options:
 
@@ -306,7 +308,8 @@ the viewport is the image's, 16:9). The editor's lists and bars step aside and t
 - **Title** (the big line) and **Line** (the small one over it): either can be empty.
 - **Light**: the glow's color, from the scene (the theme's, or the squad's own colors) or your own.
 - **Scene**: each Helldiver's armor, cape, weapon and pose (an Armory pose holds the weapon, an emote puts it away),
-  the two vehicles, the stratagem, the backpack, the sidearm and the throwable. A change swaps that item in place.
+  the two vehicles, the stratagem, the backpack, the sidearm and the throwable. A change swaps that item in place;
+  **(none)** empties any slot (the floor items start empty).
 - **Look**: sliders for the background, the glow and its size, the rim light, exposure, reflections, floor shadows,
   haze, the aura around the squad, bloom, embers, grain, the vignette, the punch (how much the tone lifts the
   midtones) and the text size (remembered in this browser); **Reset look**, **Reset camera**.

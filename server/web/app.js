@@ -1,6 +1,6 @@
 // LUT Studio editor UI. Talks to the API (server.go, in a worker: bridge.js); renders with render.js.
 import { SLOT_ORDER, slotList, vehicleMount } from './helpers.js';
-import { buildScene, SCENE } from './scene.js';
+import { buildScene, SCENE, holdsWeapon, holdWeapon } from './scene.js';
 import { openShowcase } from './showcaseui.js';
 import { Renderer, parseGLB, extractPieces, DEBUG_VIEWS, WORLD, decalNumbers, prepareClip, skeletonOf, nodeWorld, transformPrim, mountMatrix } from './render.js';
 import { importLooks } from './presets.js';
@@ -28,7 +28,7 @@ const status = (msg, err = false) => { const s = $('status'); s.textContent = ms
 // Lighting presets: LUT Studio's own approximations (sky gradient + sun). The game's baked environments
 // (/api/envs) are added to the list as "game:<name>".
 const ENVS = {
-  'Studio': { sun: [1, 0.97, 0.92], sunIntensity: 2.6, sunElev: 0.75, zenith: [0.55, 0.57, 0.62], horizon: [0.42, 0.43, 0.46], ground: [0.16, 0.16, 0.17], exposure: 1.0 },
+  'Studio': { sun: [1, 0.97, 0.92], sunIntensity: 2.6, sunElev: Math.PI / 4, zenith: [0.55, 0.57, 0.62], horizon: [0.42, 0.43, 0.46], ground: [0.16, 0.16, 0.17], exposure: 1.0 },
   'Armory': { sun: [1, 0.9, 0.78], sunIntensity: 2.8, sunElev: 0.55, zenith: [0.12, 0.16, 0.24], horizon: [0.2, 0.22, 0.27], ground: [0.06, 0.06, 0.07], exposure: 1.25 },
   'Desert noon': { sun: [1, 0.93, 0.8], sunIntensity: 5.0, sunElev: 1.2, zenith: [0.35, 0.55, 0.9], horizon: [0.75, 0.72, 0.65], ground: [0.55, 0.42, 0.28], exposure: 0.8 },
   'Overcast': { sun: [0.9, 0.92, 1], sunIntensity: 0.5, sunElev: 1.1, zenith: [0.75, 0.77, 0.8], horizon: [0.62, 0.63, 0.65], ground: [0.22, 0.23, 0.22], exposure: 1.1 },
@@ -75,6 +75,9 @@ async function init() {
   $('env').value = 'Studio';
   await loadGameEnvs();
   await loadPlanets();
+  // the default light: the game's Armory menu (as the game shows the armor), else LUT Studio's Studio
+  if ([...$('env').options].some(o => o.value === 'game:Armory (menu)')) $('env').value = 'game:Armory (menu)';
+  S.lightsInit = true;   // (lightsFor, once the Adjust menu's controls are wired)
   for (const [name, v] of DEBUG_VIEWS) $('debugView').add(new Option(name, v));
   setEnv(); showSunElev();
   fillVariants();
@@ -196,7 +199,7 @@ function planetGround(p) {
 function planetEnv(p, w = null) {
   w ??= p.weathers?.find(x => x.default) ?? null;
   const sun = w ? w.sun : p.sun, fog = w ? w.fog : p.fog, ambT = w ? w.ambient : p.ambientTint.map(t => t * (p.ambient ?? 1));
-  const amb = 0.55, sunI = 3, elev = 0.7, thick = Math.min(0.85, (w?.fogDensity ?? 0.5) / 3);
+  const amb = 0.55, sunI = 3, elev = Math.PI / 4, thick = Math.min(0.85, (w?.fogDensity ?? 0.5) / 3);
   const horizon = fog.map((c, k) => c * amb * ambT[k]);
   const zenith = fog.map((c, k) => (mixN(0.6 * c + 0.4 * [0.35, 0.5, 0.8][k], c, thick)) * amb * 0.8 * ambT[k]);
   const gnd = planetGround(p);
@@ -217,6 +220,17 @@ function planetEnv(p, w = null) {
   return e;
 }
 
+// the Adjust menu's lights for a lighting: a planet's: its sun, no side lights; the Armory menu's: the side lights,
+// no sun (the menu's own rig is its key)
+function lightsFor(v) {
+  const set = (sun, rims) => {
+    R.sunOn = sun; $('sunOn').checked = sun;
+    R.rim.forEach((l, i) => { l.on = rims; $('rim' + i).checked = rims; });
+  };
+  if (v.startsWith('planet:')) set(true, false);
+  else if (v === 'game:Armory (menu)') set(false, true);
+}
+
 function setEnv() {
   const v = $('env').value, ge = v.startsWith('game:') ? S.gameEnvs.find(e => 'game:' + e.name === v) : null;
   const pl = v.startsWith('planet:') ? S.planets.find(p => 'planet:' + p.id === v) : null;
@@ -227,8 +241,8 @@ function setEnv() {
   if (e.sunAz !== undefined) $('sunAz').value = e.sunAz;
   e.sunAz = az * Math.PI / 180;
   e.exposure *= Math.pow(2, +$('exposure').value);
-  if (ge) {                              // the Sun slider turns the environment (and its sun)
-    e.envRot = e.sunAz;
+  if (ge) {                              // the Sun slider turns the environment (and its sun); at its default
+    e.envRot = e.sunAz - 145 * Math.PI / 180;   // (180: the sun from the front) as it was matched (35)
     const old = R.env?.game === ge ? R.env.cubeTex : null;
     if (old) placeEnv(e, old);
     else R.loadCube(ge.specular, ge.diffuse ?? '').then(t => { if (R.env === e) placeEnv(e, t); })
@@ -424,7 +438,7 @@ function initialLook() {
 // Show an item (the Show menu, a LUT of another item): an item of OTHER_TYPES on its own; an
 // armor, helmet or cape on the Helldiver (an armor with its matching helmet; a helmet or cape onto the current armor)
 async function showItem(key) {
-  if (isOther(key)) { S.mode = 'other'; return loadKit(key); }
+  if (isOther(key)) { S.mode = 'other'; HELD.pieces = []; HELD.kit = null; $('heldWeapon').hidden = true; return loadKit(key); }
   const es = entriesOf(key);
   const armor = es.find(e => e.type === 'Armor'), helmet = es.find(e => e.type === 'Helmet'), cape = es.find(e => e.type === 'Cape');
   if (armor) { S.look.armor = armor.value; S.look.helmet = 'match'; }
@@ -495,6 +509,8 @@ async function loadCharacter() {
   }
   if (gen !== S.loadGen) return;
   await loadCharPieces(pieces, label, gen);
+  HELD.pieces = []; HELD.kit = null;   // (the pieces were cleared: the weapon again, if the pose holds one)
+  if (gen === S.loadGen) updateHeld();
 }
 
 async function loadKit(name) {
@@ -1199,7 +1215,72 @@ function tickPose() {
     POSE.time = (performance.now() / 1000 - POSE.t0) % Math.max(POSE.clip.length, 1e-3);
     $('poseTime').value = POSE.time;
   }
+  const t = R.pose?.time;
   R.pose = { clip: POSE.clip, time: POSE.time };
+  if (HELD.pieces.length && t !== POSE.time) gripHeld();
+}
+
+// ---------- the held weapon: with a pose that holds one (the Armory's, the moves), a weapon in the Helldiver's hands,
+// placed as the game links it (scene.js holdWeapon: on attach_hand_r, the left arm bent to its IK_left); its pieces
+// are pieces as any (pick one to edit its LUTs: an edit pulls the weapon's kit into the project)
+const HELD = { kit: null, pieces: [], loading: null };
+function fillHeldMenu() {
+  const sel = $('heldWeapon');
+  if (sel.options.length) return;
+  const guns = (S.kitList ?? []).filter(e => e.type === 'Weapon');
+  sel.add(new Option('No weapon', ''));
+  for (const e of guns) sel.add(new Option(e.label, e.value));
+  let want = null; try { want = localStorage.getItem('lutstudio.held'); } catch { }
+  sel.value = want !== null && [...sel.options].some(o => o.value === want) ? want : (guns.find(e => /Liberator\b/.test(e.label)) ?? guns[0])?.value ?? '';
+}
+// the held weapon as the pose and the menu say (force: load it again, e.g. another weapon)
+async function updateHeld(force = false) {
+  fillHeldMenu();
+  const name = $('pose').selectedOptions[0]?.text, holds = !!$('pose').value && S.mode === 'char' && holdsWeapon(POSE.list, name);
+  $('heldWeapon').hidden = !holds;
+  const want = holds ? $('heldWeapon').value : '';
+  if (!force && want === HELD.kit && (!want || HELD.pieces.length)) { if (want) gripHeld(); return; }
+  dropHeld();
+  HELD.kit = want;
+  if (!want) return;
+  const gen = S.loadGen, before = new Set(R.pieces);
+  try {
+    const ps = ((await api('/api/kit?name=' + encodeURIComponent(want))) ?? []).filter(p => p.material_lut);
+    if (!ps.length || gen !== S.loadGen || HELD.kit !== want) return;
+    const kitUnits = await weaponUnits(ps[0].kit_id, ps[0].kit_units?.length ? ps[0].kit_units : [...new Set(ps.map(p => p.unit))].map(u => ({ unit: u })));
+    let body = null;
+    for (const ku of kitUnits) {
+      const glb = parseGLB(await (await api('/api/unit?hash=' + ku.unit)).arrayBuffer());
+      let mats = [null];
+      if (!body) body = glb;
+      else { const mounts = ku.mount ? [ku.mount] : vehicleMount(ku.name ?? ''); mats = mounts ? mounts.map(m => mountMatrix(body, m, glb)).filter(Boolean) : [null]; if (!mats.length) continue; }
+      for (const m of mats) for (const prim of extractPieces(glb, { variant: ps[0].skin, vehicle: true })) {
+        if (m) transformPrim(prim, m);
+        const pc = ps.find(p => p.unit === ku.unit && p.slot === prim.slot), lut = pc?.material_lut || prim.tex.lut;
+        if (!lut) continue;
+        const pat = pc?.pattern_lut || prim.tex.patternLut;
+        try { await loadVanilla(lut); } catch { continue; }
+        if (pat) await loadVanilla(pat).catch(() => null);
+        if (gen !== S.loadGen || HELD.kit !== want) return dropHeld();
+        await R.addPiece(prim, { edited: editedKey(lut), vanilla: 'v:' + lut, pattern: pat ? editedKey(pat) : null },
+          { lut, slot: prim.slot, unit: ku.unit, pattern: pat, vehicle: true, held: true, kitRef: 'kit:' + ps[0].kit_id });
+      }
+    }
+  } catch (e) { console.warn('held weapon', e); status('The weapon could not be loaded: ' + e.message, true); }
+  HELD.pieces = R.pieces.filter(p => !before.has(p) && p.info?.held);
+  gripHeld();
+  renderLists();
+}
+function dropHeld() {
+  R.removePieces(p => p.info?.held);
+  for (const p of R.pieces) if (p.pose && p.pose.world) delete p.pose;   // (the arm back on the pose)
+  HELD.pieces = [];
+}
+// the weapon on the hands for the pose at this moment (the Helldiver unturned, at the origin)
+function gripHeld() {
+  if (!HELD.pieces.length || !R.pose) return;
+  const h = { n: 0, rot: [1, 0, 0, 0, 1, 0, 0, 0, 1], shift: [0, 0, 0], pose: R.pose, pieces: R.pieces.filter(p => !p.info?.held), posed: null };
+  holdWeapon(R, h, 0, {}, HELD.pieces);
 }
 
 // The Armory menu's cameras (game.dll's per-tab presets: yaw, distance, height; level; 22.5 deg vertical): the
@@ -1289,7 +1370,7 @@ function wire() {
   cv.addEventListener('wheel', e => { e.preventDefault(); R.cam.dist *= Math.exp(e.deltaY * 0.001); }, { passive: false });
   cv.addEventListener('dblclick', () => R.frame());
   $('frame').onclick = () => R.frame();
-  $('env').onchange = () => { R.sunElevUser = null; setEnv(); showSunElev(); };
+  $('env').onchange = () => { R.sunElevUser = null; lightsFor($('env').value); setEnv(); showSunElev(); };
   $('weather').onchange = () => setEnv();
   $('sceneryOn').onchange = e => { R.sceneryOn = e.target.checked; };
   $('sunAz').oninput = () => { if (R.env.game) setEnv(); else R.env.sunAz = +$('sunAz').value * Math.PI / 180; };
@@ -1309,7 +1390,17 @@ function wire() {
   $('sunOn').onchange = () => { R.sunOn = $('sunOn').checked; };
   $('shadowsOn').onchange = () => { R.shadows = $('shadowsOn').checked; };
   $('sunEl').oninput = () => { R.sunElevUser = +$('sunEl').value; };
+  // Reset: the Adjust menu as it starts (the sun from the front, 45° up; the lighting's own height until moved)
+  $('lightReset').onclick = () => {
+    $('exposure').value = 0; $('sunAz').value = 180; $('sunOn').checked = true; $('shadowsOn').checked = true; $('sceneryOn').checked = true;
+    Object.assign(R, { sunOn: true, shadows: true, sceneryOn: true, sunElevUser: null });
+    R.rim.forEach((l, i) => { Object.assign(l, RIM_DEFAULT[i]); $('rim' + i).checked = l.on; $('rim' + i + 'Az').value = l.az; $('rim' + i + 'El').value = l.el; });
+    try { localStorage.removeItem('lutstudio.rim2'); } catch { }
+    setEnv(); showSunElev();
+  };
   // the side lights: on / off, direction and height, remembered in this browser
+  const RIM_DEFAULT = R.rim.map(l => ({ on: l.on, az: l.az, el: l.el }));
+  if (S.lightsInit) setTimeout(() => lightsFor($('env').value), 0);
   let rimSaved = null;
   try { rimSaved = JSON.parse(localStorage.getItem('lutstudio.rim2') ?? 'null'); } catch { }
   R.rim.forEach((l, i) => {
@@ -1385,7 +1476,8 @@ function wire() {
   $('showcaseBtn').onclick = () => (track('editor opened', { editor: 'showcase' }), openShowcase(showcaseApp()));
   for (const n of Object.keys(CAMERAS)) $('camera').add(new Option(n, n));
   $('camera').onchange = () => setCamera($('camera').value);
-  $('pose').onchange = () => setPose($('pose').value);
+  $('pose').onchange = async () => { await setPose($('pose').value); updateHeld(); };
+  $('heldWeapon').onchange = () => { try { localStorage.setItem('lutstudio.held', $('heldWeapon').value); } catch { } updateHeld(true); };
   for (const [id, part] of [['wearArmor', 'armor'], ['wearHelmet', 'helmet'], ['wearCape', 'cape']])
     $(id).onchange = () => { S.look[part] = $(id).value; saveLook(); loadCharacter(); };
   $('posePlay').onclick = () => {

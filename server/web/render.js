@@ -763,6 +763,17 @@ export class Renderer {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.FLOAT, px instanceof Float32Array ? px : new Float32Array(px));
   }
 
+  // the pieces pred picks taken off (their buffers freed)
+  removePieces(pred) {
+    const gl = this.gl, keep = [];
+    for (const p of this.pieces) {
+      if (!pred(p)) { keep.push(p); continue; }
+      gl.deleteVertexArray(p.vao); p.buffers.forEach(b => gl.deleteBuffer(b));
+      if (p.skin?.tex) gl.deleteTexture(p.skin.tex);
+    }
+    this.pieces = keep;
+  }
+
   clearPieces() {
     const gl = this.gl;
     for (const p of this.pieces) {

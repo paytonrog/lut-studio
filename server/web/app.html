@@ -52,8 +52,8 @@
             <label class="popRow" title="Brighter or darker, in stops">Exposure <input type="range" id="exposure" min="-3" max="3" step="0.1" value="0"></label>
             <div class="popHead">Sun</div>
             <label class="check popRow" title="The sun (in a game environment: its key light)"><input type="checkbox" id="sunOn" checked> On</label>
-            <label class="popRow" title="Sun direction around the model">Direction <input type="range" id="sunAz" min="-180" max="180" value="35"></label>
-            <label class="popRow" title="Sun height: 0° = level with the model, 90° = overhead (a lighting preset sets its own)">Height <input type="range" id="sunEl" min="-30" max="90" value="43"></label>
+            <label class="popRow" title="Sun direction around the model">Direction <input type="range" id="sunAz" min="-180" max="180" value="180"></label>
+            <label class="popRow" title="Sun height: 0° = level with the model, 90° = overhead (a lighting preset sets its own)">Height <input type="range" id="sunEl" min="-30" max="90" value="45"></label>
             <label class="check popRow" title="Shadows (LUT Studio's own shadow maps, not the game's shadow filtering)"><input type="checkbox" id="shadowsOn" checked> Shadows</label>
             <label class="check popRow" title="With a planet's light: a simple stand-in for the planet around the armor (hills of its ground, its rocks and trees)"><input type="checkbox" id="sceneryOn" checked> Planet scenery</label>
             <div class="popHead">Side lights <span class="hint">(LUT Studio's own)</span></div>
@@ -63,6 +63,7 @@
             <label class="check popRow" title="A warm light from the right side"><input type="checkbox" id="rim1"> Yellow light</label>
             <label class="popRow" title="Yellow light direction around the model: 0° = from the camera, 90° = right, 180° = behind, 270° = left">Direction <input type="range" id="rim1Az" min="0" max="360" value="110"></label>
             <label class="popRow" title="Yellow light height: 0° = level with the model, 90° = overhead, below 0 = from underneath">Height <input type="range" id="rim1El" min="-60" max="90" value="17"></label>
+            <button id="lightReset" class="popRow" title="Everything in this menu back as it starts: exposure, the sun (from the front, 45° up), shadows, scenery, the side lights off">Reset</button>
           </div></details>
       </span>
       <!-- Camera -->
@@ -74,6 +75,7 @@
       <!-- Pose (the Helldiver) / attachments (weapons) -->
       <span class="barGroup armorOnly">
         <label title="The game's animations: armory poses, moves, emotes">Pose <select id="pose"><option value="">T-pose</option></select></label>
+        <select id="heldWeapon" hidden title="The weapon in the Helldiver's hands (a pose that holds one): click it to edit its LUTs as any piece's"></select>
         <button id="posePlay" title="Play / pause">❚❚</button>
         <input type="range" id="poseTime" min="0" max="1" step="0.01" value="0" disabled title="Animation time" style="width:90px">
       </span>
