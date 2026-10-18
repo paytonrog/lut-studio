@@ -270,8 +270,9 @@ type parsedDoc struct {
 }
 
 type cachedDoc struct {
-	mod  time.Time
-	size int64
+	mod    time.Time
+	size   int64
+	parsed time.Time // (when it was read: a file still within two seconds of its save then could change unseen)
 	parsedDoc
 }
 
@@ -307,7 +308,7 @@ func readCached(f string) parsedDoc {
 	docCacheMu.Lock()
 	c, ok := docCache[f]
 	docCacheMu.Unlock()
-	if ok && c.mod.Equal(st.ModTime()) && c.size == st.Size() && time.Since(st.ModTime()) > 2*time.Second {
+	if ok && c.mod.Equal(st.ModTime()) && c.size == st.Size() && c.parsed.Sub(st.ModTime()) > 2*time.Second {
 		return c.parsedDoc
 	}
 	b, err := os.ReadFile(f)
@@ -320,7 +321,7 @@ func readCached(f string) parsedDoc {
 		pd = parsedDoc{err: err}
 	}
 	docCacheMu.Lock()
-	docCache[f] = cachedDoc{st.ModTime(), st.Size(), pd}
+	docCache[f] = cachedDoc{st.ModTime(), st.Size(), time.Now(), pd}
 	docCacheMu.Unlock()
 	return pd
 }

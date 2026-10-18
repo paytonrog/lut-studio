@@ -445,7 +445,7 @@ func readPatches(src Source, rel map[string]string, patches []string, want func(
 	// a patch whose GPU or stream part can't be read: said as the patch's error (a note), not taken for "no LUTs"
 	for _, p := range sorted {
 		for _, ext := range []string{".gpu_resources", ".stream"} {
-			if f, ok := rel[p+ext]; ok && readErr[f] != nil && out[p] != nil && out[p].err == nil {
+			if f, ok := rel[p+ext]; ok && readErr[f] != nil && len(wanted[f]) > 0 && out[p] != nil && out[p].err == nil {
 				out[p].err = fmt.Errorf("%s can't be read: %w", path.Base(f), readErr[f])
 			}
 		}

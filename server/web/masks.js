@@ -178,7 +178,7 @@ export async function maskDialog(app) {
     const i0 = y * W + x, before = masks2.map(m => m.slice());
     // (a zone as the mask reads it; the pattern: on or off in its layer)
     const zb = kind === 'pattern' ? i => before[pl * 4][i]
-      : i => { for (let l = 0; l < L; l++) for (let c = 0; c < 4; c++) if (before[l * 4 + c][i]) return l * 4 + c; return 0; };
+      : i => { let z = 0; for (let l = 0; l < L; l++) for (let c = 0; c < 4; c++) if (before[l * 4 + c][i]) { z = l * 4 + c; break; } return z; };   // (later layers override, as the shader reads it)
     const z0 = zb(i0), seen = new Uint8Array(N), stack = [i0];
     seen[i0] = 1;
     while (stack.length) {

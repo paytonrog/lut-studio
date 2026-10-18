@@ -24,7 +24,9 @@ window.createShell = () => {
     document.head.appendChild(st);
   }
   let box = null;
+  let stopped = null;   // (why the program stopped: its message stays on screen)
   const loading = (text, frac) => {
+    if (stopped && text === null) return;   // (the program stopped: its message stays)
     if (text === null) { box?.remove(); box = null; return; }
     if (!box) {
       box = document.createElement('div');
@@ -54,7 +56,8 @@ window.createShell = () => {
   };
   // (the program stopped: the requests waiting get an error answer, the page says so)
   const failAll = why => {
-    for (const [id, w] of waiting) { waiting.delete(id); w.resolve({ type: 'res', id, status: 503, headers: { 'content-type': 'text/plain' }, body: new TextEncoder().encode(why) }); }
+    stopped = why;
+    for (const [id, w] of waiting) { waiting.delete(id); w.resolve({ type: 'res', id, status: 503, error: why, headers: { 'content-type': 'text/plain' }, body: new TextEncoder().encode(why) }); }
     loading(why, 0);
   };
   worker.onerror = e => { console.error(e); failAll('LUT Studio stopped: ' + (e.message || 'an error') + ' (reload the page)'); };

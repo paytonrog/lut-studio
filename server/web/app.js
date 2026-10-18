@@ -161,6 +161,13 @@ S.planets = [];
 const gradeCache = new Map();   // planet id -> promise of {tex, n}
 const groundCache = new Map();  // planet id -> promise of its ground tile (planet.js)
 const sceneryCache = new Map(); // planet id -> promise of its scene (planetscene.js)
+// a scene no longer cached: freed now, or once the light it's in is no longer shown
+function freeScenery(s) {
+  if (!s?.dispose) return;
+  if (R.env?.scenery !== s) return s.dispose();
+  const wait = () => (R.env?.scenery === s ? setTimeout(wait, 2000) : s.dispose());
+  setTimeout(wait, 2000);
+}
 async function loadPlanets() {
   try { S.planets = (await (await fetch('planets/planets.json')).json()).planets; } catch { S.planets = []; }
   if (!S.planets.length) return;
@@ -218,10 +225,14 @@ function planetEnv(p, w = null) {
         async t => parseGLB(await (await api('/api/speedtree?hash=' + encodeURIComponent(t))).arrayBuffer())));
       for (const old of [...sceneryCache.keys()].slice(0, -3)) {   // (the three latest kept)
         const o = sceneryCache.get(old); sceneryCache.delete(old);
-        o.then(s => { if (R.env?.scenery !== s) s.dispose(); }).catch(() => { });
+        o.then(s => freeScenery(s)).catch(() => { });
       }
     } else { const v = sceneryCache.get(p.id); sceneryCache.delete(p.id); sceneryCache.set(p.id, v); }   // (latest)
-    return sceneryCache.get(p.id).then(s => { e.scenery = s; if (s.failed) sceneryCache.delete(p.id); })
+    return sceneryCache.get(p.id).then(s => {
+      e.scenery = s;
+      // (a part failed: built again next time this planet is picked, this one freed once it's off screen)
+      if (s.failed && sceneryCache.get(p.id) && !S.retriedScenery?.has(p.id)) { (S.retriedScenery ??= new Set()).add(p.id); sceneryCache.delete(p.id); freeScenery(s); }
+    })
       .catch(err => { sceneryCache.delete(p.id); console.warn('scenery', err); });
   };
   const sceneryReady = sceneryCache.has(p.id) ? scenery()

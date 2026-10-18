@@ -290,7 +290,9 @@ export async function buildScenery(R, p, fetchUnit, fetchTree) {
   }), ...items.filter(s => s.tree && s.path).map(async s => {
     try {
       // (a leaf whose atlas didn't load: not drawn as solid cards; a tree left with no leaves: the simple one)
-      const t = (await shared(treeCache, s.path, async () => treeParts(gl, await fetchTree(s.path)))).filter(pt => pt.bark || pt.tex);
+      const all = await shared(treeCache, s.path, async () => treeParts(gl, await fetchTree(s.path)));
+      if (all.some(pt => !pt.bark && !pt.tex)) treeCache.delete(s.path);   // (an atlas missing: the tree read again next time)
+      const t = all.filter(pt => pt.bark || pt.tex);
       if (t.some(pt => !pt.bark)) trees.set(s.path, t); else failed++;
     } catch (e) { failed++; console.warn('scenery tree', s.path, e); }
   })]);

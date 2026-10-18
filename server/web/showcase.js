@@ -314,9 +314,10 @@ export class Showcase {
     }
     const [, , W, H] = rect;
     this.ensure(W, H);
-    const L = cutout ? { ...this.look, bg: 0, glow: 0, reflect: 0, shadow: 0, haze: 0, aura: 0, bloom: 0, embers: 0, grain: 0, vignette: 0 } : this.look;
+    const L = cutout ? { ...this.look, bg: 0, glow: 0, reflect: 0, shadow: 0, haze: 0, aura: 0, bloom: 0, embers: 0, grain: 0, vignette: 0, punch: 0 } : this.look;
     const keep = [R.noSky, R.shadows];
-    R.postInner = true; R.noSky = true;
+    R.postInner = true; R.noSky = true; const keepScenery = R.sceneryOn;
+    if (cutout) R.sceneryOn = false;   // (a cut-out: the items alone)
     try {
       // the scene, multisampled, resolved
       R.target = { fbo: this.scene.ms, w: W, h: H };
@@ -330,7 +331,7 @@ export class Showcase {
         R.draw(time);
         R.mirror = false; R.shadows = keep[1];
       } else { gl.bindFramebuffer(gl.FRAMEBUFFER, this.refl.fbo); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
-    } finally { R.target = null; R.postInner = false; R.mirror = false; [R.noSky, R.shadows] = keep; }
+    } finally { R.target = null; R.postInner = false; R.mirror = false; [R.noSky, R.shadows] = keep; R.sceneryOn = keepScenery; }
     // the contact shadows: the parts' heights seen from under the floor
     const { eye, inv } = R.matrices(W / H), c = R.cam;
     const ext = 6, cm = M4.mul(M4.ortho(ext, 0.5, 0.5 + 2.5), M4.lookAt([c.target[0], -0.5, c.target[2]], [c.target[0], 1, c.target[2]], [0, 0, 1]));
@@ -352,7 +353,7 @@ export class Showcase {
     const a = this.anchor, cl = [0, 1, 2, 3].map(r => vp[r] * a[0] + vp[4 + r] * a[1] + vp[8 + r] * a[2] + vp[12 + r]);
     const disc = [(cl[0] / cl[3] * 0.5 + 0.5) * W / H, (cl[1] / cl[3] * 0.5 + 0.5)];
     const accent = hex01(L.color || this.accent), seed = 0.123;
-    const pe = R.env?.planet && R.env.grade?.tex ? R.env : null, pl = this.planetUniforms(pe);
+    const pe = R.env?.planet && R.env.grade?.tex && !cutout ? R.env : null, pl = this.planetUniforms(pe);
     this.pass(this.p.comp, this.comp, {
       ...pl.u,
       uInv: inv, uEye: eye, uNF: [near, far], uFocus: focus, uRes: [W, H], uAccent: accent, uK: this.k, uDisc: disc,
