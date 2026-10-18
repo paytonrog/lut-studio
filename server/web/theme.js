@@ -390,12 +390,15 @@ export function presetOptions(value = n => n) {
 }
 const unhexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 // a preset's look of a role over a row on screen: its color (paint, secondary, wear), its fields, its camo
-export function presetRow(row, L) {
+// role: trim, hardware or glow get no camo unless the look brings one (a zone's own camo in a light trim or metal
+// color reads as white blotches, e.g. on the A-9 Helljumper's camo hips and legs)
+export function presetRow(row, L, role = '') {
   let out = row.slice();
   const c = unhexc(L.c);
   for (const [col, f] of [[0, 1], [2, 0.8], [5, 0.9], [6, 0.9]]) for (let k = 0; k < 3; k++) out[col * 4 + k] = c[k] * f;
   for (const [col, ch, v] of L.set ?? []) out[col * 4 + ch] = v;
   if (L.camo) out = withCamo(out, { ...L.camo, colors: L.camo.colors.map(unhexc) });
+  else if (/^(trim|hardware|glow)$/.test(role)) out[21 * 4 + 3] = -1;
   else if (out[21 * 4 + 3] !== -1) for (let j = 0; j < 4; j++) for (let k = 0; k < 3; k++) out[(16 + j) * 4 + k] = c[k] * [1, 0.55, 1.25, 0.3][j];
   return out;
 }
@@ -414,7 +417,7 @@ export function presetTheme(name, metal = null) {
     const looks = {};
     for (const [n, L] of Object.entries(P)) {
       const x = n === 'hardware' ? biggest('hardware') : biggest(n) ?? any;
-      if (x) looks[n] = presetRow(rowOf(x), n === 'hardware' && metal ? { ...L, c: metal } : L);
+      if (x) looks[n] = presetRow(rowOf(x), n === 'hardware' && metal ? { ...L, c: metal } : L, n);
     }
     if (metal && !P.hardware) {
       const x = biggest('hardware');
@@ -446,15 +449,21 @@ export async function themeDialog(app) {
   const data = await app.api('/api/roles').finally(() => clearTimeout(slow));
   if (said) app.status('');   // (only its own message: a save failure's stays)
   const names = data.names.filter(n => n !== 'keep' && n !== 'unused');
-  const onScreen = [...new Set(R.pieces.map(p => p.info.lut))].filter(h => app.lut(h)?.kind === 'material');
-  // the roles of the LUTs on screen (saved, else suggested) and each zone's share
-  let sug = {};
-  try { sug = await app.api(`/api/roles/suggest?variant=${encodeURIComponent(app.variant)}&luts=${onScreen.join(',')}`); } catch { }
-  const zones = [];   // {lut, z, role, cov}
-  for (const h of onScreen) {
-    const l = app.lut(h), roles = data.mine[h] ?? data.builtin[h] ?? sug[h]?.roles ?? [];
-    for (let z = 0; z < l.h; z++) zones.push({ lut: h, z, role: roles[z] ?? 'keep', cov: sug[h]?.coverage?.[z] ?? 0 });
-  }
+  // the LUTs on screen, the roles of their zones (saved, else suggested) and each zone's share: read again when the
+  // item on screen changes (screenZones)
+  let onScreen = [], zones = [];   // zones: {lut, z, role, cov}
+  const screenZones = async () => {
+    const on = [...new Set(R.pieces.map(p => p.info.lut))].filter(h => app.lut(h)?.kind === 'material');
+    let sug = {};
+    try { sug = await app.api(`/api/roles/suggest?variant=${encodeURIComponent(app.variant)}&luts=${on.join(',')}`); } catch { }
+    const zs = [];
+    for (const h of on) {
+      const l = app.lut(h), roles = data.mine[h] ?? data.builtin[h] ?? sug[h]?.roles ?? [];
+      for (let z = 0; z < l.h; z++) zs.push({ lut: h, z, role: roles[z] ?? 'keep', cov: sug[h]?.coverage?.[z] ?? 0 });
+    }
+    onScreen = on; zones = zs;
+  };
+  await screenZones();
   const unconfirmed = onScreen.filter(h => !data.mine[h] && !data.builtin[h]).length;
   // the source zone of each role: the biggest of that role on screen
   const pick = {}, camo = {};   // camo[role]: {layer, colors: 4 x rgb, tiling}
@@ -551,7 +560,7 @@ export async function themeDialog(app) {
       const any = pick.primary ?? pick.secondary ?? zones.find(z => app.lut(z.lut)?.w === W && z.role !== 'unused');
       for (const [n, L] of Object.entries(P)) {
         const x = n === 'hardware' ? null : pick[n] ?? any;
-        if (x && app.lut(x.lut).w === W) looks[n] = presetRow(rowOf(x), L);
+        if (x && app.lut(x.lut).w === W) looks[n] = presetRow(rowOf(x), L, n);
       }
     } else for (const [n, x] of Object.entries(pick)) {
       if (!x) continue;
@@ -564,7 +573,7 @@ export async function themeDialog(app) {
       if (!x && P?.hardware) return { looks };   // (a preset's metal: from the first item shown with metal parts)
       if (!x) return { error: 'No metal part on screen to take the metal look from: show an item with metal parts.' };
       const row = rowOf(x);
-      if (P?.hardware) looks.hardware = presetRow(row, { ...P.hardware, c: $('thMetalColor').value });
+      if (P?.hardware) looks.hardware = presetRow(row, { ...P.hardware, c: $('thMetalColor').value }, 'hardware');
       else {
         const c = unhexc($('thMetalColor').value);
         for (const col of [0, 5, 6]) for (let k = 0; k < 3; k++) row[col * 4 + k] = c[k];   // (paint and wear colors)
@@ -627,6 +636,13 @@ export async function themeDialog(app) {
   $('thDecals').onchange = decalsChanged;
   $('thDecalMode').onchange = decalsChanged;
   $('thPreview').onclick = () => (previewing ? (unpreview(), info('')) : preview());
+  // another item on screen (an armor, helmet or cape picked while the panel is open): its zones read, the preview on it
+  document.addEventListener('lutstudio:pieces', async () => {
+    const was = !!previewing;
+    previewing = null; decalShown = [];   // (the old pieces are gone with their keys)
+    await screenZones();
+    if (was) preview();
+  }, { signal: close.signal });
 
   // ---- the Showcase with these looks (showcaseui.js)
   // the looks per item of the scene: a preset's over each item's own zones (as the dev tool), or the looks here on all
