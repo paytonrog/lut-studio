@@ -46,11 +46,18 @@ window.createShell = () => {
     }
     if (m.type === 'ready') { loading(null); return readyOk(m.version); }
     if (m.type === 'fatal') { console.error(m.error); loading('LUT Studio could not start: ' + m.error, 0); return readyFail(new Error(m.error)); }
+    if (m.type === 'exit') { failAll('LUT Studio stopped (reload the page)'); return; }
     if (m.type !== 'res') return;
     const w = waiting.get(m.id);
     waiting.delete(m.id);
     if (w) w.resolve(m);
   };
+  // (the program stopped: the requests waiting get an error answer, the page says so)
+  const failAll = why => {
+    for (const [id, w] of waiting) { waiting.delete(id); w.resolve({ type: 'res', id, status: 503, headers: { 'content-type': 'text/plain' }, body: new TextEncoder().encode(why) }); }
+    loading(why, 0);
+  };
+  worker.onerror = e => { console.error(e); failAll('LUT Studio stopped: ' + (e.message || 'an error') + ' (reload the page)'); };
   const send = (msg, transfer = []) => new Promise(resolve => {
     const id = next++;
     waiting.set(id, { resolve });

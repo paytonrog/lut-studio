@@ -217,8 +217,8 @@ export async function buildScene(app, opts = {}) {
       theme = t;
       say('Theming…');
       const tag = 'sc' + n++ + ':';
-      const worn = await themeItems(app, items, t, tag);
-      if (n > 1) R.dropLuts('sc' + (n - 2) + ':');   // (the theme before's textures)
+      let worn;
+      try { worn = await themeItems(app, items, t, tag); } finally { if (n > 1) R.dropLuts('sc' + (n - 2) + ':'); }   // (the theme before's textures)
       const pal = palette(t.colors?.length ? t.colors : worn);
       sc.accent = pal.accent; sc.text = pal.text; sc.k = pal.k; sc.sat = pal.sat; sc.titleKey = null;
       rimLight();

@@ -34,9 +34,10 @@ export async function decalDialog(R, variant, only = null) {
     <div class="row"><button id="dsSave" class="primary" disabled>Save</button><button id="dsReset">Back to the game's sheet</button>
       <button id="dsExport">Export PNG</button><button id="dsImport">Import PNG…</button></div>
     <p class="hint" id="dsInfo"></p>`, async () => {
-    if (dirty && !confirm('Close without saving your changes to this sheet?')) return false;
+    if ((dirty || layer) && !confirm('Close without saving your changes to this sheet?')) return false;
     await R.refreshDecals(hash);
   });
+  close.isDirty = () => dirty || !!layer;   // (unsaved changes: the tab's close asks first)
   const view = $('dsView'), vg = view.getContext('2d');
   let hash = hashes[0], full = null, sel = null, drag = null, dirty = false, layer = null;
   const undos = [], redos = [];
@@ -127,12 +128,16 @@ export async function decalDialog(R, variant, only = null) {
   $('dsUndo').onclick = () => step(undos, redos);
   $('dsRedo').onclick = () => step(redos, undos);
 
+  let loadGen = 0;   // (a newer load wins: an older one's pixels never land under the newer hash)
   const load = async () => {
+    const gen = ++loadGen;
     info('Loading the sheet…'); sel = null; layer = null; dirty = false; undos.length = redos.length = 0;
     $('dsSave').disabled = true; $('dsLayer').hidden = true;
     const r = await fetch(q(hash));
+    if (gen !== loadGen) return;
     if (!r.ok) { info(await r.text()); return; }
     const bmp = await createImageBitmap(await r.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    if (gen !== loadGen) return;
     full = document.createElement('canvas'); full.width = bmp.width; full.height = bmp.height;
     fg().drawImage(bmp, 0, 0);
     const edited = r.headers.get('X-Edited') === '1';
@@ -198,7 +203,7 @@ export async function decalDialog(R, variant, only = null) {
   $('dsClear').onchange = () => { draw(); preview(); };
   $('dsZoom').onchange = () => { view.width = view.height = 512 * +$('dsZoom').value; draw(); };
   if ($('dsSheet')) $('dsSheet').onchange = async () => {
-    if (dirty && !confirm('Discard the unsaved changes to this sheet?')) { $('dsSheet').value = hash; return; }
+    if ((dirty || layer) && !confirm('Discard the unsaved changes to this sheet?')) { $('dsSheet').value = hash; return; }
     await R.refreshDecals(hash);
     hash = $('dsSheet').value;
     await load();
@@ -260,9 +265,10 @@ export async function decalDialog(R, variant, only = null) {
     if (layer) $('dsApply').onclick();
     info('Saving…');
     const png = await new Promise(r => full.toBlob(r, 'image/png'));
+    dirty = false;   // (an edit made while it saves sets it again: not taken for saved)
     const r = await fetch(q(hash), { method: 'PUT', body: png });
-    if (!r.ok) return info(await r.text());
-    dirty = false; $('dsSave').disabled = true;
+    if (!r.ok) { dirty = true; return info(await r.text()); }
+    $('dsSave').disabled = !dirty;
     await R.refreshDecals(hash);
     if ($('dsMark').checked) preview();
     info('Saved: the next build includes it.');

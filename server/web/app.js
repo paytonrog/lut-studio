@@ -13,7 +13,7 @@ import { rolesDialog } from './roles.js';
 import { themeDialog } from './theme.js';
 import { track, trackErrors } from './analytics.js';
 import { modPage } from './modpage.js';
-import { closeSide } from './texedit.js';
+import { closeSide, sideDirty } from './texedit.js';
 import { groundTile } from './planet.js';
 import { buildScenery } from './planetscene.js';
 
@@ -312,6 +312,7 @@ async function loadVariant(folder) {
     if (p.info.pattern) p.lutKeys.pattern = editedKey(p.info.pattern);
   }
   if (decals) await decals.catch(() => { });   // (the variant's own decal sheets in: a picture right after shows them)
+  if (gen !== S.varGen) return;
   if (!S.sel.lut || !S.luts.get(S.sel.lut)?.edited) S.sel.lut = v.luts?.[0]?.lut ?? null;
   if (S.sel.lut) S.sel.zone = Math.min(S.sel.zone, (S.luts.get(S.sel.lut)?.h ?? 1) - 1);
   renderLists();
@@ -1256,12 +1257,13 @@ async function updateHeld(force = false) {
   const name = $('pose').selectedOptions[0]?.text, holds = !!$('pose').value && S.mode === 'char' && holdsWeapon(POSE.list, name);
   $('heldWeapon').hidden = !holds;
   const want = holds ? $('heldWeapon').value : '';
-  if (!force && want === HELD.kit) { if (want) gripHeld(); return; }   // (loaded, or loading: as it is)
+  if (!force && want === HELD.kit && (!want || HELD.pieces.length || HELD.busy)) { if (want) gripHeld(); return; }   // (loaded, or loading: as it is)
   dropHeld();
   HELD.kit = want;
   const token = ++HELD.token, stale = () => token !== HELD.token || gen !== S.loadGen;
   if (!want) return;
   const gen = S.loadGen;
+  HELD.busy = true;
   try {
     const ps = ((await api('/api/kit?name=' + encodeURIComponent(want))) ?? []).filter(p => p.material_lut);
     if (!ps.length || stale()) return;
@@ -1287,6 +1289,7 @@ async function updateHeld(force = false) {
       }
     }
   } catch (e) { console.warn('held weapon', e); status('The weapon could not be loaded: ' + e.message, true); }
+  finally { if (token === HELD.token) HELD.busy = false; }
   if (stale()) return R.removePieces(p => p.info?.heldToken === token);
   HELD.pieces = R.pieces.filter(p => p.info?.heldToken === token);
   gripHeld();
@@ -1388,7 +1391,7 @@ function wire() {
     if (drag && !drag.moved && drag.b === 0 && !S.paint) pickAt(e);
     drag = null;
   });
-  cv.addEventListener('pointercancel', () => { if (painting) painting = false; drag = null; });   // (a touch taken over: the drag ends)
+  cv.addEventListener('pointercancel', e => { if (painting) { painting = false; S.paint?.up(e); } drag = null; });   // (a touch taken over: the drag ends)
   cv.addEventListener('wheel', e => { e.preventDefault(); R.cam.dist *= Math.exp(e.deltaY * 0.001); }, { passive: false });
   cv.addEventListener('dblclick', () => R.frame());
   $('frame').onclick = () => R.frame();
@@ -1510,6 +1513,7 @@ function wire() {
   };
   $('poseTime').oninput = () => { POSE.playing = false; POSE.time = +$('poseTime').value; $('posePlay').textContent = '▶'; };
   $('projects').onclick = async () => {
+    if (!(await closeSide())) return;   // (an open editor's unsaved changes: its own question first)
     if (!(await saveAll()) && !confirm('Some edits could not be saved (see the status line). Leave the project anyway?')) return;
     await api('/api/close', { method: 'POST' });
     try { sessionStorage.removeItem('lutstudio.project'); } catch { }
@@ -1519,7 +1523,7 @@ function wire() {
   $('modPageBtn').onclick = () => modPage({
     api, shot, state: () => S.state, variant: () => S.variant,
     kitType: id => (S.kitList ?? []).find(e => e.value === 'kit:' + id)?.type,
-    useVariant: async f => { if (!(await saveAll())) return; await loadVariant(f); $('variant').value = f; },
+    useVariant: async f => { if (!(await saveAll())) return false; await loadVariant(f); $('variant').value = f; return true; },
     refresh: async () => { S.state = await api('/api/state'); $('projName').textContent = S.state.project.name; fillVariants(); },
   }).catch(e => status(e.message, true));
   $('addArmor').onclick = addArmorDialog;
@@ -1531,7 +1535,7 @@ function wire() {
     else if (k === 'z' && !e.shiftKey && !isTyping()) { e.preventDefault(); restore(S.undo, S.redo); }
     else if ((k === 'y' || (k === 'z' && e.shiftKey)) && !isTyping()) { e.preventDefault(); restore(S.redo, S.undo); }
   });
-  window.addEventListener('beforeunload', e => { if ([...S.luts.values()].some(l => l.dirty)) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { if ([...S.luts.values()].some(l => l.dirty) || sideDirty()) { e.preventDefault(); e.returnValue = ''; } });
   buildWorldSliders();
 }
 // typing text (Ctrl+Z / Ctrl+Y are the field's own): text-like inputs, text areas, editable text; not checkboxes,

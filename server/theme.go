@@ -767,7 +767,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		wr := written[hs]
+		wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
 		for len(wr) < d.Tex.Height {
 			wr = append(wr, "")
 		}
@@ -800,12 +800,14 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			byRole[roles[z]]++
 			changed = true
 		}
-		written[hs] = wr
 		if changed {
 			if err := project.WriteDoc(p.DocPath(v, hs), d); err != nil {
 				fail(w, 500, err)
 				return
 			}
+		}
+		written[hs] = wr
+		if changed {
 			changedLUTs++
 		}
 	}
@@ -844,7 +846,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				continue
 			}
-			wr := written[hs]
+			wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
 			for len(wr) < d.Tex.Height {
 				wr = append(wr, "")
 			}
@@ -867,12 +869,14 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 				byRole["trim"]++
 				changed = true
 			}
-			written[hs] = wr
 			if changed {
 				if err := project.WriteDoc(p.DocPath(v, hs), d); err != nil {
 					fail(w, 500, err)
 					return false
 				}
+			}
+			written[hs] = wr
+			if changed {
 				changedLUTs++
 			}
 		}

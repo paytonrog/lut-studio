@@ -863,6 +863,7 @@ export class Renderer {
     if (epoch !== this.epoch) {
       gl.deleteVertexArray(vao); buffers.forEach(b => gl.deleteBuffer(b));
       if (skin?.tex) gl.deleteTexture(skin.tex);
+      if (splat.bugLayer === 1) gl.deleteTexture(splat.tex.tex);   // (its own splat texture)
       return null;
     }
     this.pieces.push(piece);

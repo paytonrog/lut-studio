@@ -5,9 +5,11 @@ package atomicfile
 import (
 	"os"
 	"path/filepath"
+	"time"
 )
 
-// WriteFile is os.WriteFile, atomic.
+// WriteFile is os.WriteFile, atomic. Where the file can't be replaced (Windows, while another request has it open
+// for reading) it is tried a few times, then written in place as os.WriteFile does.
 func WriteFile(path string, data []byte, perm os.FileMode) error {
 	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
@@ -21,11 +23,19 @@ func WriteFile(path string, data []byte, perm os.FileMode) error {
 	if err == nil {
 		err = os.Chmod(tmp, perm)
 	}
-	if err == nil {
-		err = os.Rename(tmp, path)
-	}
 	if err != nil {
 		os.Remove(tmp)
+		return err
 	}
-	return err
+	for try := 0; ; try++ {
+		if err = os.Rename(tmp, path); err == nil {
+			return nil
+		}
+		if try == 4 {
+			break
+		}
+		time.Sleep(time.Duration(10<<try) * time.Millisecond)
+	}
+	os.Remove(tmp)
+	return os.WriteFile(path, data, perm) // (replacing refused: in place, as before)
 }

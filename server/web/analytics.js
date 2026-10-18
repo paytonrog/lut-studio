@@ -25,6 +25,7 @@ export function setAnalytics(on) {
   else start();
 }
 
+let blocked = false;   // (the library couldn't load, e.g. a blocker: no events kept)
 function start() {
   if (loading || !analyticsOn()) return loading;
   loading = import(LIB).then(m => {
@@ -36,13 +37,13 @@ function start() {
       person_profiles: 'identified_only',
     });
     for (const [e, p, now] of queue.splice(0)) ph.capture(e, p, now ? { send_instantly: true, transport: 'sendBeacon' } : undefined);
-  }).catch(e => console.warn('analytics', e));
+  }).catch(e => { console.warn('analytics', e); blocked = true; queue.length = 0; });   // (blocked: not tried again)
   return loading;
 }
 
 // track(event, props): one usage event. now: sent at once (before the page reloads, e.g. a project opening).
 export function track(event, props = {}, now = false) {
-  if (!analyticsOn()) return;
+  if (!analyticsOn() || blocked) return;
   const p = { ...props, version: window.lutstudioVersion ?? '' };
   if (ph) ph.capture(event, p, now ? { send_instantly: true, transport: 'sendBeacon' } : undefined);
   else { queue.push([event, p, now]); start(); }

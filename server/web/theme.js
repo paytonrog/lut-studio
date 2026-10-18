@@ -431,9 +431,10 @@ export async function themeDialog(app) {
   await app.saveAll();
   // (the first time: the game's materials are scanned for the LUTs items share, some seconds; the editor starts it
   // in the background after a project opens, so it's usually done by now)
-  const slow = setTimeout(() => app.status('Opening the theme panel… (the first time: the game materials are read, a few seconds)'), 300);
+  let said = false;
+  const slow = setTimeout(() => { said = true; app.status('Opening the theme panel… (the first time: the game materials are read, a few seconds)'); }, 300);
   const data = await app.api('/api/roles').finally(() => clearTimeout(slow));
-  app.status('');
+  if (said) app.status('');   // (only its own message: a save failure's stays)
   const names = data.names.filter(n => n !== 'keep' && n !== 'unused');
   const onScreen = [...new Set(R.pieces.map(p => p.info.lut))].filter(h => app.lut(h)?.kind === 'material');
   // the roles of the LUTs on screen (saved, else suggested) and each zone's share

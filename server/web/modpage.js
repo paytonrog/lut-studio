@@ -57,7 +57,7 @@ export async function modPage(app) {
       // a variant's picture (its own, or an option's of it) shows that variant
       const folder = t.startsWith('opt:') ? t.split(':')[2] : (t === 'icon' || t === 'option' ? '' : t);
       const switched = folder && folder !== app.variant();
-      if (switched) await app.useVariant(folder);
+      if (switched && !(await app.useVariant(folder))) return;   // (it couldn't switch: no picture of the wrong variant)
       await savePNG(t, await app.shot(bg));
       if (switched) render(); else { await loadThumb(el); preview(); }   // (the cards say which variant is shown)
     };

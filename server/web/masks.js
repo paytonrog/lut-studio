@@ -65,6 +65,7 @@ export async function maskDialog(app) {
     app.setPaint(null);
     await R.refreshDecals(cur.hash);
   });
+  close.isDirty = () => dirty;   // (unsaved changes: the tab's close asks first)
   const info = t => { $('mkInfo').textContent = t; };
   const view = $('mkView'), vg = view.getContext('2d');
   let orig, W, H, L, N, masks2, touched, dirty = false, zoneSel = 0, colors = [], rows = 1, stroke = null, pl = 0;
@@ -87,6 +88,7 @@ export async function maskDialog(app) {
     for (let l2 = l + 1; l2 < L; l2++) for (let k = 0; k < 4; k++) set(l2 * 4 + k, i, 0);
   };
   const hist = new History(() => ({ m: masks2.map(m => m.slice()), t: touched.map(t => t.slice()) }), s => { masks2 = s.m; touched = s.t; changed(); });
+  const histLimit = () => { hist.limit = Math.max(3, Math.min(30, Math.floor((256 << 20) / Math.max(1, 2 * masks2.length * N)))); };   // (~256 MB of steps)
 
   const zoneName = z => kind === 'pattern' ? ['no pattern', 'pattern'][z] : app.zoneLabel(cur.lut, z);
   const zoneButtons = () => {
@@ -98,9 +100,13 @@ export async function maskDialog(app) {
     document.querySelectorAll('#mkZones .dzTool').forEach(b => (b.onclick = () => { zoneSel = +b.dataset.z; zoneButtons(); }));
   };
 
+  let loadGen = 0;
   const load = async () => {
+    const gen = ++loadGen;
     info('Loading the mask…');
-    orig = await fetchRaw(cur.hash, app.variant);
+    const got = await fetchRaw(cur.hash, app.variant);
+    if (gen !== loadGen) return;   // (a newer part or kind picked meanwhile)
+    orig = got;
     W = orig.w; H = orig.h; L = orig.layers; N = W * H;
     masks2 = []; touched = [];
     const on = kind === 'pattern' ? 128 : 127;   // (the pattern: R >= 0.5; a zone: a channel >= 0.496)
@@ -120,7 +126,7 @@ export async function maskDialog(app) {
       }
     } else { colors = app.zoneColors(cur.lut); rows = Math.max(1, colors.length); }
     zoneSel = Math.min(zoneSel, (kind === 'pattern' ? 2 : Math.min(rows, L * 4)) - 1);
-    dirty = false; $('mkSave').disabled = true; hist.clear();
+    dirty = false; $('mkSave').disabled = true; hist.clear(); histLimit();
     view.width = 512; view.height = Math.round(512 * H / W);
     zoneButtons();
     info(`${W} × ${H}, ${L} layer(s)${kind === 'pattern' ? `, the pattern on layer ${pl}` : ''} · ${orig.edited ? 'edited in this variant' : "the game's mask"} · used by: ${label(cur)}`);
@@ -170,7 +176,9 @@ export async function maskDialog(app) {
   };
   const fill = (x, y) => {              // the connected area (in the texture) of the zone at (x, y)
     const i0 = y * W + x, before = masks2.map(m => m.slice());
-    const zb = i => { let z = 0; for (let l = 0; l < L; l++) for (let c = 0; c < 4; c++) if (before[l * 4 + c][i]) { z = l * 4 + c; break; } return z; };
+    // (a zone as the mask reads it; the pattern: on or off in its layer)
+    const zb = kind === 'pattern' ? i => before[pl * 4][i]
+      : i => { for (let l = 0; l < L; l++) for (let c = 0; c < 4; c++) if (before[l * 4 + c][i]) return l * 4 + c; return 0; };
     const z0 = zb(i0), seen = new Uint8Array(N), stack = [i0];
     seen[i0] = 1;
     while (stack.length) {
@@ -190,10 +198,10 @@ export async function maskDialog(app) {
     stroke = [x, y]; dab(x, y); dirty = true; draw(); preview();
     return true;
   };
-  const extend = (x, y) => {
+  const extend = (x, y, onModel = false) => {
     const [x0, y0] = stroke, n = Math.max(1, Math.ceil(Math.hypot(x - x0, y - y0)));
     // (a jump across UV islands on the model: no line between them)
-    if (n > W / 8) { dab(x, y); } else for (let s = 1; s <= n; s++) dab(x0 + (x - x0) * s / n, y0 + (y - y0) * s / n);
+    if (onModel && n > W / 8) { dab(x, y); } else for (let s = 1; s <= n; s++) dab(x0 + (x - x0) * s / n, y0 + (y - y0) * s / n);
     stroke = [x, y]; draw(); preview();
   };
   const end = () => { if (stroke) { stroke = null; changed(); } };
@@ -210,7 +218,7 @@ export async function maskDialog(app) {
   };
   const paint3d = {
     down: e => { const p = onModel(e); return p ? begin(...p) : false; },
-    move: e => { if (!stroke) return; const p = onModel(e); if (p) extend(...p); },
+    move: e => { if (!stroke) return; const p = onModel(e); if (p) extend(...p, true); },
     up: end,
   };
   const paintMode = () => app.setPaint($('mkPaint3d').checked ? paint3d : null);
@@ -269,9 +277,11 @@ export async function maskDialog(app) {
   // ---- saving
   $('mkSave').onclick = async () => {
     info('Saving…');
-    const r = await fetch(q(), { method: 'PUT', body: lstx(W, H * L, compose()) });
-    if (!r.ok) return info(await r.text());
-    dirty = false; $('mkSave').disabled = true;
+    const body = lstx(W, H * L, compose());
+    dirty = false;   // (an edit made while it saves sets it again)
+    const r = await fetch(q(), { method: 'PUT', body });
+    if (!r.ok) { dirty = true; return info(await r.text()); }
+    $('mkSave').disabled = !dirty;
     await R.refreshDecals(cur.hash);
     info('Saved: the next build includes it.');
   };

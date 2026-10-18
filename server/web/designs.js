@@ -42,6 +42,7 @@ export async function designDialog(R, variant) {
     if (dirty && !confirm('Close without saving your changes to the design?')) return false;
     await R.refreshDecals(hash);
   });
+  close.isDirty = () => dirty;   // (unsaved changes: the tab's close asks first)
   const info = t => { $('dzInfo').textContent = t; };
   const view = $('dzView'), vg = view.getContext('2d');
   let orig, W, H, N, masks, touched, dirty = false, toolSel = 'z1', stroke = null;
@@ -275,9 +276,11 @@ export async function designDialog(R, variant) {
   // ---- saving
   $('dzSave').onclick = async () => {
     info('Saving…');
-    const r = await fetch(q, { method: 'PUT', body: lstx(W, H, compose()) });
-    if (!r.ok) return info(await r.text());
-    dirty = false; $('dzSave').disabled = true;
+    const body = lstx(W, H, compose());
+    dirty = false;   // (an edit made while it saves sets it again)
+    const r = await fetch(q, { method: 'PUT', body });
+    if (!r.ok) { dirty = true; return info(await r.text()); }
+    $('dzSave').disabled = !dirty;
     await R.refreshDecals(hash);
     info('Saved: the next build includes it.');
   };

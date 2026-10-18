@@ -316,13 +316,36 @@
     if (e.mount !== 'home' && e.mount !== 'projects') throw fail('EACCES', from);   // (the game folder is read-only)
     if (writers.has(norm(from))) throw fail('EBUSY', from);
     const dst = await parentOf(to);
-    try {   // the target is replaced (POSIX rename)
+    // the target is replaced (POSIX rename): a file moved aside first (put back if the move fails: never neither
+    // file); a folder only when empty (ENOTEMPTY otherwise); a file onto a folder or a folder onto a file refused
+    let aside = null;
+    try {
       const t = await lookup(to);
-      if (t.kind === 'file' || e.kind === 'dir') await dst.dir.removeEntry(dst.name, { recursive: true });
+      if (t.kind === 'dir' && e.kind !== 'dir') throw fail('EISDIR', to);
+      if (t.kind !== 'dir' && e.kind === 'dir') throw fail('ENOTDIR', to);
+      if (t.kind === 'dir') {
+        for await (const _ of t.handle.keys()) throw fail('ENOTEMPTY', to);
+        await dst.dir.removeEntry(dst.name);
+      } else {
+        aside = '.' + dst.name + '.old-' + Date.now().toString(36);
+        if (t.handle.move) await t.handle.move(dst.dir, aside).catch(x => { throw errOf(x); });
+        else { await copyTree(t.handle, dst.dir, aside, segs(to)[0] !== 'projects'); await dst.dir.removeEntry(dst.name); }
+      }
     } catch (x) { if (x.code !== 'ENOENT') throw x; }
-    if (e.kind === 'file' && e.handle.move) { await e.handle.move(dst.dir, dst.name).catch(x => { throw errOf(x); }); return; }
-    await copyTree(e.handle, dst.dir, dst.name, segs(to)[0] !== 'projects');
-    await e.parent.removeEntry(e.name, { recursive: true });
+    try {
+      if (e.kind === 'file' && e.handle.move) await e.handle.move(dst.dir, dst.name).catch(x => { throw errOf(x); });
+      else {
+        await copyTree(e.handle, dst.dir, dst.name, segs(to)[0] !== 'projects');
+        await e.parent.removeEntry(e.name, { recursive: true });
+      }
+    } catch (x) {
+      if (aside) {   // (the old one back where it was)
+        const a = await dst.dir.getFileHandle(aside).catch(() => null);
+        if (a?.move) await a.move(dst.dir, dst.name).catch(() => { });
+      }
+      throw x;
+    }
+    if (aside) await dst.dir.removeEntry(aside).catch(() => { });
   }
   async function truncate(path, len) {
     const fd = await open(path, C.O_WRONLY, 0);

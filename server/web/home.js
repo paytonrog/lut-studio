@@ -228,10 +228,11 @@ export function showHome(info) {
     if (!o) return;
     const what = o.dataset.set && $('withHelmet').checked ? o.dataset.set : o.value;   // the armor with its helmet
     status('Creating the project (reading the LUTs from the game)…');
+    $('newBtn').disabled = true;   // (a second click: no second project)
     try {
       await post('/api/new', { Name: $('newName').value, What: what });
       track('project created', { item: o.text, category: $('catPick').value, with_helmet: what !== o.value, name: $('newName').value }, true);
       open();
-    } catch (e) { status(e.message, true); }
+    } catch (e) { status(e.message, true); $('newBtn').disabled = false; }
   };
 }

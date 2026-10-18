@@ -543,9 +543,14 @@ func (s *Server) exportProject(w http.ResponseWriter, r *http.Request) {
 
 // importProject unpacks an uploaded .lutproj into the projects folder and opens it.
 func (s *Server) importProject(w http.ResponseWriter, r *http.Request) {
-	b, err := io.ReadAll(io.LimitReader(r.Body, 64<<20))
+	const most = 1 << 30 // (as big as an export can be)
+	b, err := io.ReadAll(io.LimitReader(r.Body, most+1))
 	if err != nil {
 		fail(w, 400, err)
+		return
+	}
+	if len(b) > most {
+		fail(w, 413, fmt.Errorf("the project file is over 1 GB"))
 		return
 	}
 	zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))

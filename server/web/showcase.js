@@ -233,8 +233,10 @@ export class Showcase {
     if (this.size?.[0] === w && this.size?.[1] === h) return;
     for (const k of ['scene', 'refl', 'comp', 'glowA', 'glowB', 'bloomA', 'bloomB', 'out']) this.free(this[k]);
     const q = 4, qw = Math.max(1, Math.round(w / q)), qh = Math.max(1, Math.round(h / q));
-    const samples = this.R.msaaSamples(this.R.floatRT ? this.R.gl.RGBA16F : this.R.gl.RGBA8);   // (as the scene's format takes)
-    this.scene = this.target(w, h, { depth: true, msaa: samples, float: true });
+    // (half float where it can be multisampled; else 8-bit, which WebGL2 always multisamples)
+    this.floatScene = this.R.floatRT && this.R.msaaSamples(this.R.gl.RGBA16F) > 0;
+    const samples = Math.max(1, this.R.msaaSamples(this.floatScene ? this.R.gl.RGBA16F : this.R.gl.RGBA8));
+    this.scene = this.target(w, h, { depth: true, msaa: samples, float: this.floatScene });
     this.refl = this.target(Math.round(w / 2), Math.round(h / 2), { depth: true });
     this.comp = this.target(w, h);
     this.glowA = this.target(qw, qh); this.glowB = this.target(qw, qh);

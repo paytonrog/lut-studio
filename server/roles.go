@@ -182,10 +182,10 @@ func (s *Server) roleItems(idx *game.Index) []roleItem {
 		if g != "Armor" && g != "Helmets" && g != "Capes" { // (listed by name, as the item menu does)
 			v = idx.Key(k)
 		}
-		if done[k.Type+"\x00"+v] { // (two types' kits under one name: each its own entry)
+		if done[v] {
 			continue
 		}
-		done[k.Type+"\x00"+v] = true
+		done[v] = true
 		it := roleItem{Value: v, Label: s.kitLabel(k), Group: g}
 		seen := map[roleLUT]bool{}
 		for _, p := range k.Pieces {

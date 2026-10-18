@@ -8,7 +8,8 @@ export const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;',
 // it is closed; returning false keeps it open. Returns close(); close.signal ends with the panel (pass it to the
 // panel's own listeners: { signal: close.signal }). Open another panel or dialog only after closeSide().
 let current = null;   // the open panel's close()
-export function openSide(html, onClose) {
+// isDirty(): the panel has unsaved changes (the tab's close asks first: sideDirty)
+export function openSide(html, onClose, isDirty = null) {
   const modal = $('modal'), btn = $('modalClose'), prev = current ? null : btn.onclick, ac = new AbortController();
   $('modalBody').innerHTML = html;
   modal.classList.add('side');
@@ -24,6 +25,7 @@ export function openSide(html, onClose) {
     return true;
   };
   close.signal = ac.signal;
+  close.isDirty = isDirty;
   current = close;
   btn.onclick = () => close();
   // Ctrl+Z / Ctrl+Y in the panel undo its edits, not the LUT edits behind it
@@ -44,6 +46,8 @@ export function openSide(html, onClose) {
 export async function closeSide() {
   return current ? (await current()) !== false : true;
 }
+// the open side panel has unsaved changes
+export function sideDirty() { return !!current?.isDirty?.(); }
 
 // An undo stack of states (whatever take() returns; put(state) restores one), at most limit deep.
 export class History {
