@@ -584,7 +584,7 @@ func sheetResource(g *game.Game, idx *game.Index, file string, straight bool) (m
 		return modpack.Resource{}, err
 	}
 	if in, err := texenc.ReadInfo(main); err == nil {
-		if b := img.Bounds(); (b.Dx() != in.Width || b.Dy() != in.Height*in.Layers) && strings.Contains(filepath.ToSlash(file), "/designs/") && server.Placeholder(in) { // a placeholder design replaced
+		if b := img.Bounds(); (b.Dx() != in.Width || b.Dy() != in.Height*in.Layers) && server.Placeholder(in) { // a placeholder design replaced (a few pixels: only designs are)
 			if main, stream, gpu, err = designTemplate(g, idx, b.Dx(), b.Dy()); err != nil {
 				return modpack.Resource{}, err
 			}
