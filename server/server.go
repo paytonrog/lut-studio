@@ -600,10 +600,12 @@ func (s *Server) newVariant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nv := project.Variant{Name: strings.TrimSpace(in.Name), Folder: project.Folder(in.Name)}
-	if _, err := p.Variant(nv.Folder); err == nil {
-		fail(w, 409, fmt.Errorf("a variant uses folder %q already", nv.Folder))
+	folder, err := FreeVariantFolder(p, nv.Name)
+	if err != nil {
+		fail(w, 409, err)
 		return
 	}
+	nv.Folder = folder
 	if _, err := CopyVariant(p, src, nv); err != nil {
 		fail(w, 500, err)
 		return
@@ -741,4 +743,25 @@ func (s *Server) build(w http.ResponseWriter, r *http.Request) {
 		out["error"] = err.Error()
 	}
 	writeJSON(w, out)
+}
+
+// FreeVariantFolder: the folder for a new variant named name: its own (project.Folder), numbered when another
+// variant's name makes the same one ("Красный" and "Синий" are both "variant": variant, variant-2); an error when a
+// variant has that name already
+func FreeVariantFolder(p *project.Project, name string) (string, error) {
+	for _, v := range p.Variants {
+		if strings.EqualFold(strings.TrimSpace(v.Name), strings.TrimSpace(name)) {
+			return "", fmt.Errorf("a variant is named %q already", v.Name)
+		}
+	}
+	base := project.Folder(name)
+	for i := 1; ; i++ {
+		f := base
+		if i > 1 {
+			f = fmt.Sprintf("%s-%d", base, i)
+		}
+		if _, err := p.Variant(f); err != nil {
+			return f, nil
+		}
+	}
 }

@@ -218,7 +218,7 @@ func WriteDoc(path string, d *lut.Document) error {
 
 // Docs reads every LUT document of a variant, sorted by file name. Errors name the file.
 func (p *Project) Docs(v Variant) ([]*lut.Document, []string, error) {
-	files, _ := filepath.Glob(filepath.Join(p.VariantDir(v), "*.lut.json"))
+	files := ListFiles(p.VariantDir(v), "", ".lut.json")
 	sort.Strings(files)
 	// parsed in parallel and cached by file time and size: an overhaul is ~800 LUTs x 14 variants
 	parsed := make([]parsedDoc, len(files))
@@ -280,7 +280,25 @@ var (
 	docCache   = map[string]cachedDoc{}
 )
 
-// readCached parses a document file, reusing the last parse while its time and size are unchanged.
+// ListFiles: the files of dir whose names start with prefix and end with suffix, as full paths, sorted (a listing,
+// not a glob: brackets in the folder's path are just characters)
+func ListFiles(dir, prefix, suffix string) []string {
+	es, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range es {
+		if n := e.Name(); !e.IsDir() && strings.HasPrefix(n, prefix) && strings.HasSuffix(n, suffix) {
+			out = append(out, filepath.Join(dir, n))
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// readCached parses a document file, reusing the last parse while its time and size are unchanged (8: and it is
+// more than two seconds old: on file systems with coarse times an edit of the same size could look the same).
 func readCached(f string) parsedDoc {
 	st, err := os.Stat(f)
 	if err != nil {
@@ -289,7 +307,7 @@ func readCached(f string) parsedDoc {
 	docCacheMu.Lock()
 	c, ok := docCache[f]
 	docCacheMu.Unlock()
-	if ok && c.mod.Equal(st.ModTime()) && c.size == st.Size() {
+	if ok && c.mod.Equal(st.ModTime()) && c.size == st.Size() && time.Since(st.ModTime()) > 2*time.Second {
 		return c.parsedDoc
 	}
 	b, err := os.ReadFile(f)

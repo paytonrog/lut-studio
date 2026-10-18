@@ -550,6 +550,10 @@ export class Renderer {
   // the ground under what is shown: its height (the lowest point), the footprint (center xz, half sizes) and the
   // cast shadow's far end (xz offset away from the sun, by the height), the sun on a level surface
   groundParams(sd, sunCol) {
+    if (this.post?.floorC) {   // (the Showcase: a soft shadow under the squad only; the items' own come with them)
+      const f = this.post.floorC;
+      return { floorY: 0, foot: [f[0], f[2], 1.9, 0.9], cast: [0, 0], sunE: sd[1] > 0 ? sunCol.map(c => c * sd[1] / Math.PI) : [0, 0, 0] };
+    }
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (const p of this.pieces) { const [a, b] = placedBounds(p); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], a[k]); hi[k] = Math.max(hi[k], b[k]); } }
     if (!this.pieces.length) { lo.fill(0); hi.fill(0); }

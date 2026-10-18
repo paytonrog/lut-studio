@@ -92,14 +92,17 @@ function hillsFn(id, amp) {
   };
 }
 
+let owned = null;   // (the build in progress's own meshes: its dispose frees them; shared ones are made with it null)
 function mesh(gl, pos, nrm, idx, col = null, uv = null) {
   const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const bufs = [];
   for (const [loc, data, n] of [[0, pos, 3], [1, nrm, 3], [2, col ?? new Float32Array(pos.length), 3], [3, uv ?? new Float32Array(pos.length / 3 * 2), 2]]) {
-    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    const b = gl.createBuffer(); bufs.push(b); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, n, gl.FLOAT, false, 0, 0);
   }
-  const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+  const ib = gl.createBuffer(); bufs.push(ib); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
   gl.bindVertexArray(null);
+  owned?.push({ vao, bufs });
   return { vao, n: idx.length };
 }
 
@@ -193,7 +196,7 @@ function partTexture(gl, hash) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     return t;
-  })().catch(() => null));
+  })().catch(() => null).then(t => { if (!t) partTexCache.delete(hash); return t; }));   // (a failed one: tried again next time)
   return partTexCache.get(hash);
 }
 // a SpeedTree (its GLB from /api/speedtree): one part per material {mesh, bark, tex, cutoff}
@@ -250,10 +253,16 @@ function worldOf(json) {
 const model = (x, y, z, yaw, sx, sy, sz) => { const c = Math.cos(yaw), s = Math.sin(yaw); return [c * sx, 0, -s * sx, 0, 0, sy, 0, 0, s * sz, 0, c * sz, 0, x, y, z, 1]; };
 
 // the scene of planet p: loads its meshes (fetchUnit(hash) -> a parsed GLB), places its props; draw() each frame
+const unitCache = new Map(), treeCache = new Map();   // (unit / tree path -> promise of its mesh(es): shared by every planet)
 export async function buildScenery(R, p, fetchUnit, fetchTree) {
-  const gl = R.gl, prog = R.program(VERT, FRAG), h = hillsFn(p.id, p.hills ?? 3);
-  const terrain = terrainMesh(gl, h), sphere = sphereMesh(gl), cyl = cylinderMesh(gl);
+  const gl = R.gl, h = hillsFn(p.id, p.hills ?? 3);
+  const prog = R.sceneryProg ??= R.program(VERT, FRAG);   // (one program for every planet)
+  R.sceneryShapes ??= { sphere: sphereMesh(gl), cyl: cylinderMesh(gl) };
+  const { sphere, cyl } = R.sceneryShapes, mine = [];
+  owned = mine;
+  const terrain = terrainMesh(gl, h);
   const scatter = scatterMeshes(gl, p, h, rng(hashStr(p.id) ^ 0x51ed));
+  owned = null;
   // the rock detail: the biome's rock texture over its own mean (1 = the prop's albedo), halved into 0..1
   let rockTex = null;
   if (p.rockTex) {
@@ -274,10 +283,16 @@ export async function buildScenery(R, p, fetchUnit, fetchTree) {
   }
   const items = (p.scenery ?? []).filter(s => s.tree || s.unit);
   const meshes = new Map(), trees = new Map();
+  let failed = 0;   // (a unit or tree that didn't load: the app tries the planet again next time)
+  const shared = (cache, key, make) => { if (!cache.has(key)) cache.set(key, make().catch(e => { cache.delete(key); throw e; })); return cache.get(key); };
   await Promise.all([...items.filter(s => s.unit).map(async s => {
-    try { const m = await unitMesh(gl, await fetchUnit(s.unit)); if (m) meshes.set(s.unit, m); } catch (e) { console.warn('scenery', s.unit, e); }
+    try { const m = await shared(unitCache, s.unit, async () => unitMesh(gl, await fetchUnit(s.unit))); if (m) meshes.set(s.unit, m); } catch (e) { failed++; console.warn('scenery', s.unit, e); }
   }), ...items.filter(s => s.tree && s.path).map(async s => {
-    try { const t = await treeParts(gl, await fetchTree(s.path)); if (t.length) trees.set(s.path, t); } catch (e) { console.warn('scenery tree', s.path, e); }
+    try {
+      // (a leaf whose atlas didn't load: not drawn as solid cards; a tree left with no leaves: the simple one)
+      const t = (await shared(treeCache, s.path, async () => treeParts(gl, await fetchTree(s.path)))).filter(pt => pt.bark || pt.tex);
+      if (t.some(pt => !pt.bark)) trees.set(s.path, t); else failed++;
+    } catch (e) { failed++; console.warn('scenery tree', s.path, e); }
   })]);
   // placement: a ring around the center (none within 10 m, nor in front of the default camera: the -z side), the
   // big ones farther out, no two overlapping much; each prop by its weight over its size (the big ones fewer)
@@ -301,7 +316,13 @@ export async function buildScenery(R, p, fetchUnit, fetchTree) {
     }
   }
   return {
-    props: placed.length,
+    props: placed.length, failed,
+    // its own meshes and texture freed (the shared units, trees and atlases stay for the other planets)
+    dispose() {
+      for (const m of mine) { gl.deleteVertexArray(m.vao); m.bufs.forEach(b => gl.deleteBuffer(b)); }
+      if (rockTex) gl.deleteTexture(rockTex);
+      this.draw = null;
+    },
     // in the renderer's frame (render.js draw): its view, eye, sun (toward it) and color, the environment, the
     // ground's shadow terms (groundParams) and the ground tile texture
     draw(vp, eye, sd, sunCol, e, gp, groundTex) {

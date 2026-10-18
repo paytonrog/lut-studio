@@ -124,9 +124,10 @@ func variantsNamed(folders []string) []Variant {
 	return vs
 }
 
-// imageName: a picture's file in the zip for a folder path ("armor/red" -> images/armor-red.png)
+// imageName: a picture's file in the zip for a folder path ("armor/red" -> images/armor~red.png; a "-" in a folder
+// name stays, so "a-b" and "a/b" don't share a file)
 func imageName(folder string) string {
-	return "images/" + strings.ReplaceAll(folder, "/", "-") + ".png"
+	return "images/" + strings.ReplaceAll(folder, "/", "~") + ".png"
 }
 
 func (m Mod) manifest() manifest {

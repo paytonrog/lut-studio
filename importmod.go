@@ -103,6 +103,9 @@ func (e *env) importMod(dir string, im *modpack.Imported) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if im.GUID != "" { // (the mod's own identity: a rebuild replaces the installed mod)
+		p.GUID = im.GUID
+	}
 	// a failed import leaves no half-made project in the list (only a folder this import made is removed)
 	ok := false
 	defer func() {
@@ -156,10 +159,10 @@ func (e *env) importMod(dir string, im *modpack.Imported) (string, error) {
 		return rel
 	}
 	p.Icon = keep(im.Icon, "icon.png")
-	if len(p.Variants) > 1 {
-		if !bytes.Equal(im.OptionImage, im.Icon) { // (the icon stands in for none)
-			p.OptionImage = keep(im.OptionImage, "images/option.choice.png")
-		}
+	if len(p.Variants) > 1 && !bytes.Equal(im.OptionImage, im.Icon) { // (the icon stands in for none)
+		p.OptionImage = keep(im.OptionImage, "images/option.choice.png")
+	}
+	{ // (one variant's picture too: the build shows it for the option)
 		for i := range p.Variants {
 			if b := im.Variants[i].Image; b != nil && !bytes.Equal(b, im.Icon) { // (the icon stands in for none)
 				p.Variants[i].Image = keep(b, "images/"+p.Variants[i].Folder+".png")

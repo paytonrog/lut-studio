@@ -243,7 +243,7 @@ func (e *env) target(what string) ([]pulled, string, error) {
 		return nil, "", err
 	}
 	kits := idx.Find(what)
-	if len(kits) > 0 && strings.EqualFold(kits[0].Name, what) {
+	if len(kits) > 0 && strings.EqualFold(kits[0].Name, strings.TrimSpace(what)) {
 		// an exact name: the kits of that key; same-named color versions (B-01 Tactical) are picked by id
 		var dups []string
 		for _, k := range kits {
@@ -428,8 +428,10 @@ func (e *env) cmdVariant(dir, name, from string) error {
 		}
 	}
 	nv := project.Variant{Name: name, Folder: project.Folder(name)}
-	if _, err := p.Variant(nv.Folder); err == nil {
-		return fmt.Errorf("variant folder %q exists", nv.Folder)
+	if folder, err := server.FreeVariantFolder(p, name); err != nil {
+		return err
+	} else {
+		nv.Folder = folder
 	}
 	n, err := server.CopyVariant(p, src, nv) // (its LUTs, edited textures and theme record, as the editor's + Variant)
 	if err != nil {
@@ -517,7 +519,7 @@ func (e *env) check(dir string, verbose bool) ([]built, error) {
 		}
 		// edited decal sheets and cape designs (server/decals.go): encoded like the game's texture (texenc)
 		for _, td := range server.TextureDirs {
-			files, _ := filepath.Glob(filepath.Join(p.VariantDir(v), td.Dir, "0x*.png"))
+			files := project.ListFiles(filepath.Join(p.VariantDir(v), td.Dir), "0x", ".png")
 			for _, f := range files {
 				idx, _ := e.index()
 				res, err := sheetResource(g, idx, f, td.Straight)
@@ -582,7 +584,7 @@ func sheetResource(g *game.Game, idx *game.Index, file string, straight bool) (m
 		return modpack.Resource{}, err
 	}
 	if in, err := texenc.ReadInfo(main); err == nil {
-		if b := img.Bounds(); b.Dx() != in.Width || b.Dy() != in.Height*in.Layers { // a placeholder design replaced
+		if b := img.Bounds(); (b.Dx() != in.Width || b.Dy() != in.Height*in.Layers) && strings.Contains(filepath.ToSlash(file), "/designs/") && server.Placeholder(in) { // a placeholder design replaced
 			if main, stream, gpu, err = designTemplate(g, idx, b.Dx(), b.Dy()); err != nil {
 				return modpack.Resource{}, err
 			}

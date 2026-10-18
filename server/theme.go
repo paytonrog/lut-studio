@@ -559,9 +559,9 @@ func CopyVariant(p *project.Project, src, nv project.Variant) (int, error) {
 	if err := os.MkdirAll(p.VariantDir(nv), 0o755); err != nil {
 		return 0, err
 	}
-	files, _ := filepath.Glob(filepath.Join(p.VariantDir(src), "*.lut.json"))
+	files := project.ListFiles(p.VariantDir(src), "", ".lut.json")
 	for _, td := range TextureDirs {
-		more, _ := filepath.Glob(filepath.Join(p.VariantDir(src), td.Dir, "0x*.png"))
+		more := project.ListFiles(filepath.Join(p.VariantDir(src), td.Dir), "0x", ".png")
 		files = append(files, more...)
 	}
 	for _, f := range files {

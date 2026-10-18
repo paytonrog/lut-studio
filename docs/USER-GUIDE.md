@@ -57,7 +57,8 @@ list of items is a small table of ids whose names come from your install (see **
    its `.gpu_resources` and `.stream`). Each option of the mod becomes a variant. Everything LUT Studio can edit
    comes in: the LUTs of every kind of item (armor, helmets, capes, vehicles, weapons and their attachments,
    backpacks, equipment, stratagems, SEAF…), LUTs of game materials no listed item uses (in the LUT list, shown on
-   no model), and the mod's decal sheets, cape designs, ID masks and pattern masks (for the **Decals…**, **Cape design…** and **Masks…** editors).
+   no model), and the mod's decal sheets, cape designs, ID masks and pattern masks (for the **Decals…**, **Cape design…** and **Masks…** editors). The mod's
+   identity (its GUID) comes in too, so building it again updates the installed mod instead of adding a second copy.
    Its icon, the variants' descriptions and pictures and the name of the choice come along to the **Mod page…**.
    A mod with several options keeps them as the project's options (their parts, choices and pictures).
    Left out, and LUT Studio tells you what: models and other textures, and the LUTs of models the mod adds (the game

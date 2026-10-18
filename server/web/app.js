@@ -212,11 +212,23 @@ function planetEnv(p, w = null) {
   gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => { gradeCache.delete(p.id); status('Planet light: ' + err.message, true); });
   if (!groundCache.has(p.id)) groundCache.set(p.id, groundTile(p));
   groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => groundCache.delete(p.id));
-  if (!sceneryCache.has(p.id)) sceneryCache.set(p.id, buildScenery(R, p, async h => parseGLB(await (await api('/api/unit?hash=' + h)).arrayBuffer()),
-    async t => parseGLB(await (await api('/api/speedtree?hash=' + encodeURIComponent(t))).arrayBuffer())));
-  sceneryCache.get(p.id).then(s => { e.scenery = s; }).catch(err => { sceneryCache.delete(p.id); console.warn('scenery', err); });
+  const scenery = () => {
+    if (!sceneryCache.has(p.id)) {
+      sceneryCache.set(p.id, buildScenery(R, p, async h => parseGLB(await (await api('/api/unit?hash=' + h)).arrayBuffer()),
+        async t => parseGLB(await (await api('/api/speedtree?hash=' + encodeURIComponent(t))).arrayBuffer())));
+      for (const old of [...sceneryCache.keys()].slice(0, -3)) {   // (the three latest kept)
+        const o = sceneryCache.get(old); sceneryCache.delete(old);
+        o.then(s => { if (R.env?.scenery !== s) s.dispose(); }).catch(() => { });
+      }
+    } else { const v = sceneryCache.get(p.id); sceneryCache.delete(p.id); sceneryCache.set(p.id, v); }   // (latest)
+    return sceneryCache.get(p.id).then(s => { e.scenery = s; if (s.failed) sceneryCache.delete(p.id); })
+      .catch(err => { sceneryCache.delete(p.id); console.warn('scenery', err); });
+  };
+  const sceneryReady = sceneryCache.has(p.id) ? scenery()
+    : new Promise(r => setTimeout(r, 350)).then(() => (R.env === e || S.inScene || S.planetNow === p.id ? scenery() : null));
+  S.planetNow = p.id;
   // (all of it in place: for a picture taken right after the switch)
-  e.ready = Promise.allSettled([gradeCache.get(p.id), groundCache.get(p.id), sceneryCache.get(p.id)]).then(() => new Promise(r => setTimeout(r, 50)));
+  e.ready = Promise.allSettled([gradeCache.get(p.id), groundCache.get(p.id), sceneryReady]).then(() => new Promise(r => setTimeout(r, 50)));
   return e;
 }
 
@@ -236,8 +248,11 @@ function setEnv() {
   const pl = v.startsWith('planet:') ? S.planets.find(p => 'planet:' + p.id === v) : null;
   const w = fillWeather(pl);
   const e = pl ? planetEnv(pl, w) : ge ? { ...ENVS['Studio'], sunIntensity: 0, ...GAME_ENV_LOOK[ge.name], game: ge } : { ...ENVS[v] };
-  if (pl && R.env?.weather !== w) weatherWear(w);
-  else if (!pl && R.env?.weather) weatherWear(null);   // (a planet's weather made the armor wet / snowy: undone)
+  const wearKey = pl ? pl.id + ':' + (w?.label ?? '') : null;
+  if (!S.noWear && wearKey !== S.wearKey) {   // (another weather: its wetness and snow; off a planet: back to dry)
+    if (pl) weatherWear(w); else if (S.wearKey) weatherWear(null);
+    S.wearKey = wearKey;
+  }
   const az = e.sunAz ?? +$('sunAz').value;
   if (e.sunAz !== undefined) $('sunAz').value = e.sunAz;
   e.sunAz = az * Math.PI / 180;
@@ -462,16 +477,19 @@ function sceneApp() {
       try { return await showItem(k); } finally { S.inScene = false; }
     },
     statusText: () => $('status').textContent,
+    env: () => $('env').value,   // (the editor's light: a planet's is the Showcase's too)
     // a lighting picked (a game one: until its cube map is in), the one before returned
     setEnv: async name => {
       const prev = { env: $('env').value, sunAz: $('sunAz').value, sunElevUser: R.sunElevUser, sunOn: R.sunOn, rims: R.rim.map(l => l.on) };
       if (typeof name === 'object') {
-        $('sunAz').value = name.sunAz; $('env').value = name.env; setEnv(); R.sunElevUser = name.sunElevUser; showSunElev();
+        S.noWear = true; $('sunAz').value = name.sunAz; $('env').value = name.env; setEnv(); S.noWear = false; R.sunElevUser = name.sunElevUser; showSunElev();
         R.sunOn = name.sunOn ?? true; $('sunOn').checked = R.sunOn;
         (name.rims ?? []).forEach((on, i) => { if (R.rim[i]) { R.rim[i].on = on; $('rim' + i).checked = on; } });
         return prev;
       }
+      S.noWear = true;   // (the scene's light changes leave the armor's wear as the editor has it)
       $('env').value = name; R.sunElevUser = null; lightsFor(name); setEnv(); showSunElev();
+      S.noWear = false;
       for (let i = 0; i < 120 && R.env.game && !R.env.cubeTex; i++) await new Promise(r => setTimeout(r, 250));
       return prev;
     },
@@ -1210,13 +1228,15 @@ async function loadPoses() {
   }
 }
 async function setPose(hash, { play = true, time = null, quiet = false } = {}) {
+  const gen = POSE.gen = (POSE.gen ?? 0) + 1;   // (a newer pick wins)
   if (!hash) { POSE.clip = null; R.pose = null; POSE.playing = false; $('poseTime').disabled = true; return; }
   if (!quiet) status('Loading the pose…');
   let clip = POSE.cache.get(hash);
   if (!clip) {
-    try { clip = prepareClip(await api('/api/anim?hash=' + hash)); } catch (e) { return status('The pose could not be loaded: ' + e.message, true); }
+    try { clip = prepareClip(await api('/api/anim?hash=' + hash)); } catch (e) { return gen === POSE.gen && status('The pose could not be loaded: ' + e.message, true); }
     POSE.cache.set(hash, clip);
   }
+  if (gen !== POSE.gen) return;
   POSE.clip = clip;
   POSE.time = time ?? 0;
   POSE.playing = play;
@@ -1357,7 +1377,8 @@ function loop() {
   lastT = now;
   const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  try { R.draw(performance.now() / 1000); } catch (e) { status(e.message, true); return; }
+  try { R.draw(performance.now() / 1000); S.drawError = null; }
+  catch (e) { if (S.drawError !== e.message) { S.drawError = e.message; console.error(e); status(e.message, true); } }   // (said once; the next frames still drawn)
   requestAnimationFrame(loop);
 }
 

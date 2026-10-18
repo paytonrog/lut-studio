@@ -178,7 +178,8 @@ export async function buildScene(app, opts = {}) {
       await loadSlot(si);
     }
     sync(); R.pose = null;
-    prevEnv = await app.setEnv(opts.env ?? ENV);   // (opts.env: another lighting, e.g. a planet's: 'planet:<id>')
+    // (opts.env: another lighting, e.g. a planet's: 'planet:<id>'; else the editor's when it's a planet's, else the Armory's)
+    prevEnv = await app.setEnv(opts.env ?? (app.env?.().startsWith('planet:') ? app.env() : ENV));
     await R.env.ready;
     await sleep(500);
   } catch (e) {   // (the editor back as it was, then the error)

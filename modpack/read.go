@@ -57,6 +57,7 @@ const maxTextureBytes = 64 << 20
 // Imported is what ReadMod found.
 type Imported struct {
 	Name, Description string
+	GUID              string // the manifest's Guid ("": none): kept, so a rebuilt mod updates the installed one
 	Icon              []byte // the manifest's icon (any image format), nil: none
 	// with one option of several sub-options (LUT Studio's own mods): that option, the choice between the variants
 	OptionName, OptionDescription string
@@ -151,7 +152,16 @@ func ReadModWith(src Source, fallbackName string, o Options) (*Imported, error) 
 	}
 	var opts []option
 	var layered []manifestOption // several options: the manifest's, for Layout
-	if mp, ok := rel["manifest.json"]; ok {
+	mp, ok := rel["manifest.json"]
+	if !ok { // (Manifest.json, MANIFEST.JSON…: the manager reads them too)
+		for k, v := range rel {
+			if strings.EqualFold(k, "manifest.json") {
+				mp, ok = v, true
+				break
+			}
+		}
+	}
+	if ok {
 		b, err := readAll(src, mp, 4<<20)
 		if err != nil {
 			return nil, fmt.Errorf("manifest.json: %w", err)
@@ -160,12 +170,14 @@ func ReadModWith(src Source, fallbackName string, o Options) (*Imported, error) 
 			Version     int             `json:"Version"`
 			Name        string          `json:"Name"`
 			Description string          `json:"Description"`
+			Guid        string          `json:"Guid"`
 			IconPath    string          `json:"IconPath"`
 			Options     json.RawMessage `json:"Options"`
 		}
 		if err := json.Unmarshal(relaxJSON(bytes.TrimPrefix(b, []byte("\xef\xbb\xbf"))), &raw); err != nil {
 			return nil, fmt.Errorf("manifest.json: %w", err)
 		}
+		im.GUID = strings.TrimSpace(raw.Guid)
 		if raw.Name != "" {
 			im.Name = raw.Name
 		}
@@ -421,13 +433,22 @@ func readPatches(src Source, rel map[string]string, patches []string, want func(
 		files = append(files, f)
 	}
 	sort.Slice(files, func(i, j int) bool { return ord(files[i]) < ord(files[j]) })
-	data := map[string]map[part][]byte{}
+	data, readErr := map[string]map[part][]byte{}, map[string]error{}
 	for _, f := range files {
 		d, err := readParts(src, f, wanted[f])
 		if err != nil {
+			readErr[f] = err
 			d = map[part][]byte{}
 		}
 		data[f] = d
+	}
+	// a patch whose GPU or stream part can't be read: said as the patch's error (a note), not taken for "no LUTs"
+	for _, p := range sorted {
+		for _, ext := range []string{".gpu_resources", ".stream"} {
+			if f, ok := rel[p+ext]; ok && readErr[f] != nil && out[p] != nil && out[p].err == nil {
+				out[p].err = fmt.Errorf("%s can't be read: %w", path.Base(f), readErr[f])
+			}
+		}
 	}
 	for _, p := range sorted {
 		pr := out[p]
