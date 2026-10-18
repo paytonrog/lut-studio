@@ -93,7 +93,7 @@ for (const name of presets) {
     if (!PRESETS[name] && name !== 'game') return null;
     const theme = PRESETS[name] ? presetTheme(name) : { name, colors: [], looksFor: () => ({}) };
     if (${JSON.stringify(flag('env') === 'planets')}) {
-      const pl = window.lutstudio.S.planets.find(p => name.replace(/^Biome: /, '').replace(/ \(showcase\)$/, '') === p.name);
+      const pl = window.lutstudio.S.planets.find(p => name.replace(/^Biome: /, '').replace(/ \\(showcase\\)$/, '') === p.name);
       if (pl) await window.themeScene.setEnv('planet:' + pl.id);
     }
     const c = await window.themeScene.render({ ...theme, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)});
