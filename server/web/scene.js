@@ -72,7 +72,7 @@ export async function buildScene(app, opts = {}) {
   Object.entries(opts.weapons ?? {}).forEach(([i, w]) => { if (divers[+i] && w !== undefined) divers[+i].weapon = w; });
   Object.entries(opts.poses ?? {}).forEach(([i, p]) => { if (divers[+i] && p !== undefined && p !== '' && p !== null) divers[+i].pose = p; });
   const poses = app.poses(), notes = [];
-  const kits = app.kits(), kitIn = (group, name) => kits.find(k => k.group === group && (k.name === name || k.label.startsWith(name)));
+  const kits = app.kits(), kitIn = (group, name) => kits.find(k => k.group === group && (k.value === name || k.name === name || k.label.startsWith(name)));   // (name: a kit's name, label start or value, e.g. 'kit:0x…')
   const state = app.snapshot(), cam = { ...R.cam, target: [...R.cam.target] }, pose = R.pose;
   const rimObjs = R.rim, rim = R.rim.map(l => ({ ...l }));   // (the editor's controls hold these objects: given back as they were)
   R.clearPieces();   // (the editor's pieces: freed; dispose loads them again)
@@ -152,6 +152,7 @@ export async function buildScene(app, opts = {}) {
       if (!kit) notes.push(`not found: ${it.name}`);
       else {
         const keys = [kit.value];
+        if (it.helmet) { const k = kitIn('Helmets', it.helmet); if (k) keys.push(k.value); else notes.push(`not found: ${it.helmet}`); }   // (another helmet than the armor's own)
         if (it.cape) { const k = kitIn('Capes', it.cape); if (k) keys.push(k.value); else notes.push(`not found: ${it.cape}`); }
         const ps = await take(keys), pz = await poseOf(it), { rot, shift } = place(it, ps, pz);
         items.push({ n: ids++, slot: si, kind: it.group === 'Armor' ? 'diver' : 'item', layer: it.layer, pieces: ps, pose: pz, rot, shift });
