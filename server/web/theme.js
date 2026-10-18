@@ -281,6 +281,16 @@ Object.assign(PRESETS, {
   'Midnight Exigent': T('#14224a', '#2a2c32', '#ffd21a', '#121a30', { glow: '#ffd21a', gv: 0.08 }),
   'Oiled Gunmetal': T('#14181a', '#0e1210', '#3aff9a', '#101414', { pf: [[6, 3, 0.6], [10, 0, 0.12]], px: IRID(0.45, 0.8, 1.6), glow: '#3aff9a', gv: 0.1, hw: '#2a2e30' }),
   'Monochromatic': T('#f2f2f2', '#0c0c0c', '#0c0c0c', '#f2f2f2', { pf: FIN.gloss, sf: FIN.gloss }),
+  // (more Destiny 2 shaders, from how they're described: colors and finishes, not their exact textures)
+  'Metro Shift': T('#0d0f14', '#13233f', '#2a4c86', '#0f1420', { pf: FIN.satin, sf: [[6, 3, 0.4], [10, 0, 0.3], [8, 3, 0.7]], tf: FIN.metal, hw: '#2a3446', hwf: FIN.brushed }),
+  'Vanguard Discipline': T('#8c8f92', '#3a3d42', '#c9c3b4', '#55585c', { pf: FIN.matte, sf: FIN.satin, tf: FIN.satin, hw: '#6a6e74', hwf: FIN.brushed }),
+  'Carrhae Black': T('#121112', '#1c1a19', '#4a2e1c', '#161516', { pf: FIN.satin, sf: FIN.matte, tf: FIN.satin, hw: '#5a3820', hwf: [[6, 3, -1], [10, 0, 0.45], [1, 0, 0], [1, 1, 0.9], [22, 0, 2]] }),   // (walnut wood on the metal)
+  'Ensilvered Snare': T('#b4b8bc', '#5a4230', '#2c2620', '#4a3a2a', { pf: FIN.brushed, px: [[4, 0, 3], [4, 1, 2], [4, 2, 6], [4, 3, 0], [1, 3, 0.1], [6, 0, 0.32], [6, 1, 0.22], [6, 2, 0.14], [5, 0, 0.6], [5, 1, 0.6], [5, 2, 0.6], [1, 0, 0], [1, 1, 0.8], [22, 0, 3]], sf: FIN.matte, tf: FIN.matte, hw: '#c4c8cc', hwf: FIN.metal }),   // (knightly, worn)
+  'Horizons Beyond': T('#162a52', '#6a4628', '#c8a46a', '#4e3420', { pf: FIN.satin, sf: [[6, 3, -1], [10, 0, 0.6], [1, 0, 0], [1, 1, 0.8], [22, 0, 3]], tf: FIN.brushed, hw: '#8a6a40', hwf: FIN.brushed }),   // (leather)
+  'Corrective//Protective': T('#8a6a3a', '#2a2622', '#e8f4ff', '#3a342c', { pf: FIN.brushed, sf: FIN.satin, glow: '#e8f4ff', gv: 0.08, hw: '#a8844a', hwf: FIN.metal }),   // (Vex bronze, milky radiolaria glow)
+  'Carminica': T('#7a0a10', '#3a0508', '#ff2020', '#4a0a0c', { pf: FIN.gloss, sf: FIN.satin, glow: '#ff2020', gv: 0.1, hw: '#5a0a0e', hwf: FIN.metal }),
+  "Calus's Selected": T('#eceae4', '#b8bcc2', '#d8b04a', '#4a1a6a', { pf: FIN.gloss, sf: FIN.mirror, tf: FIN.metal, glow: '#8a3ad8', gv: 0.05, hw: '#d8b04a', hwf: FIN.mirror }),   // (royal purple highlights)
+  'Jacarina': T('#f0f0f0', '#0e0e10', '#1a8cff', '#121214', { pf: FIN.gloss, sf: FIN.satin, glow: '#1a8cff', gv: 0.07, hw: '#2a2c30' }),   // (black and white, a vivid blue once worn)
 });
 
 // planet biomes: field camouflage for each of the game's planet biomes (as the SEAF swap theirs per planet), its colors
