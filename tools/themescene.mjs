@@ -24,9 +24,11 @@ const site = 'http://127.0.0.1:8790/?devgame=1';
 const TITLE = !process.argv.includes('--no-title');
 const size = (flag('size') ?? '3840x2160').split('x').map(Number);
 const list = name => flag(name)?.split(',').map(s => s.trim());
+const sparse = a => a && Object.fromEntries(a.map((v, i) => [i, v]).filter(([, v]) => v !== undefined));
 const opts = {
-  weapons: list('weapons')?.map(w => (w === '' ? undefined : /^(none|-)$/i.test(w) ? null : w)),
-  poses: list('pose')?.map(q => (q === '' ? undefined : /^\d+$/.test(q) ? +q : q)),
+  // ({index: value}: JSON keeps no undefined in an array, and buildScene keeps the scene's where there is none)
+  weapons: sparse(list('weapons')?.map(w => (w === '' ? undefined : /^(none|-)$/i.test(w) ? null : w))),
+  poses: sparse(list('pose')?.map(q => (q === '' ? undefined : /^\d+$/.test(q) ? +q : q))),
 };
 // --env=planet:<id>: a planet's lighting (or any Light menu value); --env=planets: each "Biome: X" preset on its own
 // planet's (the planet named X)
@@ -95,6 +97,7 @@ for (const name of presets) {
     if (${JSON.stringify(flag('env') === 'planets')}) {
       const pl = window.lutstudio.S.planets.find(p => name.replace(/^Biome: /, '').replace(/ \\(showcase\\)$/, '') === p.name);
       if (pl) await window.themeScene.setEnv('planet:' + pl.id);
+      else if (window.lutstudio.R.env.planet) await window.themeScene.setEnv('game:Armory (menu)');
     }
     const c = await window.themeScene.render({ ...theme, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)});
     return c.toDataURL('image/png');

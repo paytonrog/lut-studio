@@ -44,7 +44,10 @@ export async function openShowcase(app, opts = {}) {
     if (show !== mine) return;
     panel(app, themeOf);
     app.track('showcase opened', { show: mine.which, ms: Math.round(performance.now() - t0) });
-  } catch (e) { console.warn(e); if (show === mine && $('scMsg')) $('scMsg').textContent = 'Showcase: ' + e.message; }
+  } catch (e) {   // (the editor is back as it was: out of showcase mode, the error said)
+    console.warn(e);
+    if (show === mine) { closeShowcase(); app.status?.('Showcase: ' + e.message, true); }
+  }
 }
 
 export function closeShowcase() {
@@ -126,6 +129,7 @@ function panel(app, themeOf) {
     try {
       await sc.swap(si, { [f]: f === 'weapon' && v === '' ? null : v });
       msg(sc.notes.slice(n0).join('; '));
+      if ($('scAuto').checked) $('scColor').value = sc.showcase.accent;   // (the light from the scene: it changed)
       app.track('showcase item changed', { slot: sc.slots[si].label, field: f });
     } catch (e) { msg(e.message); }
     if (show) busy(false);

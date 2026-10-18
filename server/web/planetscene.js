@@ -14,7 +14,7 @@ const VERT = `#version 300 es
 layout(location = 0) in vec3 aPos; layout(location = 1) in vec3 aNrm; layout(location = 2) in vec3 aCol; layout(location = 3) in vec2 aUv;
 uniform mat4 uVP; uniform mat4 uM;
 out vec3 vP; out vec3 vN; out vec3 vCol; out vec2 vUv;
-void main() { vP = (uM * vec4(aPos, 1.0)).xyz; vN = mat3(uM) * aNrm; vCol = aCol; vUv = aUv; gl_Position = uVP * vec4(vP, 1.0); }`;
+void main() { vP = (uM * vec4(aPos, 1.0)).xyz; vN = transpose(inverse(mat3(uM))) * aNrm; vCol = aCol; vUv = aUv; gl_Position = uVP * vec4(vP, 1.0); }`;
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -44,7 +44,10 @@ void main() {
     occ = 1.0 - 0.45 * contact;
   } else if (uMode == 4) {
     vec4 t = texture(uPartTex, vUv);
-    if (t.a < uCutoff) discard;
+    // (the mips average the cut-out away: its alpha raised with the level, so far leaves stay leafy)
+    vec2 dx = dFdx(vUv * vec2(textureSize(uPartTex, 0))), dy = dFdy(vUv * vec2(textureSize(uPartTex, 0)));
+    float lod = max(0.0, 0.5 * log2(max(dot(dx, dx), dot(dy, dy))));
+    if (t.a * (1.0 + 0.3 * lod) < uCutoff) discard;
     alb = uAlb * t.r * 2.0;
     occ = 0.6 + 0.4 * clamp((vP.y - uFloorY) / 12.0, 0.0, 1.0);
   } else if (uMode == 2) {
@@ -308,7 +311,7 @@ export async function buildScenery(R, p, fetchUnit, fetchTree) {
       gl.uniformMatrix4fv(u.uVP, false, vp);
       gl.uniform3fv(u.uSunDir, sd); gl.uniform3fv(u.uSunCol, sunCol);
       gl.uniform3fv(u.uZen, e.zenith); gl.uniform3fv(u.uHor, e.horizon); gl.uniform3fv(u.uGnd, e.ground); gl.uniform3fv(u.uEye, eye);
-      gl.uniform1f(u.uExposure, e.exposure); gl.uniform1f(u.uFogDist, e.fogDist ?? 40); gl.uniform1i(u.uGradeOn, e.grade?.tex ? 1 : 0);
+      gl.uniform1f(u.uExposure, e.exposure); gl.uniform1f(u.uFogDist, e.fogDist ?? 40); gl.uniform1i(u.uGradeOn, R.gradeOn ? 1 : 0);
       gl.uniform1f(u.uFloorY, gp.floorY); gl.uniform4fv(u.uFoot, gp.foot); gl.uniform2fv(u.uCast, gp.cast);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); gl.uniform1i(u.uGroundTex, 0);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, rockTex ?? groundTex); gl.uniform1i(u.uRockTex, 1); gl.uniform1i(u.uRockOn, rockTex ? 1 : 0);

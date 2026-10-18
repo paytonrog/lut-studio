@@ -6,7 +6,6 @@
 // a vignette and the title. The frame is 16:9 (the exported image's), letterboxed in the viewport; the camera moves
 // as ever. exportCanvas(w, h) draws the same frame at that size into a 2D canvas.
 import { M4 } from './render.js';
-import { groundTile } from './planet.js';
 
 // the look's settings (the Showcase sliders: 1 = the default look; color: the light's, '' = the theme's)
 export const LOOK = {
@@ -199,10 +198,11 @@ export class Showcase {
     gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
   // a texture target: {fbo, tex, depth?, w, h}
-  target(w, h, { depth = false, msaa = 0 } = {}) {
+  target(w, h, { depth = false, msaa = 0, float = false } = {}) {
     const gl = this.R.gl, t = { w, h, fbo: gl.createFramebuffer() };
+    const F = float && this.R.floatRT ? gl.RGBA16F : gl.RGBA8;   // (half float: a planet's shaped values without banding)
     t.tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t.tex);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, w, h); this.params(gl.TEXTURE_2D, gl.LINEAR);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, F, w, h); this.params(gl.TEXTURE_2D, gl.LINEAR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.tex, 0);
     if (depth) {
@@ -213,7 +213,7 @@ export class Showcase {
     if (msaa) {   // (drawn multisampled, then resolved into tex / depth)
       t.ms = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, t.ms);
       const c = gl.createRenderbuffer(), z = gl.createRenderbuffer();
-      gl.bindRenderbuffer(gl.RENDERBUFFER, c); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, msaa, gl.RGBA8, w, h);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, c); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, msaa, F, w, h);
       gl.bindRenderbuffer(gl.RENDERBUFFER, z); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, msaa, gl.DEPTH_COMPONENT24, w, h);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, c);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, z);
@@ -233,8 +233,8 @@ export class Showcase {
     if (this.size?.[0] === w && this.size?.[1] === h) return;
     for (const k of ['scene', 'refl', 'comp', 'glowA', 'glowB', 'bloomA', 'bloomB', 'out']) this.free(this[k]);
     const q = 4, qw = Math.max(1, Math.round(w / q)), qh = Math.max(1, Math.round(h / q));
-    const samples = Math.min(4, this.R.gl.getParameter(this.R.gl.MAX_SAMPLES));
-    this.scene = this.target(w, h, { depth: true, msaa: samples });
+    const samples = this.R.msaaSamples(this.R.floatRT ? this.R.gl.RGBA16F : this.R.gl.RGBA8);   // (as the scene's format takes)
+    this.scene = this.target(w, h, { depth: true, msaa: samples, float: true });
     this.refl = this.target(Math.round(w / 2), Math.round(h / 2), { depth: true });
     this.comp = this.target(w, h);
     this.glowA = this.target(qw, qh); this.glowB = this.target(qw, qh);
@@ -373,23 +373,13 @@ export class Showcase {
     }
     if (!pe) return { u: { uPlanet: 0 }, ground: this.blankGround, grade: this.blank3 };
     const p = pe.planet;
-    if (this.groundFor !== p.id) {
-      this.groundFor = p.id; this.groundTex = null;
-      groundTile(p).then(t => {
-        if (this.groundFor !== p.id) return;
-        const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, t.w, t.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(t.px.buffer));
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        this.groundTex = tex;
-      });
-    }
-    const sunE = pe.sun.map(c => c * pe.sunIntensity * (this.R.sunOn === false ? 0 : 1) * Math.max(Math.sin(pe.sunElev), 0) / Math.PI);
+    const elev = this.R.sunElevUser !== null && this.R.sunElevUser !== undefined ? this.R.sunElevUser * Math.PI / 180 : pe.sunElev;
+    const sunE = pe.sun.map(c => c * pe.sunIntensity * (this.R.sunOn === false ? 0 : 1) * Math.max(Math.sin(elev), 0) / Math.PI);
+    this.R.ensureGroundTex(pe);
     return {
       u: { uPlanet: 1, uExposure: pe.exposure, uSunE: sunE, uSkyUp: pe.zenith.map((z, k) => 0.6 * z + 0.4 * pe.horizon[k]),
         uSkyZ: pe.zenith, uSkyH: pe.horizon, uFogDist: pe.fogDist ?? 40 },
-      ground: this.groundTex ?? this.blankGround, grade: pe.grade.tex,
+      ground: pe.groundTile ? this.R.groundTex : this.blankGround, grade: pe.grade.tex,
     };
   }
   // the frame at w x h -> a 2D canvas

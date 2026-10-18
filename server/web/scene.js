@@ -68,11 +68,14 @@ export async function buildScene(app, opts = {}) {
   const R = app.R, say = opts.progress ?? (() => { });
   const slots = (opts.scene ?? SCENE).map(it => ({ ...it }));
   const divers = slots.filter(it => it.group === 'Armor');
-  (opts.weapons ?? []).forEach((w, i) => { if (divers[i] && w !== undefined) divers[i].weapon = w; });
-  (opts.poses ?? []).forEach((p, i) => { if (divers[i] && p !== undefined && p !== '') divers[i].pose = p; });
+  // (opts.weapons / poses: per Helldiver, an array or {index: value}; none given: the scene's own)
+  Object.entries(opts.weapons ?? {}).forEach(([i, w]) => { if (divers[+i] && w !== undefined) divers[+i].weapon = w; });
+  Object.entries(opts.poses ?? {}).forEach(([i, p]) => { if (divers[+i] && p !== undefined && p !== '' && p !== null) divers[+i].pose = p; });
   const poses = app.poses(), notes = [];
   const kits = app.kits(), kitIn = (group, name) => kits.find(k => k.group === group && (k.name === name || k.label.startsWith(name)));
-  const state = app.snapshot(), cam = { ...R.cam, target: [...R.cam.target] }, pose = R.pose, rim = R.rim.map(l => ({ ...l }));
+  const state = app.snapshot(), cam = { ...R.cam, target: [...R.cam.target] }, pose = R.pose;
+  const rimObjs = R.rim, rim = R.rim.map(l => ({ ...l }));   // (the editor's controls hold these objects: given back as they were)
+  R.clearPieces();   // (the editor's pieces: freed; dispose loads them again)
   // the drawn parts: {n (an id), slot, kind ('item', 'diver', 'weapon'), layer, pieces, pose, rot, shift, posed, hidden}
   const items = [];
   let ids = 0, sc = null;
@@ -154,12 +157,13 @@ export async function buildScene(app, opts = {}) {
         items.push({ n: ids++, slot: si, kind: it.group === 'Armor' ? 'diver' : 'item', layer: it.layer, pieces: ps, pose: pz, rot, shift });
       }
     }
-    if (it.group === 'Armor' && it.name && it.backpack && (parts === 'all' || parts === 'backpack')) {
+    const diver = items.some(e => e.slot === si && e.kind === 'diver');   // (a weapon, a backpack: only with their Helldiver)
+    if (it.group === 'Armor' && diver && it.backpack && (parts === 'all' || parts === 'backpack')) {
       const kit = kitIn('Backpacks', it.backpack);
       if (!kit) notes.push(`not found: ${it.backpack}`);
       else items.push({ n: ids++, slot: si, kind: 'backpack', layer: it.layer, pieces: await take([kit.value]) });
     }
-    if (it.group === 'Armor' && it.name && it.weapon && (parts === 'all' || parts === 'weapon')) {
+    if (it.group === 'Armor' && diver && it.weapon && (parts === 'all' || parts === 'weapon')) {
       const kit = kitIn('Weapons', it.weapon);
       if (!kit) notes.push(`not found: ${it.weapon}`);
       else items.push({ n: ids++, slot: si, kind: 'weapon', layer: it.layer, pieces: await take([kit.value]) });
@@ -167,14 +171,24 @@ export async function buildScene(app, opts = {}) {
     if (!freed && oldPieces.length) { const keep = R.pieces; R.pieces = oldPieces; R.clearPieces(); R.pieces = keep; }
     if (it.group === 'Armor') grip(si);
   };
-  for (const [si, it] of slots.entries()) {
-    say(`Loading ${si + 1} / ${slots.length}: ${it.name}${it.weapon ? ' + ' + it.weapon : ''}`);
-    await loadSlot(si);
+  let prevEnv = null;
+  try {
+    for (const [si, it] of slots.entries()) {
+      say(`Loading ${si + 1} / ${slots.length}: ${it.name}${it.weapon ? ' + ' + it.weapon : ''}`);
+      await loadSlot(si);
+    }
+    sync(); R.pose = null;
+    prevEnv = await app.setEnv(opts.env ?? ENV);   // (opts.env: another lighting, e.g. a planet's: 'planet:<id>')
+    await R.env.ready;
+    await sleep(500);
+  } catch (e) {   // (the editor back as it was, then the error)
+    R.post = null; rimObjs.forEach((l, i) => Object.assign(l, rim[i])); R.rim = rimObjs;
+    Object.assign(R.cam, cam); R.pose = pose;
+    R.pieces = items.flatMap(s => s.pieces); R.clearPieces();
+    if (prevEnv) await app.setEnv(prevEnv).catch(() => { });
+    await app.restore(state).catch(() => { });
+    throw e;
   }
-  sync(); R.pose = null;
-  const prevEnv = await app.setEnv(opts.env ?? ENV);   // (opts.env: another lighting, e.g. a planet's: 'planet:<id>')
-  await R.env.ready;
-  await sleep(500);
   let baseExposure = R.env.exposure;
   sc = new Showcase(R);
   // the glow behind the squad, the pool of light at its feet (world: x is the scene's mirrored)
@@ -184,6 +198,7 @@ export async function buildScene(app, opts = {}) {
   camera();
   R.post = sc;
   let n = 0, auto = 1, theme = null, busy = Promise.resolve();
+  const queue = fn => (busy = busy.catch(() => { }).then(fn));   // (one change at a time; a failed one doesn't stop the next)
   const rimLight = () => {
     if (R.env.planet) { R.rim = []; return; }   // (a planet's light: its sun and sky only)
     const lin = hexRGB(sc.look.color || sc.accent).map(c => Math.pow(c / 255, 2.2)), top = Math.max(...lin, 1e-3), I = RIM * sc.look.rim * (0.35 + 0.65 * sc.sat);
@@ -197,7 +212,8 @@ export async function buildScene(app, opts = {}) {
     // looksFor: the items as they are; base 'vanilla': as the game has them, else as in the mod): the items' LUTs, the
     // light's color (the theme's colors, else the squad's), the exposure (lowered while the squad's lit parts would
     // clip: a white or pastel theme)
-    async setTheme(t) {
+    setTheme(t) { return queue(() => this.themeNow(t)); },
+    async themeNow(t) {
       theme = t;
       say('Theming…');
       const worn = await themeItems(app, items, t, 'sc' + n++ + ':');
@@ -212,7 +228,7 @@ export async function buildScene(app, opts = {}) {
     // a slot changed: { name, cape, weapon (null: none), pose } (the frame held meanwhile; the camera kept), then the
     // theme again on the scene. One change at a time (a second waits for the first).
     swap(si, patch) {
-      busy = busy.then(async () => {
+      return queue(async () => {
         const it = slots[si], c = { ...R.cam, target: [...R.cam.target] }, before = { ...it };
         Object.assign(it, patch);
         sc.frozen = true;
@@ -228,15 +244,14 @@ export async function buildScene(app, opts = {}) {
           }
           sync();
           Object.assign(R.cam, c);
-          if (theme) await this.setTheme(theme);
+          if (theme) await this.themeNow(theme);
         } finally { sc.frozen = false; Object.assign(R.cam, c); }
       });
-      return busy;
     },
     // a slot moved on the floor: at [x, depth] (m; the scene's), its item placed again (its weapon and backpack with it)
     move(si, at) {
-      const it = slots[si], dx = at[0] - it.at[0], dz = at[1] - it.at[1];
-      if (it.edges) { it.edges.x += dx; it.edges.z += dz; }
+      const it = slots[si];
+      it.edges = null;   // (placed from its spot again; a swap after keeps the new edges)
       it.at = [...at];
       for (const e of items.filter(e => e.slot === si && (e.kind === 'diver' || e.kind === 'item'))) Object.assign(e, place(it, e.pieces, e.pose));
       if (it.group === 'Armor') grip(si);
@@ -272,7 +287,7 @@ export async function buildScene(app, opts = {}) {
     async dispose() {
       await busy.catch(() => { });
       R.post = null; sc.dispose();
-      R.rim = rim; R.env.exposure = baseExposure;
+      rimObjs.forEach((l, i) => Object.assign(l, rim[i])); R.rim = rimObjs; R.env.exposure = baseExposure;
       Object.assign(R.cam, cam); R.pose = pose;
       R.pieces = items.flatMap(s => s.pieces);   // (freed by the next load)
       await app.setEnv(prevEnv);

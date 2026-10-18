@@ -333,7 +333,7 @@ const SC = ' (showcase)';
 function onPlanet(look, swap, glow = 1) {
   return JSON.parse(JSON.stringify(look), (k, v) => {
     if (typeof v === 'string' && swap[v.toLowerCase()]) return swap[v.toLowerCase()];
-    if (Array.isArray(v) && v.length === 3 && v[0] === 13 && v[1] === 0) return [13, 0, Math.min(0.2, v[2] * glow)];
+    if (Array.isArray(v) && v.length === 3 && v[0] === 13 && v[1] === 0) return [13, 0, Math.min(0.15, v[2] * glow)];   // (the glow's top)
     return v;
   });
 }

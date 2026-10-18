@@ -985,7 +985,8 @@ void main() {
     col = (col * (uTone.x * col + uTone.y)) / (col * (uTone.z * col + uTone.w) + uToneE);  // (default: the ACES fit)
     col = uRawOut == 1 ? sat(col) : linearToSrgb(sat(col));
   }
-  if (uHighlightZone >= 0 && zone == uHighlightZone) col = mix(col, vec3(1.0, 0.85, 0.2), 0.25 + 0.15 * sin(uTime * 6.0));
+  // (the zone highlight; in the planet grading's shaped values: a bright yellow there, graded to about the same)
+  if (uHighlightZone >= 0 && zone == uHighlightZone) col = mix(col, uGradeOn == 1 ? shaped(vec3(1.6, 1.2, 0.25)) : vec3(1.0, 0.85, 0.2), 0.25 + 0.15 * sin(uTime * 6.0));
   outColor = vec4(col, 1.0);
 }`;
 

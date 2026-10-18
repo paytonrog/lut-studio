@@ -227,8 +227,8 @@ function lightsFor(v) {
     R.sunOn = sun; $('sunOn').checked = sun;
     R.rim.forEach((l, i) => { l.on = rims; $('rim' + i).checked = rims; });
   };
-  if (v.startsWith('planet:')) set(true, false);
-  else if (v === 'game:Armory (menu)') set(false, true);
+  if (v === 'game:Armory (menu)') set(false, true);
+  else set(true, false);   // (a planet, LUT Studio's own, the game's others: the sun)
 }
 
 function setEnv() {
@@ -237,6 +237,7 @@ function setEnv() {
   const w = fillWeather(pl);
   const e = pl ? planetEnv(pl, w) : ge ? { ...ENVS['Studio'], sunIntensity: 0, ...GAME_ENV_LOOK[ge.name], game: ge } : { ...ENVS[v] };
   if (pl && R.env?.weather !== w) weatherWear(w);
+  else if (!pl && R.env?.weather) weatherWear(null);   // (a planet's weather made the armor wet / snowy: undone)
   const az = e.sunAz ?? +$('sunAz').value;
   if (e.sunAz !== undefined) $('sunAz').value = e.sunAz;
   e.sunAz = az * Math.PI / 180;
@@ -310,6 +311,7 @@ async function loadVariant(folder) {
     if (p.info.cape) p.lutKeys.cape = editedKey(p.info.cape);
     if (p.info.pattern) p.lutKeys.pattern = editedKey(p.info.pattern);
   }
+  if (decals) await decals.catch(() => { });   // (the variant's own decal sheets in: a picture right after shows them)
   if (!S.sel.lut || !S.luts.get(S.sel.lut)?.edited) S.sel.lut = v.luts?.[0]?.lut ?? null;
   if (S.sel.lut) S.sel.zone = Math.min(S.sel.zone, (S.luts.get(S.sel.lut)?.h ?? 1) - 1);
   renderLists();
@@ -453,17 +455,26 @@ function sceneApp() {
   return {
     R, api, kits: () => S.kitList ?? [], poses: () => POSE.list, clip: loadClip,
     // (the scene's items, each on its own: without the editor's held weapon, which the scene gives its Helldivers itself)
-    showItem: async k => { S.inScene = true; try { return await showItem(k); } finally { S.inScene = false; } },
+    showItem: async k => {
+      S.inScene = true;
+      if (!S.capeNames?.has(k)) S.look.cape = '';   // (an armor alone: no cape but the one the scene gives it next)
+      try { return await showItem(k); } finally { S.inScene = false; }
+    },
     statusText: () => $('status').textContent,
     // a lighting picked (a game one: until its cube map is in), the one before returned
     setEnv: async name => {
-      const prev = { env: $('env').value, sunAz: $('sunAz').value, sunElevUser: R.sunElevUser };
-      if (typeof name === 'object') { $('sunAz').value = name.sunAz; $('env').value = name.env; setEnv(); R.sunElevUser = name.sunElevUser; showSunElev(); return prev; }
-      $('env').value = name; R.sunElevUser = null; setEnv(); showSunElev();
+      const prev = { env: $('env').value, sunAz: $('sunAz').value, sunElevUser: R.sunElevUser, sunOn: R.sunOn, rims: R.rim.map(l => l.on) };
+      if (typeof name === 'object') {
+        $('sunAz').value = name.sunAz; $('env').value = name.env; setEnv(); R.sunElevUser = name.sunElevUser; showSunElev();
+        R.sunOn = name.sunOn ?? true; $('sunOn').checked = R.sunOn;
+        (name.rims ?? []).forEach((on, i) => { if (R.rim[i]) { R.rim[i].on = on; $('rim' + i).checked = on; } });
+        return prev;
+      }
+      $('env').value = name; R.sunElevUser = null; lightsFor(name); setEnv(); showSunElev();
       for (let i = 0; i < 120 && R.env.game && !R.env.cubeTex; i++) await new Promise(r => setTimeout(r, 250));
       return prev;
     },
-    snapshot: () => ({ mode: S.mode, kit: S.kit, look: { ...S.look } }),
+    snapshot: () => { const st = { mode: S.mode, kit: S.kit, look: { ...S.look } }; HELD.pieces = []; HELD.kit = null; return st; },
     restore: async st => {
       if (st.mode === 'other' && st.kit) return loadKit(st.kit);
       S.look = { ...st.look }; saveLook(); return loadCharacter();   // (the held weapon back with it)
@@ -471,7 +482,7 @@ function sceneApp() {
   };
 }
 // the Showcase mode's app (showcaseui.js): the scene's, and analytics, the project's name
-function showcaseApp() { return { ...sceneApp(), track, projectName: () => S.state?.project?.name ?? '' }; }
+function showcaseApp() { return { ...sceneApp(), track, status, projectName: () => S.state?.project?.name ?? '' }; }
 // a pose's animation, loaded once
 async function loadClip(hash) {
   if (!POSE.cache.has(hash)) POSE.cache.set(hash, prepareClip(await api('/api/anim?hash=' + hash)));
@@ -511,8 +522,9 @@ async function loadCharacter() {
   }
   if (gen !== S.loadGen) return;
   await loadCharPieces(pieces, label, gen);
-  HELD.pieces = []; HELD.kit = null;   // (the pieces were cleared: the weapon again, if the pose holds one)
-  if (gen === S.loadGen && !S.inScene) updateHeld();
+  if (gen !== S.loadGen) return;   // (a newer load owns the screen and its weapon)
+  HELD.pieces = []; HELD.kit = null; HELD.token++;   // (the pieces were cleared: the weapon again, if the pose holds one)
+  if (!S.inScene) updateHeld();
 }
 
 async function loadKit(name) {
@@ -528,6 +540,7 @@ async function loadKit(name) {
   document.body.classList.toggle('vehicle', vehicle);   // hides the armor-only controls (body, pickers, pose)
   document.body.classList.toggle('weapon', vehicle && pieces.every(p => p.kit_type === 'Weapon'));
   if (vehicle) return loadVehicle(name, pieces, gen);
+  if (isOther(name)) { status(`${kitLabel(name)}: nothing to show (no parts of its kind)`, true); renderLists(); renderFields(); return; }   // (else showItem sends it back here)
   return showItem(name);
 }
 
@@ -1225,7 +1238,7 @@ function tickPose() {
 // ---------- the held weapon: with a pose that holds one (the Armory's, the moves), a weapon in the Helldiver's hands,
 // placed as the game links it (scene.js holdWeapon: on attach_hand_r, the left arm bent to its IK_left); its pieces
 // are pieces as any (pick one to edit its LUTs: an edit pulls the weapon's kit into the project)
-const HELD = { kit: null, pieces: [], loading: null };
+const HELD = { kit: null, pieces: [], token: 0 };   // (token: the current load's; an older one stops and drops its parts)
 function fillHeldMenu() {
   const sel = $('heldWeapon');
   if (sel.options.length) return;
@@ -1240,15 +1253,17 @@ async function updateHeld(force = false) {
   const name = $('pose').selectedOptions[0]?.text, holds = !!$('pose').value && S.mode === 'char' && holdsWeapon(POSE.list, name);
   $('heldWeapon').hidden = !holds;
   const want = holds ? $('heldWeapon').value : '';
-  if (!force && want === HELD.kit && (!want || HELD.pieces.length)) { if (want) gripHeld(); return; }
+  if (!force && want === HELD.kit) { if (want) gripHeld(); return; }   // (loaded, or loading: as it is)
   dropHeld();
   HELD.kit = want;
+  const token = ++HELD.token, stale = () => token !== HELD.token || gen !== S.loadGen;
   if (!want) return;
-  const gen = S.loadGen, before = new Set(R.pieces);
+  const gen = S.loadGen;
   try {
     const ps = ((await api('/api/kit?name=' + encodeURIComponent(want))) ?? []).filter(p => p.material_lut);
-    if (!ps.length || gen !== S.loadGen || HELD.kit !== want) return;
-    const kitUnits = await weaponUnits(ps[0].kit_id, ps[0].kit_units?.length ? ps[0].kit_units : [...new Set(ps.map(p => p.unit))].map(u => ({ unit: u })));
+    if (!ps.length || stale()) return;
+    // (its own attachments: the weapon view's choices stay with the weapon view)
+    const kitUnits = ps[0].kit_units?.length ? ps[0].kit_units : [...new Set(ps.map(p => p.unit))].map(u => ({ unit: u }));
     let body = null;
     for (const ku of kitUnits) {
       const glb = parseGLB(await (await api('/api/unit?hash=' + ku.unit)).arrayBuffer());
@@ -1262,13 +1277,15 @@ async function updateHeld(force = false) {
         const pat = pc?.pattern_lut || prim.tex.patternLut;
         try { await loadVanilla(lut); } catch { continue; }
         if (pat) await loadVanilla(pat).catch(() => null);
-        if (gen !== S.loadGen || HELD.kit !== want) return dropHeld();
+        if (stale()) return R.removePieces(p => p.info?.heldToken === token);
         await R.addPiece(prim, { edited: editedKey(lut), vanilla: 'v:' + lut, pattern: pat ? editedKey(pat) : null },
-          { lut, slot: prim.slot, unit: ku.unit, pattern: pat, vehicle: true, held: true, kitRef: 'kit:' + ps[0].kit_id });
+          { lut, slot: prim.slot, unit: ku.unit, pattern: pat, vehicle: true, held: true, heldToken: token, kitRef: 'kit:' + ps[0].kit_id });
+        if (stale()) return R.removePieces(p => p.info?.heldToken === token);
       }
     }
   } catch (e) { console.warn('held weapon', e); status('The weapon could not be loaded: ' + e.message, true); }
-  HELD.pieces = R.pieces.filter(p => !before.has(p) && p.info?.held);
+  if (stale()) return R.removePieces(p => p.info?.heldToken === token);
+  HELD.pieces = R.pieces.filter(p => p.info?.heldToken === token);
   gripHeld();
   renderLists();
 }
@@ -1368,6 +1385,7 @@ function wire() {
     if (drag && !drag.moved && drag.b === 0 && !S.paint) pickAt(e);
     drag = null;
   });
+  cv.addEventListener('pointercancel', () => { if (painting) painting = false; drag = null; });   // (a touch taken over: the drag ends)
   cv.addEventListener('wheel', e => { e.preventDefault(); R.cam.dist *= Math.exp(e.deltaY * 0.001); }, { passive: false });
   cv.addEventListener('dblclick', () => R.frame());
   $('frame').onclick = () => R.frame();
@@ -1397,7 +1415,7 @@ function wire() {
     Object.assign(R, { sunOn: true, shadows: true, sceneryOn: true, sunElevUser: null });
     R.rim.forEach((l, i) => { Object.assign(l, RIM_DEFAULT[i]); $('rim' + i).checked = l.on; $('rim' + i + 'Az').value = l.az; $('rim' + i + 'El').value = l.el; });
     try { localStorage.removeItem('lutstudio.rim2'); } catch { }
-    setEnv(); showSunElev();
+    lightsFor($('env').value); setEnv(); showSunElev();
   };
   // the side lights: on / off, direction and height, remembered in this browser
   const RIM_DEFAULT = R.rim.map(l => ({ on: l.on, az: l.az, el: l.el }));
@@ -1489,7 +1507,8 @@ function wire() {
   };
   $('poseTime').oninput = () => { POSE.playing = false; POSE.time = +$('poseTime').value; $('posePlay').textContent = '▶'; };
   $('projects').onclick = async () => {
-    await saveAll(); await api('/api/close', { method: 'POST' });
+    if (!(await saveAll()) && !confirm('Some edits could not be saved (see the status line). Leave the project anyway?')) return;
+    await api('/api/close', { method: 'POST' });
     try { sessionStorage.removeItem('lutstudio.project'); } catch { }
     location.reload();
   };
@@ -1497,7 +1516,7 @@ function wire() {
   $('modPageBtn').onclick = () => modPage({
     api, shot, state: () => S.state, variant: () => S.variant,
     kitType: id => (S.kitList ?? []).find(e => e.value === 'kit:' + id)?.type,
-    useVariant: async f => { await saveAll(); await loadVariant(f); $('variant').value = f; },
+    useVariant: async f => { if (!(await saveAll())) return; await loadVariant(f); $('variant').value = f; },
     refresh: async () => { S.state = await api('/api/state'); $('projName').textContent = S.state.project.name; fillVariants(); },
   }).catch(e => status(e.message, true));
   $('addArmor').onclick = addArmorDialog;
@@ -1680,6 +1699,7 @@ async function renderImage(target, auto) {
     if (!clip) { clip = prepareClip(await api('/api/anim?hash=' + idle.animation)); POSE.cache.set(idle.animation, clip); }
     R.pose = { clip, time: 0 };
   }
+  gripHeld();   // (the held weapon on the hands for this pose)
   setCamera('Front ¾');
   R.env = { ...ENVS['Studio'], sunAz: R.cam.yaw - 0.7, sunElev: 0.6, exposure: 1.15 };   // key light from the camera side
   // (the image's own lighting: not the view's light switches)
@@ -1691,6 +1711,7 @@ async function renderImage(target, auto) {
   const out = document.createElement('canvas'); out.width = out.height = 512;
   out.getContext('2d').drawImage(cv, 0, cv.height - size, size, size, 0, 0, 512, 512);
   Object.assign(R, { cam: keep.cam, env: keep.env, world: keep.world, debug: keep.debug, split: keep.split, highlight: keep.hl, pose: keepPose });
+  gripHeld();
   return api('/api/image', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ Target: target, PNG: out.toDataURL('image/png'), Auto: auto }) });
 }
@@ -1768,7 +1789,7 @@ async function addArmorDialog() {
     const label = o.dataset.label;
     $('aaAdd').disabled = true;
     status(`Adding ${label}…`);
-    await saveAll();
+    if (!(await saveAll())) { $('aaAdd').disabled = false; return; }
     try {
       await api('/api/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ LUT: key }) });
       S.state = await api('/api/state');

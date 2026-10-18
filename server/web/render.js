@@ -475,7 +475,7 @@ export class Renderer {
     const gl = canvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true });
     if (!gl) throw new Error('WebGL2 is not available in this browser');
     this.gl = gl;
-    gl.getExtension('EXT_color_buffer_float');
+    this.floatRT = !!gl.getExtension('EXT_color_buffer_float');   // (half-float targets: the planet grading's input without banding)
     this.prog = this.program(VERT, FRAG);
     this.capeProg = this.program(VERT, CAPE_FRAG);
     this.bg = this.program(BG_VERT, BG_FRAG);
@@ -560,22 +560,35 @@ export class Renderer {
       sunE: sd[1] > 0 ? sunCol.map(c => c * sd[1] / Math.PI) : [0, 0, 0] };
   }
 
+  // the multisample count a render target of format F can take (at most 4; 0: none)
+  msaaSamples(F) {
+    const s = this.gl.getInternalformatParameter(this.gl.RENDERBUFFER, F, this.gl.SAMPLES);
+    return Math.min(4, s && s.length ? s[0] : 0);
+  }
+
   // the frame drawn shaped into a target, then graded onto the canvas (size: an export at w x h, left in this.gradeT)
   gradeDraw(time, size) {
     const gl = this.gl, W = size ? size[0] : this.canvas.width, H = size ? size[1] : this.canvas.height;
     let t = this.gradeT;
     if (!t || t.w !== W || t.h !== H) {
-      if (t) { gl.deleteFramebuffer(t.fbo); gl.deleteTexture(t.tex); gl.deleteRenderbuffer(t.rb); }
-      t = this.gradeT = { w: W, h: H, fbo: gl.createFramebuffer(), tex: gl.createTexture(), rb: gl.createRenderbuffer() };
-      gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, W, H);
+      if (t) { gl.deleteFramebuffer(t.fbo); gl.deleteFramebuffer(t.ms); gl.deleteTexture(t.tex); t.rbs.forEach(r => gl.deleteRenderbuffer(r)); }
+      const F = this.floatRT ? gl.RGBA16F : gl.RGB10_A2;
+      const samples = this.msaaSamples(F);
+      t = this.gradeT = { w: W, h: H, fbo: gl.createFramebuffer(), ms: gl.createFramebuffer(), tex: gl.createTexture(), rbs: [gl.createRenderbuffer(), gl.createRenderbuffer()] };
+      gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.texStorage2D(gl.TEXTURE_2D, 1, F, W, H);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.bindRenderbuffer(gl.RENDERBUFFER, t.rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, W, H);
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.tex, 0);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.rb);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.ms);   // (drawn multisampled: the edges as smooth as the canvas's)
+      gl.bindRenderbuffer(gl.RENDERBUFFER, t.rbs[0]); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, F, W, H);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, t.rbs[1]); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH_COMPONENT24, W, H);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, t.rbs[0]);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.rbs[1]);
     }
-    this.target = t;
+    this.target = { fbo: t.ms, w: W, h: H };
     try { this.draw(time); } finally { this.target = null; }
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, t.ms); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, t.fbo);
+    gl.blitFramebuffer(0, 0, W, H, 0, 0, W, H, gl.COLOR_BUFFER_BIT, gl.NEAREST);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     gl.useProgram(this.gradeProg.p);
@@ -903,7 +916,7 @@ export class Renderer {
       c.target[2] + c.dist * Math.cos(c.pitch) * Math.cos(c.yaw)];
     const view = M4.lookAt(eye, c.target, [0, 1, 0]);
     // clip planes scale with the view: a fleet ship (780 m) or an 11 km model fits as well as a helmet
-    const proj = M4.persp(c.fov ?? 0.6, aspect, Math.max(0.02, c.dist * 0.001), Math.max(100, c.dist * 4));
+    const proj = M4.persp(c.fov ?? 0.6, aspect, Math.max(0.02, c.dist * 0.001), Math.max(this.env?.scenery && this.sceneryOn !== false ? 260 : 100, c.dist * 4));
     if (c.shiftX) proj[8] = -c.shiftX;   // a horizontal lens shift: the target sits shiftX right of center (NDC)
     const vp = M4.mul(proj, view);
     return { eye, vp, inv: M4.invert(vp) };
@@ -931,7 +944,7 @@ export class Renderer {
       this.tables.diff = c;
     }
     // planet lighting: the frame written shaped, graded after (draw's grade pass; the showcase's composite)
-    if (u.uGradeOn) gl.uniform1i(u.uGradeOn, e.grade?.tex ? 1 : 0);
+    if (u.uGradeOn) gl.uniform1i(u.uGradeOn, this.gradeOn ? 1 : 0);
     if (!c) return;
     gl.uniform1f(u.uEnvMips, c.mips); gl.uniform1f(u.uEnvScale, e.envScale ?? 1); gl.uniform1f(u.uEnvRot, e.envRot ?? 0);
     if (u.uSH) gl.uniform3fv(u.uSH, c.sh);
@@ -1045,7 +1058,9 @@ export class Renderer {
     // the showcase (showcase.js): its passes draw the scene through here (into its own targets) and finish the frame
     if (!pick && this.post && !this.postInner) return this.post.draw(this, time, size);
     // planet lighting: the frame into a target of its own (shaped), then through the planet's 3D LUT
-    if (!pick && !this.target && !this.postInner && this.env?.grade?.tex) return this.gradeDraw(time, size);
+    // (not for a debug view: its values as they are; nor a cut-out picture: noSky, its background clear)
+    this.gradeOn = !!this.env?.grade?.tex && !this.debug && (!this.noSky || this.postInner);
+    if (!pick && !this.target && !this.postInner && this.gradeOn) return this.gradeDraw(time, size);
     const gl = this.gl, cv = this.canvas, tg = !pick ? this.target : null;   // (target: {fbo, w, h}, an offscreen one)
     const W = tg ? tg.w : size ? size[0] : cv.width, H = tg ? tg.h : size ? size[1] : cv.height;
     const m = this.matrices(W / H);
@@ -1091,8 +1106,12 @@ export class Renderer {
       gl.depthMask(true);
     }
     // the planet scene (planetscene.js): its hills and props, before the model (not in a pick or a reflection)
-    if (!pick && !this.mirror && this.sceneryOn !== false && e.scenery?.draw && this.pieces.length && (this.ensureGroundTex(e), true))
+    if (!this.mirror && !(this.noSky && !this.postInner) && this.sceneryOn !== false && e.scenery?.draw && this.pieces.length) {
+      this.ensureGroundTex(e);
+      if (pick) gl.colorMask(false, false, false, false);
       e.scenery.draw(vp, eye, sd, sunCol, e, this.groundParams(sd, sunCol), this.groundTex);
+      if (pick) gl.colorMask(true, true, true, true);
+    }
     const setGlobals = (u) => {
     gl.uniformMatrix4fv(u.uViewProj, false, vp);
     gl.uniform3fv(u.uCamPos, eye);
