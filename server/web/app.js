@@ -1193,9 +1193,9 @@ async function loadPoses() {
     sel.append(og);
   }
 }
-async function setPose(hash, { play = true, time = null } = {}) {
+async function setPose(hash, { play = true, time = null, quiet = false } = {}) {
   if (!hash) { POSE.clip = null; R.pose = null; POSE.playing = false; $('poseTime').disabled = true; return; }
-  status('Loading the pose…');
+  if (!quiet) status('Loading the pose…');
   let clip = POSE.cache.get(hash);
   if (!clip) {
     try { clip = prepareClip(await api('/api/anim?hash=' + hash)); } catch (e) { return status('The pose could not be loaded: ' + e.message, true); }
@@ -1209,7 +1209,7 @@ async function setPose(hash, { play = true, time = null } = {}) {
   $('poseTime').max = clip.length;
   $('posePlay').textContent = play ? '❚❚' : '▶';
   R.pose = { clip, time: POSE.time };
-  status(`${$('pose').selectedOptions[0]?.text ?? 'Pose'}: ${clip.length.toFixed(1)} s`);
+  if (!quiet) status(`${$('pose').selectedOptions[0]?.text ?? 'Pose'}: ${clip.length.toFixed(1)} s`);
 }
 function tickPose() {
   if (!POSE.clip) return;
@@ -1918,7 +1918,7 @@ async function boot() {
   await loadPoses();
   // the default pose: the Armory's first idle (no weapon in hand until one is picked)
   const idle = [...$('pose').options].find(o => o.text === 'Armory idle 1');
-  if (idle && S.mode === 'char') { $('pose').value = idle.value; await setPose(idle.value); updateHeld(); }
+  if (idle && S.mode === 'char') { $('pose').value = idle.value; await setPose(idle.value, { quiet: true }); updateHeld(); }
   setCamera('Front ¾');
   let report = null;       // a mod was just imported (start page): say what came in
   try { report = sessionStorage.getItem('lutstudio.importReport'); sessionStorage.removeItem('lutstudio.importReport'); } catch { }
