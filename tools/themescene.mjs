@@ -10,6 +10,7 @@
 //     poses, in the scene's order; "none" or "-": no weapon, "" keeps the scene's. --scene: { items: [...], cam: {...} }
 //     in scene.js's SCENE / CAM form. --line: the small line over the title, "" for none.)
 //   node tools/themescene.mjs x --poses   (the poses; * : the pose holds a weapon)
+//   --cutout: the items alone on a transparent background (no backdrop, floor, glow, aura, title)
 // Writes <preset>.png per preset. Needs Chrome or Edge.
 import { spawn } from 'node:child_process';
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -99,7 +100,7 @@ for (const name of presets) {
       if (pl) await window.themeScene.setEnv('planet:' + pl.id);
       else if (window.lutstudio.R.env.planet) await window.themeScene.setEnv('game:Armory (menu)');
     }
-    const c = await window.themeScene.render({ ...theme, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)});
+    const c = await window.themeScene.render({ ...theme, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)}, { cutout: ${process.argv.includes('--cutout')} });
     return c.toDataURL('image/png');
   })()`);
   if (!url) { console.log(name, ': no such preset'); continue; }

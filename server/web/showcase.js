@@ -4,7 +4,9 @@
 // disc in the theme's color behind the squad, soft bokeh), the floor (a pool of light, the reflection fading with
 // height, contact shadows, haze), the scene (the far part hazed), a glow around it, sparks, bloom, the tone and grain,
 // a vignette and the title. The frame is 16:9 (the exported image's), letterboxed in the viewport; the camera moves
-// as ever. exportCanvas(w, h) draws the same frame at that size into a 2D canvas.
+// as ever. exportCanvas(w, h) draws the same frame at that size into a 2D canvas; exportCanvas(w, h, { cutout: true })
+// the squad and its items alone on a transparent background (no backdrop, floor, glow, haze, sparks, bloom, grain,
+// vignette or title).
 import { M4 } from './render.js';
 
 // the look's settings (the Showcase sliders: 1 = the default look; color: the light's, '' = the theme's)
@@ -154,6 +156,7 @@ void main() {
 }`;
 // the finish: bloom, the tone, grain, the vignette, the title
 const FINAL = HEAD + `uniform sampler2D uComp; uniform sampler2D uBloom; uniform sampler2D uTone; uniform sampler2D uTitle;
+uniform sampler2D uScene; uniform float uCutout;   // (a cut-out: the items' coverage as the alpha, colors un-premultiplied)
 uniform vec2 uRes; uniform float uPunch, uGrain, uVignette, uHasTitle, uSeed;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233)) + uSeed) * 43758.5453); }
 void main() {
@@ -166,6 +169,7 @@ void main() {
   vec2 p = vUv * uRes; float v = 1.0 - 0.8 * uVignette * min(1.0, length(p - uRes * 0.5) / (uRes.x * 0.5));
   c *= v;
   if (uHasTitle > 0.5) { vec4 tt = texture(uTitle, vec2(vUv.x, 1.0 - vUv.y)); c = tt.rgb + c * (1.0 - tt.a); }
+  if (uCutout > 0.5) { float a = texture(uScene, vUv).a; o = vec4(clamp(c / max(a, 1e-4), 0.0, 1.0), a); return; }
   o = vec4(clamp(c, 0.0, 1.0), 1.0);
 }`;
 
@@ -298,7 +302,7 @@ export class Showcase {
     return !!(this.title || this.line);
   }
   // a frame: into the canvas (letterboxed 16:9), or at size [w, h] into this.out (an export)
-  draw(R, time = 0, size = null) {
+  draw(R, time = 0, size = null, cutout = false) {
     if (this.frozen && !size) return null;   // (an item being swapped: the last frame stays on the canvas)
     const gl = R.gl, cv = R.canvas;
     let rect;
@@ -310,7 +314,8 @@ export class Showcase {
     }
     const [, , W, H] = rect;
     this.ensure(W, H);
-    const L = this.look, keep = [R.noSky, R.shadows];
+    const L = cutout ? { ...this.look, bg: 0, glow: 0, reflect: 0, shadow: 0, haze: 0, aura: 0, bloom: 0, embers: 0, grain: 0, vignette: 0 } : this.look;
+    const keep = [R.noSky, R.shadows];
     R.postInner = true; R.noSky = true;
     try {
       // the scene, multisampled, resolved
@@ -359,10 +364,10 @@ export class Showcase {
     // bloom (22 px at 2560 wide)
     this.pass(this.p.bright, this.bloomA, { uAmt: pe ? 0 : L.bloom }, { uSrc: this.comp.tex });
     if (!pe) this.blur(this.bloomA, this.bloomB, 22 * s / 4);
-    const hasTitle = this.titleTexture(W, H) ? 1 : 0;
+    const hasTitle = !cutout && this.titleTexture(W, H) ? 1 : 0;
     if (!size) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.05, 0.055, 0.06, 1); gl.clear(gl.COLOR_BUFFER_BIT); }
-    this.pass(this.p.final, size ? this.out : null, { uRes: [W, H], uPunch: pe ? 0 : L.punch, uGrain: L.grain, uVignette: L.vignette, uHasTitle: hasTitle, uSeed: 0.71 },
-      { uComp: this.comp.tex, uBloom: this.bloomA.tex, uTone: this.toneTex, uTitle: this.titleTex }, size ? null : rect);
+    this.pass(this.p.final, size ? this.out : null, { uRes: [W, H], uPunch: pe ? 0 : L.punch, uGrain: L.grain, uVignette: L.vignette, uHasTitle: hasTitle, uSeed: 0.71, uCutout: cutout ? 1 : 0 },
+      { uComp: this.comp.tex, uBloom: this.bloomA.tex, uTone: this.toneTex, uTitle: this.titleTex, uScene: this.scene.tex }, size ? null : rect);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return null;
   }
@@ -388,9 +393,9 @@ export class Showcase {
     };
   }
   // the frame at w x h -> a 2D canvas
-  exportCanvas(w, h) {
+  exportCanvas(w, h, { cutout = false } = {}) {
     const R = this.R, gl = R.gl;
-    this.draw(R, 0, [w, h]);
+    this.draw(R, 0, [w, h], cutout);
     const px = new Uint8Array(w * h * 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.out.fbo);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);

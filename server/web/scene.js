@@ -281,11 +281,14 @@ export async function buildScene(app, opts = {}) {
     },
     setText(title, line) { sc.title = title ?? ''; sc.line = line ?? ''; },
     resetCamera: camera,
-    exportCanvas: (w = 3840, h = 2160) => sc.exportCanvas(w, h),
-    async render(t, size = [3840, 2160]) {
+    exportCanvas: (w = 3840, h = 2160, o = {}) => sc.exportCanvas(w, h, o),
+    async render(t, size = [3840, 2160], o = {}) {   // (o.cutout: on a transparent background, nothing around)
       if (t !== theme) await this.setTheme(t);
       if (t.title !== undefined || t.line !== undefined) this.setText(t.title, t.line);
-      return sc.exportCanvas(size[0], size[1]);
+      if (!o.cutout) return sc.exportCanvas(size[0], size[1], o);
+      // (a cut-out: no colored side lights either, the items in their own colors)
+      const rim0 = sc.look.rim; this.setLook({ rim: 0 });
+      try { return sc.exportCanvas(size[0], size[1], o); } finally { this.setLook({ rim: rim0 }); }
     },
     async dispose() {
       await busy.catch(() => { });
