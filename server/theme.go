@@ -9,6 +9,7 @@ import (
 	"hash/fnv"
 	"image"
 	"image/png"
+	"lutstudio/atomicfile"
 	"math"
 	"net/http"
 	"os"
@@ -976,7 +977,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	b, _ := json.MarshalIndent(st, "", " ")
-	if err := os.WriteFile(themePath(p), b, 0o644); err != nil {
+	if err := atomicfile.WriteFile(themePath(p), b, 0o644); err != nil {
 		fail(w, 500, err)
 		return
 	}

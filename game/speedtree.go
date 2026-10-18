@@ -107,7 +107,7 @@ func (a *Assets) SpeedTreeGLB(name uint64) ([]byte, error) {
 
 	// the full-detail LOD: the first index set, with its vertex set
 	ix := tree.IndexDefinitions[0]
-	if int(ix.VertexDef) >= len(tree.VertexDefinitions) || int(ix.MeshOffset+ix.MeshCount) > len(tree.MeshDefinitions) {
+	if int(ix.VertexDef) >= len(tree.VertexDefinitions) || uint64(ix.MeshOffset)+uint64(ix.MeshCount) > uint64(len(tree.MeshDefinitions)) {
 		return nil, fmt.Errorf("speedtree %s: LOD 0 names data it doesn't have", lut.HashString(name))
 	}
 	vd := tree.VertexDefinitions[ix.VertexDef]
@@ -171,7 +171,7 @@ func (a *Assets) SpeedTreeGLB(name uint64) ([]byte, error) {
 	mesh := &gltf.Mesh{Name: lut.HashString(name)}
 	for m := range ix.MeshCount {
 		md := tree.MeshDefinitions[ix.MeshOffset+m]
-		if md.IndexOffset+md.IndexCount > ix.Count || md.IndexCount%3 != 0 {
+		if uint64(md.IndexOffset)+uint64(md.IndexCount) > uint64(ix.Count) || md.IndexCount%3 != 0 {
 			return nil, fmt.Errorf("speedtree %s: mesh %d's indices out of range", lut.HashString(name), m)
 		}
 		sdkName := ""

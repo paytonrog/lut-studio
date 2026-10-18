@@ -28,6 +28,8 @@ func main() {
 	os.Setenv("HOME", "/home")
 	os.Setenv("LUTSTUDIO_CONFIG_DIR", "/home/config")
 	os.Setenv("LUTSTUDIO_CACHE_DIR", "/home/cache")
+	os.Setenv("TMPDIR", "/home/tmp") // (temporary files, e.g. a big mod upload's: where the browser's file system allows)
+	os.MkdirAll("/home/tmp", 0o755)
 	e := &env{out: os.Stdout, gameDir: webGameDir}
 	// the install's file index, kept between page loads (game/datadircache.go)
 	game.DataDirCache = "/home/cache/index"
@@ -52,7 +54,10 @@ func main() {
 			body = make([]byte, jsBody.Get("length").Int())
 			js.CopyBytesToGo(body, jsBody)
 		}
-		return promise.New(js.FuncOf(func(_ js.Value, pr []js.Value) any {
+		// (the executor holds the request body: freed once it has run, else every body stays in memory)
+		var exec js.Func
+		exec = js.FuncOf(func(_ js.Value, pr []js.Value) any {
+			defer exec.Release()
 			resolve := pr[0]
 			go func() {
 				req := httptest.NewRequest(method, url, bytes.NewReader(body))
@@ -74,7 +79,8 @@ func main() {
 				resolve.Invoke(response(rec.Result()))
 			}()
 			return nil
-		}))
+		})
+		return promise.New(exec)
 	}))
 
 	// lutstudioOpenGame() -> Promise<error string | "">: (re)open the install mounted at /game

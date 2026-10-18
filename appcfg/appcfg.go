@@ -4,6 +4,7 @@ package appcfg
 
 import (
 	"encoding/json"
+	"lutstudio/atomicfile"
 	"os"
 	"path/filepath"
 	"slices"
@@ -48,9 +49,17 @@ func path() string { return filepath.Join(Dir(), "config.json") }
 func Load() Config {
 	mu.Lock()
 	defer mu.Unlock()
+	return load()
+}
+
+// (a file that doesn't parse is kept aside as config.json.bad: the next save would otherwise wipe what was in it)
+func load() Config {
 	var c Config
 	if b, err := os.ReadFile(path()); err == nil {
-		json.Unmarshal(b, &c)
+		if json.Unmarshal(b, &c) != nil {
+			os.Rename(path(), path()+".bad")
+			c = Config{}
+		}
 	}
 	return c
 }
@@ -58,16 +67,22 @@ func Load() Config {
 func Save(c Config) error {
 	mu.Lock()
 	defer mu.Unlock()
-	os.MkdirAll(filepath.Dir(path()), 0o755)
-	b, _ := json.MarshalIndent(c, "", "  ")
-	return os.WriteFile(path(), append(b, '\n'), 0o644)
+	return save(c)
 }
 
-// Update loads, changes and saves the settings.
+func save(c Config) error {
+	os.MkdirAll(filepath.Dir(path()), 0o755)
+	b, _ := json.MarshalIndent(c, "", "  ")
+	return atomicfile.WriteFile(path(), append(b, '\n'), 0o644)
+}
+
+// Update loads, changes and saves the settings (under one lock: two updates at once both land).
 func Update(f func(*Config)) error {
-	c := Load()
+	mu.Lock()
+	defer mu.Unlock()
+	c := load()
 	f(&c)
-	return Save(c)
+	return save(c)
 }
 
 // AddRecent puts a project folder first in the recent list (at most 12 kept).

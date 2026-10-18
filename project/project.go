@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"lutstudio/atomicfile"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -180,7 +181,7 @@ func (p *Project) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(p.Dir, FileName), append(b, '\n'), 0o644)
+	return atomicfile.WriteFile(filepath.Join(p.Dir, FileName), append(b, '\n'), 0o644)
 }
 
 func (p *Project) VariantDir(v Variant) string { return filepath.Join(p.Dir, "variants", v.Folder) }
@@ -212,7 +213,7 @@ func WriteDoc(path string, d *lut.Document) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0o644)
+	return atomicfile.WriteFile(path, b, 0o644)
 }
 
 // Docs reads every LUT document of a variant, sorted by file name. Errors name the file.

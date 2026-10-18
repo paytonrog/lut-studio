@@ -694,9 +694,11 @@ func (e *env) newServer() (*server.Server, *sync.Mutex) {
 		OpenGame: func(dir string) (*game.Game, *game.Index, *game.Assets, error) {
 			mu.Lock()
 			defer mu.Unlock()
+			oldG, oldIdx, oldDir := e.g, e.idx, e.gameDir
 			e.g, e.idx, e.gameDir = nil, nil, dir
 			g, err := e.game()
 			if err != nil {
+				e.g, e.idx, e.gameDir = oldG, oldIdx, oldDir // (a mistyped folder: the game in use stays)
 				return nil, nil, nil, err
 			}
 			idx, err := e.index()

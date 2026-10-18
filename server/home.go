@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lutstudio/atomicfile"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"lutstudio/appcfg"
@@ -348,15 +350,19 @@ func (s *Server) getPresets(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
+var presetsMu sync.Mutex // (one looks save at a time: two windows saving at once can't mix their files)
+
 func (s *Server) putPresets(w http.ResponseWriter, r *http.Request) {
 	var v []json.RawMessage
-	if err := decode(r, &v); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<20)).Decode(&v); err != nil { // (a big looks library: up to 16 MB)
 		fail(w, 400, err)
 		return
 	}
 	b, _ := json.MarshalIndent(v, "", " ")
+	presetsMu.Lock()
+	defer presetsMu.Unlock()
 	os.MkdirAll(filepath.Dir(presetsPath()), 0o755)
-	if err := os.WriteFile(presetsPath(), b, 0o644); err != nil {
+	if err := atomicfile.WriteFile(presetsPath(), b, 0o644); err != nil {
 		fail(w, 500, err)
 		return
 	}

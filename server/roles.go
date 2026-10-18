@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"lutstudio/atomicfile"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -266,7 +267,7 @@ func writeRoleFile(path string, roles map[string][]string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, roleFileBytes(roles), 0o644)
+	return atomicfile.WriteFile(path, roleFileBytes(roles), 0o644)
 }
 
 // GET /api/roles/export: the built-in roles with the user's on top, as a roles.json to ship
