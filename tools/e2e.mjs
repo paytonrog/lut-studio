@@ -227,6 +227,33 @@ async function rolesPanel(kind) {
     `suggested ${suggested}; view ${view}; picked ${picked}; ${confirmed}; mine ${mine}; next ${next}; ${progress}; restored ${restored}; ${errors.slice(0, 2).join(' | ')}`);
 }
 
+// several zones edited together: Ctrl+click two zones, a #rrggbb color typed goes to both (not the one between);
+// Shift+click a range; ⌖ takes a zone's color off the model; each zone row shows its role
+async function multiZone(kind) {
+  errors.length = 0;
+  const r = await evaluate(`(async () => { const d = document, S = window.lutstudio.S, sl = ms => new Promise(r => setTimeout(r, ms));
+    const items = () => d.querySelectorAll('#zoneList .item');
+    if (items().length < 4) return JSON.stringify({ skip: items().length });
+    items()[0].click(); await sl(200);
+    items()[2].dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true })); await sl(200);
+    const l = S.luts.get(S.sel.lut), col = z => [0, 1, 2].map(k => Math.round(l.edited[z * l.w * 4 + k] * 255)).join(',');
+    const out = { sel: [S.sel.zone, ...S.sel.more].join(','), banner: !!d.querySelector('#fieldsHead .multi'), mid: col(1) };
+    const hx = d.querySelector('#fields .field input.hex'); hx.value = '#ff0000'; hx.dispatchEvent(new Event('change')); await sl(200);
+    Object.assign(out, { z0: col(0), z1: col(1), z2: col(2) });
+    items()[3].click(); await sl(200);
+    d.querySelector('#fields .field button.drop').click(); S.eyedrop(S.sel.lut, 0); await sl(200);
+    out.z3 = col(3);
+    items()[1].click(); await sl(200); items()[3].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true })); await sl(200);
+    out.range = [S.sel.zone, ...S.sel.more].sort().join(',');
+    items()[0].click(); await sl(1500);
+    out.tags = d.querySelectorAll('#zoneList .roleTag').length;
+    return JSON.stringify(out); })()`);
+  const v = JSON.parse(r);
+  check(`${kind}: several zones edited together (Ctrl / Shift+click), a #rrggbb color, a color picked off the model, roles in the zone list`,
+    v.skip !== undefined || (v.sel === '0,2' && v.banner && v.z0 === '255,0,0' && v.z2 === '255,0,0' && v.z1 === v.mid && v.z3 === '255,0,0' && v.range === '1,2,3' && v.tags > 0 && errors.length === 0),
+    `${r}; ${errors.slice(0, 2).join(' | ')}`);
+}
+
 // Recolor this item: the Theme panel on the item on screen only, the primary role in a color of its own, applied (the
 // item's zones in it), then Undo theme: every zone back as it was
 async function recolorUndo(kind) {
@@ -562,6 +589,7 @@ async function main() {
         await rolesPanel(kind);
         await themePanel(kind);
         await recolorUndo(kind);
+        await multiZone(kind);
       }
       if (kind === 'weapon') {   // an attachment change: another optic, reloaded with no errors
         const before = parts;
