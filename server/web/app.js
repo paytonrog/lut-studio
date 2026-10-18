@@ -294,6 +294,10 @@ async function loadVanilla(hash) {
 }
 
 async function loadVariant(folder) {
+  S.varLoading = true;
+  try { return await loadVariantNow(folder); } finally { S.varLoading = false; }
+}
+async function loadVariantNow(folder) {
   const gen = ++S.varGen;      // (a newer switch wins: an older one's answers are dropped)
   S.variant = folder;
   R.variant = folder;          // the variant's own decal sheets (render.js loadTexture)
@@ -732,14 +736,15 @@ function snapshot() {
 }
 
 function setCell(zone, col, ch, v) {
-  const l = selLut(); if (!l?.edited) return;
+  const l = selLut(); if (!l?.edited || S.varLoading) return;   // (a variant loading: its LUTs aren't in yet)
   l.edited[cell(l, zone, col, ch)] = v;
 }
 
 function changed(l) {
   if (l.pull) adopt(l);
   l.dirty = true;
-  R.setLut('e:' + S.sel.lut, l.w, l.h, l.edited);
+  const hash = S.luts.get(S.sel.lut) === l ? S.sel.lut : [...S.luts].find(([, x]) => x === l)?.[0] ?? S.sel.lut;   // (its own texture)
+  R.setLut('e:' + hash, l.w, l.h, l.edited);
   scheduleSave();
   refreshMarks();
 }
@@ -764,7 +769,7 @@ function scheduleSave() {
 
 async function saveAll() {
   if (S.adopting) await S.adopting;
-  if (S.saving) await S.saving;
+  while (S.saving) await S.saving;   // (one at a time: each call saves what is still unsaved after the one before)
   const work = [...S.luts.entries()].filter(([, l]) => l.dirty && l.edited && !l.pull);
   if (!work.length) return true;
   let failed = 0;
@@ -783,8 +788,9 @@ async function saveAll() {
     if (failed) status(`Save failed for ${failed} of ${work.length} LUT(s): they stay unsaved (try Save again)`, true);
     else status(`Saved ${work.length} LUT${work.length > 1 ? 's' : ''} to variants/${S.variant}`);
   })();
-  await S.saving;
-  S.saving = null;
+  const mine = S.saving;
+  await mine;
+  if (S.saving === mine) S.saving = null;
   return failed === 0;   // (false: something stays unsaved; callers about to reload the LUTs stop)
 }
 
@@ -975,6 +981,7 @@ async function selectLut(hash) {
   S.sel.zone = Math.min(S.sel.zone, (S.luts.get(hash)?.h ?? 1) - 1);
   const onArmor = R.pieces.some(p => p.info.lut === hash || p.info.pattern === hash || p.info.cape === hash);
   if (!onArmor) {
+    renderLists(); renderFields();   // (its fields at once: an edit while the item loads goes to this LUT)
     const keys = (S.state.parts?.[hash] ?? []).map(p => p.key);
     const kit = S.state.kits.find(k => keys.includes(k));
     if (kit && kit !== S.kit) await showItem(kit);
@@ -1021,7 +1028,12 @@ function renderFieldsInto(box, head) {
   // the looks: the built-in ones and yours, in categories (looks.js)
   looksPanel($('zLooks'), {
     S, api, l, z, schema: S.schema[l.kind], status, track, paydex: paydexDialog, rerender: renderFields,
-    apply: fn => { snapshot(); S.lastSnap = 0; fn(); changed(l); renderFields(); },
+    apply: fn => {
+      const u = S.undo.length, redo = S.redo;
+      snapshot(); S.lastSnap = 0;
+      try { fn(); } catch (e) { S.undo.length = u; S.redo = redo; throw e; }   // (a look that fails: no undo step)
+      changed(l); renderFields();
+    },
   });
   $('zCopy').onclick = () => { S.clip = l.edited.slice(z * l.w * 4, (z + 1) * l.w * 4); status('Zone copied'); };
   $('zPaste').onclick = () => {
@@ -1524,6 +1536,7 @@ function wire() {
   $('camera').onchange = () => setCamera($('camera').value);
   $('pose').onchange = async () => { await setPose($('pose').value); updateHeld(); };
   $('heldWeapon').onchange = () => updateHeld(true);
+  $('autosave').onchange = () => { clearTimeout(saveTimer); if ($('autosave').checked) scheduleSave(); };
   for (const [id, part] of [['wearArmor', 'armor'], ['wearHelmet', 'helmet'], ['wearCape', 'cape']])
     $(id).onchange = () => { S.look[part] = $(id).value; saveLook(); loadCharacter(); };
   $('posePlay').onclick = () => {
@@ -1544,7 +1557,12 @@ function wire() {
   $('modPageBtn').onclick = () => modPage({
     api, shot, state: () => S.state, variant: () => S.variant,
     kitType: id => (S.kitList ?? []).find(e => e.value === 'kit:' + id)?.type,
-    useVariant: async f => { if (!(await saveAll())) return false; await loadVariant(f); $('variant').value = f; return true; },
+    useVariant: async f => {
+      // (the variant shown was deleted: its unsaved edits have nowhere to go)
+      if (!S.state.variants.some(v => v.folder === S.variant)) for (const l of S.luts.values()) l.dirty = false;
+      else if (!(await saveAll())) return false;
+      await loadVariant(f); $('variant').value = f; return true;
+    },
     refresh: async () => { S.state = await api('/api/state'); $('projName').textContent = S.state.project.name; fillVariants(); },
   }).catch(e => status(e.message, true));
   $('addArmor').onclick = addArmorDialog;
@@ -1623,7 +1641,11 @@ function adopt(l) {
         try { const d = await api(`/api/doc?variant=${S.variant}&lut=${hash}`); if (!x.labels.length) x.labels = d.labels ?? []; x.note = d.note ?? ''; } catch { }
       }
       await loadMissingDocs();
-      fillKits(); renderLists(); renderFields();
+      fillKits(); renderLists();
+      // (the fields kept while one is being typed in or dragged: redrawn once it's let go)
+      const busy = () => document.activeElement?.closest?.('#fields') || S.dragging;
+      if (!busy()) renderFields();
+      else { const again = () => { if (busy()) return setTimeout(again, 400); renderFields(); }; setTimeout(again, 400); }
       status(`Added ${what.startsWith('kit:') ? 'the cape' : what} to the project (every variant)`);
     } catch (e) {
       group.forEach(([, x]) => { x.pull = what; });
@@ -1756,7 +1778,8 @@ async function autoImages() {
         await renderImage(v.folder, true);
       }
     } finally {   // (back to the variant being edited, also when a picture failed)
-      if (S.variant !== cur) { await loadVariant(cur); S.undo = undo; S.redo = redo; }
+      if (S.variant !== cur) await loadVariant(cur);
+      S.undo = undo; S.redo = redo;   // (the history as it was, however the pictures went)
       $('variant').value = cur;
     }
   }
@@ -1869,15 +1892,16 @@ async function newVariant() {
 // The view as a 512 x 512 PNG (data URL), cut to a square from its middle; bg: {kind: 'view' | 'none' (transparent)
 // | 'color', color}
 function shot(bg = { kind: 'view' }) {
-  const split = R.split, hl = R.highlight, noSky = R.noSky;
+  const split = R.split, hl = R.highlight, noSky = R.noSky, debug = R.debug, world = R.world;
   R.split = false; R.highlight = { lut: null, zone: -1, piece: -1 }; R.noSky = bg.kind !== 'view';
+  R.debug = 0; R.world = { ...WORLD };   // (the armor as it is: no debug view, no mission wear)
   R.draw(0);
   const cv = $('canvas'), s = Math.min(cv.width, cv.height);
   const out = document.createElement('canvas'); out.width = out.height = 512;
   const g = out.getContext('2d');
   if (bg.kind === 'color') { g.fillStyle = bg.color; g.fillRect(0, 0, 512, 512); }
   g.drawImage(cv, (cv.width - s) / 2, (cv.height - s) / 2, s, s, 0, 0, 512, 512);
-  R.split = split; R.highlight = hl; R.noSky = noSky;
+  R.split = split; R.highlight = hl; R.noSky = noSky; R.debug = debug; R.world = world;
   return out.toDataURL('image/png');
 }
 

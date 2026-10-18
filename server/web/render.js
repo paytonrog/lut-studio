@@ -919,7 +919,8 @@ export class Renderer {
     for (const p of this.pieces) { const [a, b] = placedBounds(p); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], a[k]); hi[k] = Math.max(hi[k], b[k]); } }
     if (!isFinite(lo[0])) return;
     this.cam.target = lo.map((v, k) => (v + hi[k]) / 2);
-    this.cam.dist = Math.max(0.5, Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) * 1.45);
+    // (for the camera's own field of view: an Armory camera's narrow one frames from farther)
+    this.cam.dist = Math.max(0.5, Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) * 1.45 * Math.tan(0.3) / Math.tan((this.cam.fov ?? 0.6) / 2));
   }
 
   matrices(aspect) {

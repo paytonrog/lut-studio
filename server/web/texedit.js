@@ -31,6 +31,9 @@ export function openSide(html, onClose, isDirty = null) {
   // Ctrl+Z / Ctrl+Y in the panel undo its edits, not the LUT edits behind it
   const keys = e => {
     if (!(e.ctrlKey || e.metaKey) || modal.hidden) return;
+    const a = document.activeElement;   // (typing in a field, or a field outside the panel: its own undo)
+    if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && !(a.type === 'range' && modal.contains(a))) return;
+    if (a && a !== document.body && !modal.contains(a)) return;
     const k = e.key.toLowerCase();
     const undo = k === 'z' && !e.shiftKey, redo = k === 'y' || (k === 'z' && e.shiftKey);
     if (!undo && !redo) return;
