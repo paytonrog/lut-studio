@@ -358,6 +358,10 @@ func (s *Server) putPresets(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, err)
 		return
 	}
+	if v == nil { // (null: not a list, the file isn't overwritten with it)
+		fail(w, 400, fmt.Errorf("give a list of looks"))
+		return
+	}
 	b, _ := json.MarshalIndent(v, "", " ")
 	presetsMu.Lock()
 	defer presetsMu.Unlock()
@@ -464,9 +468,7 @@ func (s *Server) saveAs(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, err)
 		return
 	}
-	s.mu.Unlock()
-	err = s.SetProject(dst)
-	s.mu.Lock()
+	err = s.SetProject(dst) // (it takes no s.mu)
 	if err != nil {
 		fail(w, 500, err)
 		return
@@ -568,12 +570,20 @@ func (s *Server) importProject(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, fmt.Errorf("not a LUT Studio project (no %s inside)", project.FileName))
 		return
 	}
-	rc, _ := cfg.Open()
+	rc, err := cfg.Open()
+	if err != nil {
+		fail(w, 400, fmt.Errorf("%s: %v", project.FileName, err))
+		return
+	}
 	var p project.Project
 	err = json.NewDecoder(rc).Decode(&p)
 	rc.Close()
 	if err != nil || p.Name == "" {
 		fail(w, 400, fmt.Errorf("%s: %v", project.FileName, err))
+		return
+	}
+	if p.Format != project.FormatID { // (checked before anything is written: no folder left behind for a file that won't open)
+		fail(w, 400, fmt.Errorf("%s: format %q, expected %q", project.FileName, p.Format, project.FormatID))
 		return
 	}
 	if err := p.CheckPaths(); err != nil { // (nothing is written for a project naming files outside itself)

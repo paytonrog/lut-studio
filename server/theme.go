@@ -726,6 +726,9 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if q, err := s.project(); err == nil { // (read again under the lock: a variant added meanwhile gets the LUTs added)
+		p = q
+	}
 	var st themeState
 	if b, err := os.ReadFile(themePath(p)); err == nil {
 		json.Unmarshal(b, &st)

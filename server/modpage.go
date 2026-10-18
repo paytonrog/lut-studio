@@ -273,7 +273,12 @@ func (s *Server) putOptions(w http.ResponseWriter, r *http.Request) {
 // GET /api/texusers?hash=: the items (kit labels) whose pieces use a texture as their decal sheet or cape design
 // (the record's; a material's own decal sheet isn't listed)
 func (s *Server) texUsers(w http.ResponseWriter, r *http.Request) {
-	h := lut.HashString(must(hashParam(r)))
+	hv, err := hashParam(r)
+	if err != nil {
+		fail(w, 400, err)
+		return
+	}
+	h := lut.HashString(hv)
 	var out []string
 	if idx := s.index(); idx != nil {
 		for _, k := range idx.Kits {

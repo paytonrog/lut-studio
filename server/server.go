@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -183,7 +184,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		b, err := s.assetsOf().AnimationJSON(h)
 		if err != nil {
-			fail(w, 500, err)
+			fail(w, notFoundOr500(err), err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -266,7 +267,7 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		}
 		vi := variantInfo{Variant: v, Problems: probs}
 		for _, td := range TextureDirs {
-			files, _ := filepath.Glob(filepath.Join(p.VariantDir(v), td.Dir, "0x*.png"))
+			files := project.ListFiles(filepath.Join(p.VariantDir(v), td.Dir), "0x", ".png")
 			for _, f := range files {
 				vi.Textures = append(vi.Textures, textureInfo{strings.TrimSuffix(filepath.Base(f), ".png"), td.What})
 			}
@@ -525,7 +526,7 @@ func (s *Server) unit(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := s.assetsOf().UnitGLB(h)
 	if err != nil {
-		fail(w, 500, err)
+		fail(w, notFoundOr500(err), err)
 		return
 	}
 	w.Header().Set("Content-Type", "model/gltf-binary")
@@ -735,9 +736,9 @@ func (s *Server) image(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) build(w http.ResponseWriter, r *http.Request) {
 	var log bytes.Buffer
-	s.mu.Lock() // (the project's files as a whole: no save or theme write halfway through while it reads them)
-	path, err := s.Build(s.curDir(), &log)
-	s.mu.Unlock()
+	// (the project's files as a whole: no save or theme write halfway through while it reads them; released however
+	// the build ends, a panic too)
+	path, err := func() (string, error) { s.mu.Lock(); defer s.mu.Unlock(); return s.Build(s.curDir(), &log) }()
 	out := map[string]any{"ok": err == nil, "log": log.String(), "path": path}
 	if err != nil {
 		out["error"] = err.Error()
@@ -764,4 +765,12 @@ func FreeVariantFolder(p *project.Project, name string) (string, error) {
 			return f, nil
 		}
 	}
+}
+
+// notFoundOr500: 404 for something the game doesn't have, else 500
+func notFoundOr500(err error) int {
+	if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no such") {
+		return 404
+	}
+	return 500
 }
