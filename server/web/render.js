@@ -1139,7 +1139,8 @@ export class Renderer {
     // left), at their height (el), so they stay on the same side of the screen as the view turns
     const t = this.cam.target, cd = norm([eye[0] - t[0], 0, eye[2] - t[2]]), rd = [cd[2], 0, -cd[0]];
     const rimDir = [], rimCol = [];
-    for (const l of this.rim) {
+    for (let i = 0; i < 2; i++) {   // (the shader's two side lights: one not given is off, not left as it was)
+      const l = this.rim[i] ?? { on: false, az: 0, el: 0 };
       const a = l.az * Math.PI / 180, el = l.el * Math.PI / 180;
       rimDir.push(Math.cos(el) * (Math.cos(a) * cd[0] + Math.sin(a) * rd[0]), Math.sin(el), Math.cos(el) * (Math.cos(a) * cd[2] + Math.sin(a) * rd[2]));
       rimCol.push(...(l.on ? l.color.map(x => x * l.intensity) : [0, 0, 0]));
