@@ -88,6 +88,9 @@ func TestGuards(t *testing.T) {
 	if code, _ := c.do("GET", "/api/kits", nil); code != 503 {
 		t.Errorf("kits without a game: %d, want 503", code)
 	}
+	if code, _ := c.do("GET", "/api/speedtree?hash=0x1234", nil); code != 503 {
+		t.Errorf("speedtree without a game: %d, want 503", code)
+	}
 	if code, _ := c.do("GET", "/api/state", nil); code != 409 {
 		t.Errorf("state without a project: %d, want 409", code)
 	}

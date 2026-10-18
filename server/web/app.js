@@ -209,7 +209,8 @@ function planetEnv(p, w = null) {
   gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => status('Planet light: ' + err.message, true));
   if (!groundCache.has(p.id)) groundCache.set(p.id, groundTile(p));
   groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => { });
-  if (!sceneryCache.has(p.id)) sceneryCache.set(p.id, buildScenery(R, p, async h => parseGLB(await (await api('/api/unit?hash=' + h)).arrayBuffer())));
+  if (!sceneryCache.has(p.id)) sceneryCache.set(p.id, buildScenery(R, p, async h => parseGLB(await (await api('/api/unit?hash=' + h)).arrayBuffer()),
+    async t => parseGLB(await (await api('/api/speedtree?hash=' + encodeURIComponent(t))).arrayBuffer())));
   sceneryCache.get(p.id).then(s => { e.scenery = s; }).catch(err => console.warn('scenery', err));
   // (all of it in place: for a picture taken right after the switch)
   e.ready = Promise.allSettled([gradeCache.get(p.id), groundCache.get(p.id), sceneryCache.get(p.id)]).then(() => new Promise(r => setTimeout(r, 50)));

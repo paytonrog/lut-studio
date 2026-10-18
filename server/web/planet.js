@@ -15,7 +15,7 @@ export function groundLayers(p) {
 }
 
 // a texture of the install as linear RGB at N x N (null: not an RGBA image)
-async function texLinear(hash) {
+export async function texLinear(hash) {
   try {
     const b = new Uint8Array(await (await fetch('/api/tex?hash=' + hash)).arrayBuffer()), dv = new DataView(b.buffer);
     const w = dv.getUint32(4, true), h = dv.getUint32(8, true), fmt = dv.getUint32(16, true);

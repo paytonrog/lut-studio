@@ -143,6 +143,8 @@ func (s *Server) Handler() http.Handler {
 	}))
 	mux.HandleFunc("GET /api/unit", s.needs(true, false, s.unit))
 	mux.HandleFunc("GET /api/tex", s.needs(true, false, s.tex))
+	// a SpeedTree tree as glTF binary (?hash=<resource path or 0x hash>; game.SpeedTreeGLB)
+	mux.HandleFunc("GET /api/speedtree", s.needs(true, false, s.speedTree))
 	mux.HandleFunc("GET /api/sheet", s.needs(true, true, s.sheetGet))
 	mux.HandleFunc("PUT /api/sheet", s.needs(true, true, s.sheetPut))
 	mux.HandleFunc("DELETE /api/sheet", s.needs(true, true, s.sheetDelete))
@@ -522,6 +524,25 @@ func (s *Server) unit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b, err := s.assetsOf().UnitGLB(h)
+	if err != nil {
+		fail(w, 500, err)
+		return
+	}
+	w.Header().Set("Content-Type", "model/gltf-binary")
+	w.Write(b)
+}
+
+func (s *Server) speedTree(w http.ResponseWriter, r *http.Request) {
+	h, err := game.ResourceHash(r.URL.Query().Get("hash"))
+	if err != nil {
+		fail(w, 400, err)
+		return
+	}
+	if !s.game().HasSpeedTree(h) {
+		fail(w, 404, fmt.Errorf("the game has no SpeedTree tree %s", lut.HashString(h)))
+		return
+	}
+	b, err := s.assetsOf().SpeedTreeGLB(h)
 	if err != nil {
 		fail(w, 500, err)
 		return

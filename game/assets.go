@@ -44,6 +44,9 @@ type Assets struct {
 	appMu sync.Mutex // openApp (UnitGLB holds mu, Poses doesn't)
 	app   *app.App   // filediver's full app (unit -> glTF export); opened on first use
 
+	fibMu      sync.Mutex
+	fibNormals *[256][3]float32 // (speedtree.go: the tree vertices' normal table)
+
 	surfMu sync.Mutex
 	prims  map[uint64][]surfPrim // (surfaces.go: a unit's primitives and their areas)
 	surfs  map[string]Surface    // (surfaces.go: computed LUT surfaces)
