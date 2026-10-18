@@ -11,6 +11,7 @@
 //     in scene.js's SCENE / CAM form. --line: the small line over the title, "" for none.)
 //   node tools/themescene.mjs x --poses   (the poses; * : the pose holds a weapon)
 //   --cutout: the items alone on a transparent background (no backdrop, floor, glow, aura, title)
+//   --look=vignette=0,grain=0.5: the showcase look's settings (showcase.js LOOK: bg, glow, rim, exposure, vignette...)
 // Writes <preset>.png per preset. Needs Chrome or Edge.
 import { spawn } from 'node:child_process';
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -85,6 +86,8 @@ if (process.argv.includes('--poses')) {
 console.log(await ev(`(async () => {
   const L = window.lutstudio;
   window.themeScene = await L.scene.buildScene(L.scene.app(), ${JSON.stringify(opts)});
+  const look = ${JSON.stringify(Object.fromEntries((flag('look') ?? '').split(',').filter(Boolean).map(kv => kv.split('=')).map(([k, v]) => [k.trim(), +v])))};
+  if (Object.keys(look).length) window.themeScene.setLook(look);
   return 'scene: ' + window.themeScene.items.length + ' items' + (window.themeScene.notes.length ? ' (' + window.themeScene.notes.join('; ') + ')' : '');
 })()`));
 const presets = wanted.length ? wanted : JSON.parse(await ev(`import('./theme.js').then(m => JSON.stringify(Object.keys(m.PRESETS)))`));
