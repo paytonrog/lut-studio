@@ -258,7 +258,8 @@ whenever it's worn.
   the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Also theme decals** recolors the decals too (emblems, markings, stencils): their decal sheets, in the
   theme's colors (light parts in the trim look's color and dark parts in the secondary's, or all in the trim color);
   their shapes stay. A decal sheet is shared: every item drawing from it shows the recolored decals, items you
-  didn't theme too (Apply says how many), and each recolored sheet adds about 5 MB to the mod. A sheet you edited
+  didn't theme too (Apply says how many), and each recolored sheet adds about 5 MB to the mod. Pattern trims work the same: a
+  pattern LUT other items share changes on them too, and Apply says how many. A sheet you edited
   in **Decals…** is kept unless *also overwrite* is ticked. **Preview on screen** shows it too. **Showcase** opens Showcase mode (below) with these looks. **Paint metal parts** gives the metal parts (barrels, bolts, buckles: the hardware role) a color of your
   choice while they keep their metal finish; off, they stay as the game made them. A zone that is cloth in the game but has another role (a cape's panels, padded armor) takes only
   the look's colors and keeps its cloth finish. Capes' trim lines (their cape design) and the items' patterns (stripes,

@@ -209,12 +209,12 @@ function planetEnv(p, w = null) {
     ground: gnd.map(v => v * E), exposure: p.exposureTarget / Math.max(lum709(gnd) * E, 1e-4), planet: p, weather: w, grade: {},
     fogDist: Math.min(150, Math.max(15, 60 / Math.max(w?.fogDensity ?? 0.5, 0.3))) };
   if (!gradeCache.has(p.id)) gradeCache.set(p.id, R.loadGrade('planets/' + p.id + '.png'));
-  gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => status('Planet light: ' + err.message, true));
+  gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => { gradeCache.delete(p.id); status('Planet light: ' + err.message, true); });
   if (!groundCache.has(p.id)) groundCache.set(p.id, groundTile(p));
-  groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => { });
+  groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => groundCache.delete(p.id));
   if (!sceneryCache.has(p.id)) sceneryCache.set(p.id, buildScenery(R, p, async h => parseGLB(await (await api('/api/unit?hash=' + h)).arrayBuffer()),
     async t => parseGLB(await (await api('/api/speedtree?hash=' + encodeURIComponent(t))).arrayBuffer())));
-  sceneryCache.get(p.id).then(s => { e.scenery = s; }).catch(err => console.warn('scenery', err));
+  sceneryCache.get(p.id).then(s => { e.scenery = s; }).catch(err => { sceneryCache.delete(p.id); console.warn('scenery', err); });
   // (all of it in place: for a picture taken right after the switch)
   e.ready = Promise.allSettled([gradeCache.get(p.id), groundCache.get(p.id), sceneryCache.get(p.id)]).then(() => new Promise(r => setTimeout(r, 50)));
   return e;
@@ -1085,6 +1085,7 @@ function emblemButton(l, z, di) {
 
 async function pickEmblem(l, z, di) {
   if (!(await closeSide())) return;
+  const forLut = S.sel.lut;   // (the cape LUT the emblem is for)
   const piece = R.pieces.find(p => p.info.cape === S.sel.lut);
   const sheetHash = piece?.info.capeTex?.decalSheet;
   if (!sheetHash) return status('This cape has no decal sheet of its own', true);
@@ -1117,6 +1118,7 @@ async function pickEmblem(l, z, di) {
     const cx = Math.floor((e.clientX - rc.left) / rc.width * n), cy = Math.floor((e.clientY - rc.top) / rc.height * n);
     const R0 = 4 + 3 * di, X0 = 5 + 3 * di, O0 = 6 + 3 * di;
     const at = (col, ch) => cell(l, z, col, ch);
+    if (S.sel.lut !== forLut) { $('modal').hidden = true; return status('Another LUT was picked meanwhile: pick the emblem again', true); }
     snapshot(); S.lastSnap = 0;
     if (l.edited[at(R0, 2)] <= 0 || l.edited[at(R0, 3)] <= 0) {        // a new decal: defaults
       l.edited.set([0.5, 0.3, 0.2, 0.2], at(R0, 0));
@@ -1226,6 +1228,7 @@ async function setPose(hash, { play = true, time = null, quiet = false } = {}) {
 }
 function tickPose() {
   if (!POSE.clip) return;
+  if (S.mode !== 'char' && !R.post) { R.pose = null; return; }   // (a vehicle, a weapon…: no Helldiver pose on its bones)
   if (POSE.playing) {
     POSE.time = (performance.now() / 1000 - POSE.t0) % Math.max(POSE.clip.length, 1e-3);
     $('poseTime').value = POSE.time;

@@ -318,7 +318,7 @@ export class Showcase {
       gl.blitFramebuffer(0, 0, W, H, 0, 0, W, H, gl.COLOR_BUFFER_BIT, gl.LINEAR);
       gl.blitFramebuffer(0, 0, W, H, 0, 0, W, H, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
       // the reflection: the scene upside down under the floor (half size, no shadows)
-      if (L.reflect > 0) {
+      if (L.reflect > 0 && !(R.env?.planet && R.env.grade?.tex)) {   // (a planet's floor: no reflection)
         R.mirror = true; R.shadows = false; R.target = { fbo: this.refl.fbo, w: this.refl.w, h: this.refl.h };
         R.draw(time);
         R.mirror = false; R.shadows = keep[1];
@@ -335,8 +335,11 @@ export class Showcase {
     const focus = Math.hypot(...eye.map((v, k) => v - c.target[k])) + 1.2;
     // the glow's source, blurred (28 px at 2560 wide)
     const s = W / 2560;
-    this.pass(this.p.glowsrc, this.glowA, { uNF: [near, far], uFocus: focus }, { uScene: this.scene.tex, uDepth: this.scene.depth });
-    this.blur(this.glowA, this.glowB, 28 * s / 4);
+    const onPlanet = !!(R.env?.planet && R.env.grade?.tex);   // (a planet: no glow nor bloom)
+    if (!onPlanet) {
+      this.pass(this.p.glowsrc, this.glowA, { uNF: [near, far], uFocus: focus }, { uScene: this.scene.tex, uDepth: this.scene.depth });
+      this.blur(this.glowA, this.glowB, 28 * s / 4);
+    }
     // the glow's center: the anchor on the frame (frame heights from the top-left)
     const vp = M4.mul(M4.persp(c.fov ?? 0.6, W / H, near, far), M4.lookAt(eye, c.target, [0, 1, 0]));
     const a = this.anchor, cl = [0, 1, 2, 3].map(r => vp[r] * a[0] + vp[4 + r] * a[1] + vp[8 + r] * a[2] + vp[12 + r]);
@@ -353,7 +356,7 @@ export class Showcase {
       uGroundTex: pl.ground, uGrade: { tex3d: pl.grade } });
     // bloom (22 px at 2560 wide)
     this.pass(this.p.bright, this.bloomA, { uAmt: pe ? 0 : L.bloom }, { uSrc: this.comp.tex });
-    this.blur(this.bloomA, this.bloomB, 22 * s / 4);
+    if (!pe) this.blur(this.bloomA, this.bloomB, 22 * s / 4);
     const hasTitle = this.titleTexture(W, H) ? 1 : 0;
     if (!size) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.05, 0.055, 0.06, 1); gl.clear(gl.COLOR_BUFFER_BIT); }
     this.pass(this.p.final, size ? this.out : null, { uRes: [W, H], uPunch: pe ? 0 : L.punch, uGrain: L.grain, uVignette: L.vignette, uHasTitle: hasTitle, uSeed: 0.71 },
@@ -403,6 +406,7 @@ export class Showcase {
     for (const k of ['scene', 'refl', 'comp', 'glowA', 'glowB', 'bloomA', 'bloomB', 'out']) this.free(this[k]);
     if (this.contact) { gl.deleteFramebuffer(this.contact.fbo); gl.deleteTexture(this.contact.depth); }
     gl.deleteTexture(this.toneTex); gl.deleteTexture(this.titleTex); gl.deleteVertexArray(this.vao);
+    if (this.blankGround) { gl.deleteTexture(this.blankGround); gl.deleteTexture(this.blank3); }
     for (const p of Object.values(this.p)) gl.deleteProgram(p.p);
   }
 }

@@ -416,7 +416,7 @@ export function presetTheme(name, metal = null) {
 // a look on a zone, as the server applies it (theme.go): a zone that is cloth in the game but has another role takes
 // the look's colors only (paint, secondary, wear, camo), keeping its cloth finish
 export function putLook(px, l, z, look, role) {
-  const base = z * l.w * 4, cloth = Math.round(px[base + 3]) === 1 && role !== 'cloth';
+  const base = z * l.w * 4, cloth = Math.round((l.vanilla ?? px)[base + 3]) === 1 && role !== 'cloth';   // (the game's mode, as Apply decides)
   if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) px[base + i] = look[i]; return; }
   for (const col of [0, 2, 5, 6]) for (let k = 0; k < 3; k++) px[base + col * 4 + k] = look[col * 4 + k];
   if (look[21 * 4 + 3] !== -1) for (let col = 16; col <= 21; col++) for (let k = 0; k < 4; k++) if (col !== 16 || k < 3) px[base + col * 4 + k] = look[col * 4 + k];
@@ -571,6 +571,7 @@ export async function themeDialog(app) {
   // ---- the theme on the item on screen, without saving: its LUTs in the looks (shown under keys of their own)
   let previewing = null;   // piece -> its LUT keys before
   let decalShown = [];   // (the decal sheets shown recolored)
+  let previewSeq = 0;
   function unpreview() {
     unpreviewDecals(R, decalShown); decalShown = [];
     if (!previewing) return;
@@ -606,7 +607,8 @@ export async function themeDialog(app) {
     }
     // decals: the sheets on screen recolored in the theme's colors
     const dc = $('thDecals').checked && decalColors(looks);
-    if (dc) previewDecals(R, R.pieces, $('thDecalMode').value, dc).then(h => { if (previewing) decalShown = h; else unpreviewDecals(R, h); });
+    const seq = ++previewSeq;   // (a newer preview, or decals unticked meanwhile: these sheets put back)
+    if (dc) previewDecals(R, R.pieces, $('thDecalMode').value, dc).then(h => { if (previewing && seq === previewSeq && $('thDecals').checked) decalShown = h; else unpreviewDecals(R, h); });
     $('thPreview').textContent = 'End preview';
     info('Preview: the theme on the item on screen (nothing saved). Apply theme to keep it.');
   }
@@ -653,6 +655,7 @@ export async function themeDialog(app) {
       if (r.decal_sheets) await R.refreshDecals();
       info(`Themed ${r.zones} zone(s) in ${r.changed} LUT(s) of ${r.items} item(s)` + (r.added ? `; ${r.added} LUT(s) added to the mod` : '') +
         (r.decal_sheets ? `; recolored ${r.decal_sheets} decal sheet(s)` + (r.decal_outside ? ` (also drawn on ${r.decal_outside} item(s) outside the groups themed)` : '') : '') +
+        (r.pattern_outside ? `; the pattern trims are shared with ${r.pattern_outside} item(s) outside the groups themed (they change too)` : '') +
         (r.kept ? `; kept ${r.kept} zone(s) you changed by hand (tick "also overwrite" to replace them)` : '') + '. Step through them below.');
       const inMod = app.projectLuts();
       review = targets().filter(it => !$('thOnly').checked || it.luts.some(x => inMod.has(x.lut))); ri = -1;

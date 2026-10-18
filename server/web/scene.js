@@ -216,7 +216,9 @@ export async function buildScene(app, opts = {}) {
     async themeNow(t) {
       theme = t;
       say('Theming…');
-      const worn = await themeItems(app, items, t, 'sc' + n++ + ':');
+      const tag = 'sc' + n++ + ':';
+      const worn = await themeItems(app, items, t, tag);
+      if (n > 1) R.dropLuts('sc' + (n - 2) + ':');   // (the theme before's textures)
       const pal = palette(t.colors?.length ? t.colors : worn);
       sc.accent = pal.accent; sc.text = pal.text; sc.k = pal.k; sc.sat = pal.sat; sc.titleKey = null;
       rimLight();
@@ -286,7 +288,7 @@ export async function buildScene(app, opts = {}) {
     },
     async dispose() {
       await busy.catch(() => { });
-      R.post = null; sc.dispose();
+      R.post = null; sc.dispose(); R.dropLuts('sc' + (n - 1) + ':');
       rimObjs.forEach((l, i) => Object.assign(l, rim[i])); R.rim = rimObjs; R.env.exposure = baseExposure;
       Object.assign(R.cam, cam); R.pose = pose;
       R.pieces = items.flatMap(s => s.pieces);   // (freed by the next load)
@@ -390,7 +392,7 @@ async function themeItems(app, items, theme, tag) {
 }
 // (theme.js's, without importing it: theme.js imports this module)
 function putLook(px, l, z, look, role) {
-  const base = z * l.w * 4, cloth = Math.round(px[base + 3]) === 1 && role !== 'cloth';
+  const base = z * l.w * 4, cloth = Math.round((l.vanilla ?? px)[base + 3]) === 1 && role !== 'cloth';   // (the game's mode, as Apply decides)
   if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) px[base + i] = look[i]; return; }
   for (const col of [0, 2, 5, 6]) for (let k = 0; k < 3; k++) px[base + col * 4 + k] = look[col * 4 + k];
   if (look[21 * 4 + 3] !== -1) for (let col = 16; col <= 21; col++) for (let k = 0; k < 4; k++) if (col !== 16 || k < 3) px[base + col * 4 + k] = look[col * 4 + k];

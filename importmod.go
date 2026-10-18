@@ -405,10 +405,14 @@ func importTexture(g *game.Game, file string, h uint64, raw modpack.RawTexture) 
 	if err != nil {
 		return err
 	}
-	if !texenc.Supported(in.DXGI) {
+	// a new design for a placeholder (the editors made it NewDesignSize square, the build wrote it so): kept as is
+	b := img.Bounds()
+	newDesign := strings.Contains(filepath.ToSlash(file), "/designs/") && server.Placeholder(in) &&
+		b.Dx() == server.NewDesignSize && b.Dy() == server.NewDesignSize
+	if !newDesign && !texenc.Supported(in.DXGI) {
 		return fmt.Errorf("the game's texture format (%d) can't be written", in.DXGI)
 	}
-	if b := img.Bounds(); b.Dx() != in.Width || b.Dy() != in.Height*in.Layers {
+	if !newDesign && (b.Dx() != in.Width || b.Dy() != in.Height*in.Layers) {
 		img = texenc.Resize(img, in.Width, in.Height*in.Layers)
 	}
 	var out bytes.Buffer

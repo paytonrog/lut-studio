@@ -733,7 +733,9 @@ func (s *Server) image(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) build(w http.ResponseWriter, r *http.Request) {
 	var log bytes.Buffer
+	s.mu.Lock() // (the project's files as a whole: no save or theme write halfway through while it reads them)
 	path, err := s.Build(s.curDir(), &log)
+	s.mu.Unlock()
 	out := map[string]any{"ok": err == nil, "log": log.String(), "path": path}
 	if err != nil {
 		out["error"] = err.Error()

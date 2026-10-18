@@ -760,6 +760,11 @@ export class Renderer {
   }
 
   // LUT texels -> float texture (texelFetch only)
+  // the LUT textures whose keys start with prefix, freed
+  dropLuts(prefix) {
+    for (const [k, l] of this.luts) if (k.startsWith(prefix)) { this.gl.deleteTexture(l.tex); this.luts.delete(k); }
+  }
+
   setLut(key, w, h, px) {
     const gl = this.gl;
     let l = this.luts.get(key);
@@ -783,6 +788,7 @@ export class Renderer {
       if (!pred(p)) { keep.push(p); continue; }
       gl.deleteVertexArray(p.vao); p.buffers.forEach(b => gl.deleteBuffer(b));
       if (p.skin?.tex) gl.deleteTexture(p.skin.tex);
+      if (p.bugLayer === 1 && p.wSplat?.tex) gl.deleteTexture(p.wSplat.tex);
     }
     this.pieces = keep;
   }
@@ -792,6 +798,7 @@ export class Renderer {
     for (const p of this.pieces) {
       gl.deleteVertexArray(p.vao); p.buffers.forEach(b => gl.deleteBuffer(b));
       if (p.skin?.tex) gl.deleteTexture(p.skin.tex);   // (the piece's own joint texture)
+      if (p.bugLayer === 1 && p.wSplat?.tex) gl.deleteTexture(p.wSplat.tex);   // (its own splat texture)
     }
     this.pieces = [];
     this.epoch = (this.epoch ?? 0) + 1;
@@ -849,7 +856,7 @@ export class Renderer {
     const idMaskHash = prim.kind !== 'cape' ? t.idMasks ?? null : null;   // the zones' mask (editable: masks.js)
     // where the pattern shows (editable too; not the 1 x 1 "no pattern" texture most parts share)
     const patMaskHash = prim.kind !== 'cape' && t.patternMasks && t.patternMasks !== NO_PATTERN_MASK ? t.patternMasks : null;
-    const splat = this.splatTexture(wBlood, wBug);
+    const splat = this.splatTexture(wBlood, wBug);   // (its own texture when bugLayer is 1: freed with the piece)
     const piece = { decalHash, scalarHash, idMaskHash, patMaskHash, uvWire, vao, buffers, count: prim.idx.length, idMasks, baseData, patMasks, camo, composite, skin, shift: prim.shift ?? [0, 0, 0],
       wDirt, wSpecial, wSplat: splat.tex, bugLayer: splat.bugLayer, damageTex, lutKeys, info, kind: prim.kind, ...cape,
       params: prim.params, bounds: bounds(prim.pos) };

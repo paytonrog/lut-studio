@@ -737,7 +737,17 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		st.Written[v.Folder] = map[string][]string{}
 	}
 	written := st.Written[v.Folder]
+	// (what was written is recorded however this ends: a failure partway leaves its writes known as the theme's, not
+	// taken for hand edits by the next apply)
+	recorded := false
+	defer func() {
+		if !recorded {
+			b, _ := json.MarshalIndent(st, "", " ")
+			atomicfile.WriteFile(themePath(p), b, 0o644)
+		}
+	}()
 	added, zones, kept, changedLUTs := 0, 0, 0, 0
+	patternOutside := 0
 	byRole := map[string]int{}
 	for _, hs := range luts {
 		h, _ := lut.ParseHash(hs)
@@ -883,6 +893,18 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		// (a pattern LUT is shared: the items outside the groups themed that wear one of these, counted for the message)
+		for _, k := range idx.Kits {
+			if want[ThemeGroupOf(k)] {
+				continue
+			}
+			for _, pc := range k.Pieces {
+				if patterns[pc.PatternLUT] {
+					patternOutside++
+					break
+				}
+			}
+		}
 		if !trimRows(capeLUTs, lut.CapeWidth, nil) {
 			return
 		}
@@ -977,12 +999,13 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	b, _ := json.MarshalIndent(st, "", " ")
+	recorded = true
 	if err := atomicfile.WriteFile(themePath(p), b, 0o644); err != nil {
 		fail(w, 500, err)
 		return
 	}
 	writeJSON(w, map[string]any{"items": items, "luts": len(luts), "changed": changedLUTs, "added": added, "zones": zones, "kept": kept, "roles": byRole,
-		"decal_sheets": decalSheets, "decal_outside": outside})
+		"decal_sheets": decalSheets, "decal_outside": outside, "pattern_outside": patternOutside})
 }
 
 // addLUT: LUT h (the game's values: van) in every variant of p that doesn't have it yet; how many variants got it.
