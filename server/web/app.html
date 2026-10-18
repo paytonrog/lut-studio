@@ -33,6 +33,7 @@
     <nav id="leftTabs" role="tablist">
       <button id="partsTab" class="on" role="tab" title="The mod's materials (LUTs) and the zones of the one picked">Materials</button>
       <button id="themeBtn" role="tab" title="Give every armor, helmet, cape or weapon the looks of the item on screen, one per zone role">Theme</button>
+      <button id="changesBtn" role="tab" title="Every zone of this variant that differs from the game: click one to edit it">Changes</button>
       <button id="modPageBtn" role="tab" title="The mod's name, description, icon, variants and their pictures, as the mod managers show them">Mod page</button>
       <button id="decals" role="tab" hidden title="Replace emblems, numbers and markings on this model's decal sheet with your own images">Decals</button>
       <button id="design" role="tab" hidden title="Paint where the cape's zones are and where its cloth is cut out">Cape design</button>
@@ -101,10 +102,12 @@
       <span class="spacer"></span>
       <!-- Pictures and editors -->
       <span class="barGroup">
-        <details class="pop up-right" id="snapPop"><summary title="Use this view as the mod's pictures">Snapshot ▾</summary>
+        <details class="pop up-right" id="snapPop"><summary title="Save this view as an image, or use it as the mod's pictures">Snapshot ▾</summary>
           <div class="popBody">
             <button id="snapIcon" title="Use this view as the mod icon">Use as the mod icon</button>
             <button id="snapVariant" title="Use this view as the image of this variant">Use as this variant's picture</button>
+            <button id="snapSave" title="Save the view as a PNG, as it looks now, at twice its size on screen">Save image (PNG)</button>
+            <button id="snapSaveClear" title="Save the view as a PNG with a transparent background (the items alone)">Save image, no background</button>
           </div></details>
       </span>
     </div>

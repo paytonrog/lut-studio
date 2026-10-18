@@ -758,7 +758,12 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	written := st.Written[v.Folder]
 	// the files as they were, for an undo (a theme that fails partway: what it wrote can be undone too)
 	jr := &fileJournal{}
-	s.lastTheme = jr
+	s.themeID++
+	id := s.themeID
+	s.themes = append(s.themes, themeUndo{id, jr})
+	if len(s.themes) > maxThemeUndo {
+		s.themes = s.themes[len(s.themes)-maxThemeUndo:]
+	}
 	jr.keep(themePath(p))
 	// (what was written is recorded however this ends: a failure partway leaves its writes known as the theme's, not
 	// taken for hand edits by the next apply)
@@ -1034,7 +1039,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, err)
 		return
 	}
-	writeJSON(w, map[string]any{"items": items, "luts": len(luts), "changed": changedLUTs, "added": added, "zones": zones, "kept": kept, "roles": byRole,
+	writeJSON(w, map[string]any{"undo": id, "items": items, "luts": len(luts), "changed": changedLUTs, "added": added, "zones": zones, "kept": kept, "roles": byRole,
 		"decal_sheets": decalSheets, "decal_outside": outside, "pattern_outside": patternOutside})
 }
 
@@ -1113,17 +1118,34 @@ func (j *fileJournal) restore() error {
 	return first
 }
 
-// POST /api/theme/undo: the last theme applied (since the program started) undone: its files back as they were
-// before it; 409 when there's none to undo
+// themeUndo: a theme applied (its id, as /api/theme answered) and its files as they were before it
+type themeUndo struct {
+	id int
+	jr *fileJournal
+}
+
+// maxThemeUndo: how many themes back can be undone
+const maxThemeUndo = 8
+
+// POST /api/theme/undo {ID (0: the last one)}: the last theme applied (since the program started) undone: its files
+// back as they were before it. Only the last one can be: an earlier one (409) once the later ones are undone; 409
+// too when there's none (or it's too far back)
 func (s *Server) undoTheme(w http.ResponseWriter, r *http.Request) {
+	var in struct{ ID int }
+	decode(r, &in) // (no body: the last one)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	jr := s.lastTheme
-	if jr == nil || len(jr.order) == 0 {
-		fail(w, 409, fmt.Errorf("no theme to undo"))
+	if len(s.themes) == 0 || (in.ID != 0 && !slices.ContainsFunc(s.themes, func(t themeUndo) bool { return t.id == in.ID })) {
+		fail(w, 409, fmt.Errorf("that theme can't be undone any more (only the last %d applied since LUT Studio started can)", maxThemeUndo))
 		return
 	}
-	s.lastTheme = nil
+	last := s.themes[len(s.themes)-1]
+	if in.ID != 0 && in.ID != last.id {
+		fail(w, 409, fmt.Errorf("a theme applied after it (maybe in another variant) has to be undone first"))
+		return
+	}
+	s.themes = s.themes[:len(s.themes)-1]
+	jr := last.jr
 	if err := jr.restore(); err != nil {
 		fail(w, 500, err)
 		return

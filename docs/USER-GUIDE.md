@@ -156,6 +156,15 @@ whenever it's worn.
   (**Paydex presets…** says where its file is: `%LOCALAPPDATA%\PaydexLutEditor`); a look you already have is
   skipped, a name taken gets a number, Paydex presets go in the *Paydex* category.
 - **Copy / Paste / Reset zone**, **Ctrl+Z / Ctrl+Y** undo / redo, **Ctrl+S** save (autosave is on by default).
+  Each variant keeps its own undo history while you work in another one, and a theme applied is one step in it:
+  Ctrl+Z undoes the whole theme (as the Theme panel's **Undo theme**; a theme can't be redone, and only the last
+  eight applied since LUT Studio started can be undone, the latest first).
+- **This material as a file**: **.dds** (R16G16B16A16 float, the game's own format) or **.exr** (OpenEXR, half
+  floats) saves the material's LUT as it is now, exactly, for other tools; **Import…** reads one back (a .dds in
+  16- or 32-bit float RGBA, an .exr uncompressed, RLE, ZIP or ZIPS, half or float) into this material when it is
+  the same size. Ctrl+Z undoes it; LUT Studio's hidden mark channels keep the project's values.
+- **Snapshot ▾ → Save image (PNG)** saves the view as it looks now (its light, pose, mission wear and view), at
+  twice its size on screen; **Save image, no background** the same without the sky or backdrop (transparent).
 - **Moving around**: drag to rotate, right-drag (or Shift+drag) to pan, the mouse wheel to zoom, double-click to
   frame the armor again. **Camera** has fixed views; **Turntable** spins it. **Armory: overview / armor / helmet /
   cape** are the game's Armory screen cameras (its per-tab distances and heights, a narrow 22.5° view, the
@@ -202,9 +211,12 @@ whenever it's worn.
   nothing), so the box is off there.
 - **The right panel** keeps its place when you pick another zone: same scroll position, and the sections you
   opened or closed stay that way.
+- **Changes** (a sidebar tab): every zone of this variant that differs from the game, by material, with what changed
+  in it (paint, wear, camo…) and its color before → now. Click one to edit it; **↺** puts it back as the game has
+  it. It follows your edits as you make them.
 - **The sidebars' tabs**: each sidebar has its own pane (**Materials** on the left: the materials (LUTs) and their zones, each zone tagged with its role (primary, trim, cloth…); **Zone** on the
   right: the picked zone's settings) and the editors' tabs: **Theme**, **Mod page**, **Decals**, **Cape design**,
-  **Masks** on the left, **Showcase** on the right (only the editors the item on screen has are shown). An editor
+  **Masks** and **Changes** on the left, **Showcase** on the right (only the editors the item on screen has are shown). An editor
   opens in the sidebar its tab is in, in place of that sidebar's pane; the pane's own tab (**Materials** or **Zone**)
   closes it. One editor is open at a time. To put a tab in the other sidebar, drag it there (or to another place in
   the same strip), or right-click it; where the tabs are is kept in this browser.
@@ -318,7 +330,9 @@ whenever it's worn.
 
 ## Showcase
 
-**Showcase** (a sidebar tab, on the right at first, or the Theme panel's button) turns the viewport into key art, live: three Helldivers in
+**Showcase** (a sidebar tab, on the right at first, or the Theme panel's button) turns the viewport into key art, live (opened from its tab,
+the item on screen is in it: your armor, helmet and cape on the leader, a weapon in the leader's hands, a backpack on
+the leader's back, a vehicle or stratagem in its place behind): three Helldivers in
 warbond poses holding their weapons (backpacks on when you pick them), two vehicles and a stratagem behind them, in
 the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
 a title. The items load one by one (a few seconds each the first time); then orbit, pan and zoom as ever (the frame in

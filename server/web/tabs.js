@@ -8,7 +8,7 @@ const $ = id => document.getElementById(id);
 const HOME = { left: 'partsTab', right: 'zoneTab' };
 const PANE = { left: 'partsPane', right: 'zonePane' };
 // the editors' tabs, in order, and their sidebar until moved
-const TABS = [['themeBtn', 'left'], ['modPageBtn', 'left'], ['decals', 'left'], ['design', 'left'], ['masksBtn', 'left'],
+const TABS = [['themeBtn', 'left'], ['changesBtn', 'left'], ['modPageBtn', 'left'], ['decals', 'left'], ['design', 'left'], ['masksBtn', 'left'],
   ['rolesBtn', 'left'], ['showcaseBtn', 'right']];
 const KEY = 'lutstudio.tabs';
 

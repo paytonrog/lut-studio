@@ -14,7 +14,8 @@ import { rolesDialog, ROLE_INFO } from './roles.js';
 import { themeDialog } from './theme.js';
 import { track, trackErrors } from './analytics.js';
 import { modPage } from './modpage.js';
-import { closeSide, sideDirty } from './texedit.js';
+import { changesPanel } from './changes.js';
+import { closeSide, sideDirty, saveFile, pickFile } from './texedit.js';
 import { groundTile } from './planet.js';
 import { buildScenery } from './planetscene.js';
 
@@ -53,7 +54,7 @@ const S = {
   schema: null, state: null, variant: null, kit: null, body: 'slim',
   luts: new Map(),       // hash -> {w, h, kind, vanilla, edited|null, labels, note, dirty}
   sel: { lut: null, zone: 0, more: new Set() },   // more: other zones of that LUT selected with it (Ctrl / Shift)
-  undo: [], redo: [], lastSnap: 0, saving: null, clip: null, loadGen: 0, varGen: 0,
+  undo: [], redo: [], history: new Map(), histOf: null, lastSnap: 0, saving: null, clip: null, loadGen: 0, varGen: 0,
 };
 let R;
 
@@ -314,7 +315,10 @@ async function loadVariantNow(folder) {
   S.variant = folder;
   R.variant = folder;          // the variant's own decal sheets (render.js loadTexture)
   const decals = R.pieces.length ? R.refreshDecals() : null;
-  S.undo = []; S.redo = [];
+  // the history: each variant's own, kept while another is shown (the same variant loaded again keeps it as it is)
+  if (S.histOf && S.histOf !== folder) S.history.set(S.histOf, { undo: S.undo, redo: S.redo });
+  if (S.histOf !== folder) { const h = S.history.get(folder); S.undo = h?.undo ?? []; S.redo = h?.redo ?? []; }
+  S.histOf = folder;
   for (const l of S.luts.values()) { l.edited = null; l.dirty = false; }
   const v = S.state.variants.find(x => x.folder === folder);
   if (v.problems?.length) showModal('Problems in this variant', v.problems.join('\n\n'));
@@ -759,6 +763,29 @@ function selZones(zone = S.sel.zone) {
 // one zone selected again (another LUT, a plain click)
 function selectOnly() { S.sel.more.clear(); }
 
+// a theme applied (its id from /api/theme): one step in the history, undone by Ctrl+Z or the panel's Undo theme
+function pushTheme(id) { S.undo.push({ theme: id }); S.redo = []; }
+async function undoThemeStep(id = S.undo.at(-1)?.theme) {
+  if (S.themeUndoing) return false;
+  S.themeUndoing = true;
+  try {
+    await saveAll();
+    const r = await api('/api/theme/undo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ID: id }) });
+    for (const h of S.history.values()) h.undo = h.undo.filter(e => e.theme !== id);
+    S.undo = S.undo.filter(e => e.theme !== id); S.redo = [];
+    S.state = await api('/api/state'); await loadVariant(S.variant); fillKits();
+    if (R.pieces.length) await R.refreshDecals();
+    track('theme undone', { files: r.files });
+    status(`Theme undone: ${r.files} file(s) back as they were before it`);
+    document.dispatchEvent(new Event('lutstudio:themeundone'));
+    return true;
+  } catch (e) {
+    status(e.message.replace(/^[^:]*: /, ''), true);
+    if (/can't be undone/.test(e.message)) S.undo = S.undo.filter(x => x.theme !== id);   // (gone from the server: its step too)
+    return false;
+  } finally { S.themeUndoing = false; }
+}
+
 function changed(l) {
   if (l.pull) adopt(l);
   l.dirty = true;
@@ -766,11 +793,14 @@ function changed(l) {
   R.setLut('e:' + hash, l.w, l.h, l.edited);
   scheduleSave();
   refreshMarks();
+  document.dispatchEvent(new Event('lutstudio:edited'));
 }
 
 function restore(stack, other) {
+  if (stack.at(-1)?.theme) return stack === S.undo ? undoThemeStep() : null;
   const s = stack.pop(); if (!s) return;
   const l = S.luts.get(s.lut);
+  if (!l?.edited) return restore(stack, other);   // (a LUT no longer in the variant: that step is gone)
   other.push({ lut: s.lut, px: l.edited.slice(), labels: [...l.labels] });
   l.edited.set(s.px); l.labels = s.labels;
   S.sel.lut = s.lut;
@@ -1021,8 +1051,8 @@ function refreshMarks() {
 }
 
 async function selectLut(hash) {
-  S.sel.lut = hash;
   if (hash !== S.sel.lut) selectOnly();
+  S.sel.lut = hash;
   S.sel.zone = Math.min(S.sel.zone, (S.luts.get(hash)?.h ?? 1) - 1);
   const onArmor = R.pieces.some(p => p.info.lut === hash || p.info.pattern === hash || p.info.cape === hash);
   if (!onArmor) {
@@ -1084,6 +1114,7 @@ function renderFieldsInto(box, head) {
     ${zs.length > 1 ? `<div class="multi">Editing ${zs.length} zones together (${zs.map(i => esc(l.labels[i] || 'zone ' + i)).join(', ')}): a change goes to all of them; the values shown are ${esc(l.labels[z] || 'zone ' + z)}'s. <a href="#" id="zOne">Just this one</a></div>` : ''}
     ${(() => { if (l.pull || !S.state.parts?.[S.sel.lut]) return `<div class="s" title="${esc(l.note || '')}">${esc(l.note || '')}</div>`; const d = describeLut(S.sel.lut, l.kind); return `<div class="s" title="${esc(d.parts + ' · ' + d.shared)}"><span class="badge ${d.cls}">${esc(d.badge)}</span>${esc(d.parts)} · ${esc(d.shared)}</div>`; })()}
     <div class="row" style="margin-top:6px"><button id="zCopy">Copy zone</button><button id="zPaste">Paste zone</button><button id="zReset">Reset zone</button></div>
+    <div class="row lutFile"><span class="hint">This material as a file:</span><button id="lExpDds" title="Save this material's LUT as a .dds (R16G16B16A16 float, the game's own format) for other tools">.dds</button><button id="lExpExr" title="Save this material's LUT as an OpenEXR .exr (half-float RGBA) for other tools">.exr</button><button id="lImport" title="Replace this material's values with a .dds or .exr of the same size (Ctrl+Z undoes it)">Import…</button></div>
     <div id="zLooks" class="looks"></div>`;
   // the looks: the built-in ones and yours, in categories (looks.js)
   looksPanel($('zLooks'), {
@@ -1098,6 +1129,9 @@ function renderFieldsInto(box, head) {
       changed(l); renderFields();
     },
   });
+  $('lExpDds').onclick = () => exportLut('dds');
+  $('lExpExr').onclick = () => exportLut('exr');
+  $('lImport').onclick = importLut;
   $('zCopy').onclick = () => { S.clip = l.edited.slice(z * l.w * 4, (z + 1) * l.w * 4); status('Zone copied'); };
   $('zPaste').onclick = () => {
     if (!S.clip || S.clip.length !== l.w * 4) return status('Nothing to paste (copy a zone of a LUT of the same kind)', true);
@@ -1628,7 +1662,7 @@ function wire() {
     pops.forEach(d => { d.open = false; });
     if (S.eyedrop) { S.eyedrop = null; document.body.classList.remove('eyedrop'); status(''); }
   });
-  for (const id of ['snapIcon', 'snapVariant']) $(id).addEventListener('click', () => { $('snapPop').open = false; });
+  for (const id of ['snapIcon', 'snapVariant', 'snapSave', 'snapSaveClear']) $(id).addEventListener('click', () => { $('snapPop').open = false; });
   setupTabs();
   // a sidebar's own tab (Parts, Zone): the editor open in that sidebar closed
   $('partsTab').onclick = $('zoneTab').onclick = () => (showcaseOpen() ? closeShowcase() : closeSide());
@@ -1649,6 +1683,7 @@ function wire() {
       refresh: async () => { S.state = await api('/api/state'); fillKits(); await loadVariant(S.variant); },
       projectLuts: () => new Set(S.state.variants.flatMap(v => (v.luts ?? []).map(l => l.lut))),
       openShowcase: o => openShowcase(showcaseApp(), o),
+      pushTheme, undoTheme: id => undoThemeStep(id),
     }, o).catch(e => status('Theme: ' + e.message, true));
   };
   $('themeBtn').onclick = () => { if (!$('themeBtn').classList.contains('on')) openTheme(); };
@@ -1657,7 +1692,22 @@ function wire() {
     if ($('themeBtn').classList.contains('on')) document.dispatchEvent(new Event('lutstudio:recolor'));
     else openTheme({ item: true });
   };
-  $('showcaseBtn').onclick = () => (track('editor opened', { editor: 'showcase' }), openShowcase(showcaseApp()));
+  $('showcaseBtn').onclick = () => (track('editor opened', { editor: 'showcase' }), openShowcase(showcaseApp(), { scene: ownScene() }));
+  $('changesBtn').onclick = () => {
+    track('editor opened', { editor: 'changes' });
+    changesPanel({
+      luts: () => S.luts, schema: k => S.schema[k], describe: h => describeLut(h, S.luts.get(h)?.kind), variant: () => S.variant, hex,
+      select: async (h, z) => { await selectLut(h); selectZone(z); R.highlight = { lut: 'e:' + h, zone: z, piece: -1 }; setTimeout(() => { if (R.highlight.zone === z) R.highlight = { lut: null, zone: -1, piece: -1 }; }, 900); },
+      reset: (h, z) => {
+        const l = S.luts.get(h); if (!l?.edited) return;
+        const keep = S.sel.lut; S.sel.lut = h; snapshot(); S.lastSnap = 0; S.sel.lut = keep;
+        l.edited.set(l.vanilla.slice(z * l.w * 4, (z + 1) * l.w * 4), z * l.w * 4); changed(l); renderLists(); renderFields();
+      },
+    });
+  };
+  // ---- pictures: the view as a PNG (twice its size), with its background or none
+  $('snapSave').onclick = () => saveImage(false);
+  $('snapSaveClear').onclick = () => saveImage(true);
   for (const n of Object.keys(CAMERAS)) $('camera').add(new Option(n, n));
   $('camera').onchange = () => setCamera($('camera').value);
   $('pose').onchange = async () => { await setPose($('pose').value); updateHeld(); };
@@ -2054,6 +2104,75 @@ function shot(bg = { kind: 'view' }) {
   g.drawImage(cv, (cv.width - s) / 2, (cv.height - s) / 2, s, s, 0, 0, 512, 512);
   R.split = split; R.highlight = hl; R.noSky = noSky; R.debug = debug; R.world = world;
   return out.toDataURL('image/png');
+}
+
+// the view as a PNG to keep: as shown (its light, pose, mission wear and view), twice the size on screen (up to 8K),
+// no zone highlight or before | after split; clear: no sky or backdrop (a transparent background)
+async function saveImage(clear) {
+  const cv = $('canvas'), w0 = cv.width, h0 = cv.height, k = Math.min(2, 7680 / Math.max(w0, h0));
+  const keep = { split: R.split, hl: R.highlight, noSky: R.noSky };
+  R.split = false; R.highlight = { lut: null, zone: -1, piece: -1 }; if (clear) R.noSky = true;
+  const out = document.createElement('canvas');
+  try {
+    cv.width = Math.round(w0 * k); cv.height = Math.round(h0 * k);
+    R.draw(performance.now() / 1000);
+    out.width = cv.width; out.height = cv.height;
+    out.getContext('2d').drawImage(cv, 0, 0);
+  } finally { Object.assign(R, keep); cv.width = w0; cv.height = h0; }
+  const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+  const name = (S.state?.project?.name || 'lut-studio').replace(/[^\w-]+/g, '-').replace(/^-|-$/g, '') || 'lut-studio';
+  saveFile(blob, `${name}${clear ? '-cutout' : ''}.png`);
+  track('image saved', { clear, w: out.width, h: out.height });
+  status(`Saved ${out.width} x ${out.height} PNG${clear ? ' (no background)' : ''}`);
+}
+
+// the Showcase's scene with the item on screen in it: the armor, helmet and cape on the leader; a weapon in the
+// leader's hands; a backpack on the leader's back; a vehicle or a stratagem in its place behind (the rest as SCENE)
+function ownScene() {
+  const sc = SCENE.map(it => ({ ...it })), lead = sc.find(it => it.group === 'Armor'), kits = S.kitList ?? [];
+  // (by name when one kit has it, else by its key: the right one of several B-01 Tactical)
+  const named = v => { const k = kits.find(e => e.value === v); return !k?.name || kits.filter(e => e.name === k.name && e.group === k.group).length > 1 ? v : k.name; };
+  if (S.mode !== 'other') {
+    if (S.look.armor) lead.name = named(S.look.armor);
+    if (S.look.helmet && S.look.helmet !== 'match' && S.look.helmet !== 'none') lead.helmet = S.look.helmet;
+    if (S.look.cape) lead.cape = named(S.look.cape);
+  } else {
+    const g = kits.find(e => e.value === S.kit)?.group;
+    if (g === 'Weapons') lead.weapon = named(S.kit);
+    else if (g === 'Backpacks') lead.backpack = named(S.kit);
+    else if (g === 'Vehicles') sc.find(it => it.label === (/exosuit/i.test(named(S.kit)) ? 'Back left' : 'Back right')).name = named(S.kit);
+    else if (g === 'Stratagems') sc.find(it => it.group === 'Stratagems').name = named(S.kit);
+  }
+  return sc;
+}
+
+// a material as a .dds / .exr file for other tools (the values as they are now, saved or not), and one read back in
+async function exportLut(format) {
+  const l = selLut(); if (!l?.edited) return;
+  const r = await fetch(`/api/lut/file?format=${format}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ Width: l.w, Height: l.h, Px: Array.from(l.edited) }) });
+  if (!r.ok) return status(await r.text(), true);
+  const d = describeLut(S.sel.lut, l.kind), name = `${d.badge}-${d.parts}`.replace(/[^\w-]+/g, '-').replace(/^-|-$/g, '');
+  saveFile(await r.blob(), `${name}-${S.sel.lut}.${format}`);
+  track('lut exported', { format });
+  status(`Exported ${S.sel.lut} as .${format} (${l.w} x ${l.h}, half floats as the game keeps them)`);
+}
+async function importLut() {
+  const l = selLut(); if (!l?.edited) return;
+  const f = await pickFile('.dds,.exr');
+  if (!f) return;
+  let t;
+  try { t = await api('/api/lut/read', { method: 'POST', body: await f.arrayBuffer() }); } catch (e) { return status(e.message.replace(/^[^:]*: /, ''), true); }
+  if (t.width !== l.w || t.height !== l.h) return status(`${f.name} is ${t.width} x ${t.height}; this material is ${l.w} x ${l.h}: pick the file of this LUT`, true);
+  snapshot(); S.lastSnap = 0;
+  // (the hidden channels, LUT Studio's mark: kept as the project has them)
+  const hidden = (S.schema[l.kind] ?? []).filter(f => f.hidden).flatMap(f => f.leaves);
+  const keep = l.edited.slice();
+  l.edited.set(t.px);
+  for (let z = 0; z < l.h; z++) for (const [c, ch] of hidden) l.edited[cell(l, z, c, ch)] = keep[cell(l, z, c, ch)];
+  changed(l); renderLists(); renderFields();
+  track('lut imported', { format: f.name.split('.').pop() });
+  status(`Imported ${f.name} into ${S.sel.lut} (Ctrl+Z undoes it)`);
 }
 
 async function snap(target) {

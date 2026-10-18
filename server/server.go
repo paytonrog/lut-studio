@@ -47,7 +47,8 @@ type Server struct {
 
 	mu sync.Mutex // project file writes
 
-	lastTheme *fileJournal // the last theme applied: its files as they were before (POST /api/theme/undo), under mu
+	themes  []themeUndo // the themes applied lately, the last one last: their files as they were before (POST /api/theme/undo), under mu
+	themeID int
 
 	colorMu sync.Mutex
 	colors  map[string]string // kit id -> color name (kitLabel)
@@ -121,6 +122,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/roles/suggest", s.needs(true, false, s.suggestRolesAPI))
 	mux.HandleFunc("POST /api/theme", s.needs(true, true, s.applyTheme))
 	mux.HandleFunc("POST /api/theme/undo", s.needs(true, false, s.undoTheme))
+	mux.HandleFunc("POST /api/lut/file", s.lutFile)
+	mux.HandleFunc("POST /api/lut/read", s.lutRead)
 	mux.HandleFunc("GET /api/state", s.needs(false, true, s.state))
 	mux.HandleFunc("GET /api/schema", s.schema)
 	mux.HandleFunc("GET /api/doc", s.needs(false, true, s.getDoc))

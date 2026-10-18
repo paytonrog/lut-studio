@@ -723,25 +723,22 @@ export async function themeDialog(app, opts = {}) {
       const inMod = app.projectLuts();
       review = targets().filter(it => !$('thOnly').checked || it.luts.some(x => inMod.has(x.lut))); ri = -1;
       $('thReview').hidden = !review.length || itemMode();
+      if (r.undo) { app.pushTheme?.(r.undo); lastUndo = r.undo; }
       $('thUndo').hidden = false;
       count();
     } catch (e) { info(e.message); }
     $('thApply').disabled = false;
   };
   // ---- undo: the files the last theme changed put back (theme.go undoTheme)
+  let lastUndo = null;   // (the id of the theme applied here: app.undoTheme undoes it, as Ctrl+Z does)
   $('thUndo').onclick = async () => {
     $('thUndo').disabled = true;
-    try {
-      const r = await app.api('/api/theme/undo', { method: 'POST' });
-      await app.refresh();
-      await R.refreshDecals();
-      app.track('theme undone', { files: r.files });
-      info(`Undone: ${r.files} file(s) back as they were before the theme.`);
-      $('thUndo').hidden = true; $('thReview').hidden = true;
-      count();
-    } catch (e) { info(e.message); }
+    if (await app.undoTheme(lastUndo)) { info('Undone: every file back as it was before the theme.'); $('thUndo').hidden = true; $('thReview').hidden = true; lastUndo = null; }
+    else info('The theme could not be undone: see the status line.');
     $('thUndo').disabled = false;
+    count();
   };
+  document.addEventListener('lutstudio:themeundone', () => { $('thUndo').hidden = true; $('thReview').hidden = true; }, { signal: close.signal });
   // ---- stepping through the themed items
   let review = [], ri = -1;
   const step = async d => {

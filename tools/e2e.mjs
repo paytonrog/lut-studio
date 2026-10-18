@@ -227,6 +227,40 @@ async function rolesPanel(kind) {
     `suggested ${suggested}; view ${view}; picked ${picked}; ${confirmed}; mine ${mine}; next ${next}; ${progress}; restored ${restored}; ${errors.slice(0, 2).join(' | ')}`);
 }
 
+// the Changes tab lists an edited zone and its ↺ puts it back; the material as .dds and .exr read back the same; Save
+// image makes a PNG; the history kept while another variant is shown
+async function changesAndFiles(kind) {
+  errors.length = 0;
+  const r = await evaluate(`(async () => { const d = document, S = window.lutstudio.S, sl = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    d.querySelectorAll('#zoneList .item')[0].click(); await sl(200);
+    const hx = d.querySelector('#fields .field input.hex'); hx.value = '#00ff00'; hx.dispatchEvent(new Event('change')); await sl(400);
+    d.getElementById('changesBtn').click(); await sl(1200);
+    out.listed = [...d.querySelectorAll('.chZone')].some(z => z.dataset.h === S.sel.lut && +z.dataset.z === S.sel.zone);
+    const n0 = d.querySelectorAll('.chZone').length;
+    [...d.querySelectorAll('.chZone')].find(z => z.dataset.h === S.sel.lut && +z.dataset.z === S.sel.zone)?.querySelector('.chReset').click(); await sl(800);
+    out.reset = d.querySelectorAll('.chZone').length === n0 - 1;
+    d.getElementById('partsTab').click(); await sl(300);
+    const l = S.luts.get(S.sel.lut), px = Array.from(l.edited);
+    for (const f of ['dds', 'exr']) {
+      const b = await (await fetch('/api/lut/file?format=' + f, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ Width: l.w, Height: l.h, Px: px }) })).arrayBuffer();
+      const t = await (await fetch('/api/lut/read', { method: 'POST', body: b })).json();
+      out[f] = t.width === l.w && t.height === l.h && t.px.every((v, i) => Math.abs(v - px[i]) < 1e-6);
+    }
+    d.getElementById('snapSave').click(); await sl(1500); out.saved = /^Saved [0-9]+ x [0-9]+ PNG/.test(d.getElementById('status').textContent);
+    hx.value = '#0000ff'; d.querySelector('#fields .field input.hex').value = '#0000ff'; d.querySelector('#fields .field input.hex').dispatchEvent(new Event('change')); await sl(1200);
+    const n = S.undo.length, from = S.variant;
+    window.prompt = () => 'E2E history'; d.getElementById('newVariant').click();
+    for (let i = 0; i < 60 && S.variant === from; i++) await sl(500); await sl(1500);
+    out.otherEmpty = S.undo.length === 0;
+    const v = d.getElementById('variant'); v.value = from; v.dispatchEvent(new Event('change'));
+    for (let i = 0; i < 60 && S.variant !== from; i++) await sl(500); await sl(2000);
+    out.kept = S.undo.length === n;
+    return JSON.stringify(out); })()`);
+  const v = JSON.parse(r);
+  check(`${kind}: the Changes tab lists an edit and resets it; .dds / .exr read back the same; Save image; each variant's history kept`,
+    v.listed && v.reset && v.dds && v.exr && v.saved && v.otherEmpty && v.kept && errors.length === 0, `${r}; ${errors.slice(0, 2).join(' | ')}`);
+}
+
 // several zones edited together: Ctrl+click two zones, a #rrggbb color typed goes to both (not the one between);
 // Shift+click a range; ⌖ takes a zone's color off the model; each zone row shows its role
 async function multiZone(kind) {
@@ -590,6 +624,7 @@ async function main() {
         await themePanel(kind);
         await recolorUndo(kind);
         await multiZone(kind);
+        await changesAndFiles(kind);
       }
       if (kind === 'weapon') {   // an attachment change: another optic, reloaded with no errors
         const before = parts;

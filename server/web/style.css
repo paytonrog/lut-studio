@@ -49,6 +49,13 @@ aside { background: var(--panel); overflow: auto; }
 #leftTabs.dropEnd, #rightTabs.dropEnd { box-shadow: inset -2px 0 0 var(--accent, #f2c94c); }
 body.sideOpen main { grid-template-columns: min(560px, 42vw) minmax(0, 1fr) 380px; }
 #partsActions { padding: 8px 10px 0; }
+.lutFile { flex-wrap: wrap; }
+.lutFile button { padding: 1px 8px; }
+.chGroup { margin: 6px 0 10px; }
+.chGroup .lutName { margin: 0 4px 2px; }
+.chZone { display: flex; align-items: center; gap: 5px; }
+.chZone .sub { color: var(--dim); font-size: 11px; }
+.chReset { padding: 0 6px; min-width: 0; }
 .buildCard { display: flex; gap: 14px; align-items: center; margin: 8px 0; }
 .buildCard img { width: 96px; height: 96px; border-radius: 8px; background: var(--panel2); flex: none; object-fit: cover; }
 .buildCard .bcName { font-size: 18px; font-weight: 600; margin-bottom: 4px; }

@@ -20,7 +20,8 @@ let show = null;   // {scene, theme, which}
 const lineFor = which => (which === 'mod' || which === 'game' ? 'Made with LUT Studio' : 'LUT Studio theme');
 
 // app: scene.js's app (R, api, kits, poses, clip, showItem, statusText, setEnv, snapshot, restore) and track(event,
-// props), projectName(). opts.theme: the Theme panel's looks (a theme for scene.setTheme), shown first.
+// props), projectName(). opts.theme: the Theme panel's looks (a theme for scene.setTheme), shown first; opts.scene: the
+// scene's items (scene.js SCENE's form; the editor's: its item on screen in it)
 export async function openShowcase(app, opts = {}) {
   if (show) return;
   if (!(await closeSide())) return;   // (an open panel first)
@@ -34,7 +35,7 @@ export async function openShowcase(app, opts = {}) {
   const themeOf = which => themes[which] ?? (PRESETS[which.slice(2)] ? presetTheme(which.slice(2)) : themes.mod);
   mine.which = mine.panelTheme ? 'panel' : 'mod';
   try {
-    const scene = await buildScene(app, { progress: m => { if (show === mine && $('scMsg') && m) $('scMsg').textContent = m; } });
+    const scene = await buildScene(app, { scene: opts.scene, progress: m => { if (show === mine && $('scMsg') && m) $('scMsg').textContent = m; } });
     if (show !== mine) { await scene.dispose(); return; }   // (exited while it loaded)
     mine.scene = scene;
     window.lutstudio.showcase = scene;   // (for headless checks: e2e)
