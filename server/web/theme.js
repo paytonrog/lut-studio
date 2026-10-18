@@ -252,41 +252,42 @@ Object.assign(PRESETS, {
 });
 
 // planet biomes: field camouflage for each of the game's planet biomes (as the SEAF swap theirs per planet), its colors
-// taken from the biome's daytime ground-level screenshots (the ground, plants and rock, by share): primary the
-// biome's main ground or vegetation tone, secondary its second (rock, bark, shrubs), trim its darkest shadow, cloth a
-// muted ground tone; as the game's own camo armors have it, the plates in the field color and the camo on the cloth
+// the game's own albedos of the biome's ground (its terrain layers and the plants scattered on them by how much they
+// cover, its snow; graded as the game grades them), so that under the planet's light the armor and the ground take
+// it alike (Light: Planets shows them so): primary the ground's main tone, secondary its second, trim a dark of it,
+// cloth near the primary; as the game's own camo armors have it, the plates in the field color and the camo on the cloth
 // (the fabric: under-suit, sleeves, cape), in those colors and the pattern of the biome's cover (woodland in forest,
 // tiger stripes in jungle and swamp, mottled on open ground, speckle on bare rock); matte, no glow (it gives a soldier
 // away). Names: the biomes' own (the wiki's)
 Object.assign(PRESETS, {
-  'Biome: Plains': T('#5a5a40', '#77706a', '#24221c', '#4a4a3a', { pf: FIN.matte, cc: CM(3, ['#5a5a40', '#3a3828', '#7e7466', '#1e1c16']) }),
-  'Biome: Ionic Crimson': T('#5e5656', '#6e2420', '#2a2220', '#4e4648', { pf: FIN.matte, cc: CM(1, ['#5e5656', '#6e2420', '#6e6460', '#2e2422']) }),
-  'Biome: Scorched Moor': T('#8a5a32', '#5a3420', '#2a140c', '#9a6a40', { pf: FIN.matte, cc: CM(1, ['#8a5a32', '#5a3420', '#b07e4e', '#2e140a']) }),
-  'Biome: Tundra': T('#4e5652', '#5e4a34', '#222422', '#4a5040', { pf: FIN.matte, cc: CM(3, ['#4e5652', '#3a4434', '#6f5a43', '#1e2220']) }),
-  'Biome: Volcanic Jungle': T('#4e4630', '#2e2a1c', '#1a1810', '#5a5034', { pf: FIN.matte, cc: CM(4, ['#4e4630', '#2e2a1c', '#6e5e36', '#1a1810'], 1.3) }),
-  'Biome: Ionic Jungle': T('#1e4a62', '#0e2a3c', '#08141c', '#1c3e52', { pf: FIN.matte, cc: CM(4, ['#1e4a62', '#0e2a3c', '#2e6e8e', '#061018'], 1.3) }),
-  'Biome: Ethereal Jungle': T('#4a3e58', '#2e2434', '#18121a', '#574f67', { pf: FIN.matte, cc: CM(4, ['#4a3e58', '#2e2434', '#6e6680', '#16101a'], 1.3) }),
-  'Biome: Deadlands': T('#5e5848', '#3a342a', '#1e1a16', '#5a5446', { pf: FIN.matte, cc: CM(3, ['#5e5848', '#3a342a', '#7e6e5a', '#26201a']) }),
-  'Biome: Supercolony': T('#8a7440', '#5a4a2a', '#2a2214', '#7a6a42', { pf: FIN.rough, cc: CM(1, ['#8a7440', '#5a4a2a', '#a8925a', '#3a3020']) }),
-  'Biome: Desert Dunes': T('#b07a50', '#7a4626', '#3a2214', '#c49a74', { pf: FIN.matte, cc: CM(1, ['#b07a50', '#8a5230', '#d4ac88', '#5a301a']) }),
-  'Biome: Desert Cliffs': T('#9a4a1e', '#5e2a16', '#2e1208', '#a8602e', { pf: FIN.matte, cc: CM(1, ['#9a4a1e', '#6a2c12', '#c4702a', '#3a1408']) }),
-  'Biome: Acidic Badlands': T('#a8955a', '#6a5a34', '#2a2416', '#9a8a50', { pf: FIN.matte, cc: CM(1, ['#a8955a', '#7a6a3e', '#c4b07a', '#5a4a2e']) }),
-  'Biome: Rocky Canyons': T('#5e5444', '#4a4032', '#1e1812', '#6a6650', { pf: FIN.matte, cc: CM(1, ['#5e5444', '#3a3228', '#5a3a2e', '#6a6650']) }),
-  'Biome: Moon': T('#6e727a', '#4a5058', '#1e242e', '#5a6068', { pf: FIN.matte, cc: CM(0, ['#6e727a', '#4a5058', '#8e9298', '#2e3440'], 2.2) }),
-  'Biome: Desert Oasis': T('#a8784e', '#7a5232', '#2e1e10', '#bc8b6a', { pf: FIN.matte, cc: CM(1, ['#a8784e', '#7a5232', '#c8a078', '#5e5a34']) }),
-  'Biome: Bleak Oasis': T('#3e4452', '#262a34', '#14161d', '#4e5466', { pf: FIN.matte, cc: CM(1, ['#3e4452', '#262a34', '#565e70', '#14161d']) }),
-  'Biome: Icy Glaciers': T('#b4bccc', '#4a5470', '#22283a', '#9ca0b4', { pf: FIN.matte, cc: CM(1, ['#b4bccc', '#8890a8', '#dfe4ec', '#3e465e']) }),
-  'Biome: Boneyard': T('#3a3e44', '#4d5b6a', '#1a1c20', '#3e4650', { pf: FIN.matte, cc: CM(1, ['#3a3e44', '#22252a', '#b8c2cc', '#5a3a24']) }),
-  'Biome: Cyberstan Megafactory': T('#3e444a', '#2e2220', '#1a1414', '#4a4e54', { pf: FIN.matte, cc: CM(1, ['#3e444a', '#22262a', '#8e9aa4', '#5b2d21']) }),
-  'Biome: Basic Swamp': T('#4a4128', '#2c2414', '#161208', '#5a4c30', { pf: FIN.matte, cc: CM(4, ['#4a4128', '#2e3018', '#6e5c38', '#1a160c'], 1.3) }),
-  'Biome: Haunted Swamp': T('#3e4438', '#222422', '#121412', '#464c44', { pf: FIN.matte, cc: CM(4, ['#3e4438', '#262826', '#4a5048', '#141614'], 1.3) }),
-  'Biome: Deciduous Forest': T('#556236', '#34421f', '#1a1e14', '#6a6a3c', { pf: FIN.matte, cc: CM(3, ['#556236', '#34421f', '#7a7240', '#1e2414']) }),
-  'Biome: Autumn Forest': T('#8d4a21', '#4a2711', '#24140a', '#b06a31', { pf: FIN.matte, cc: CM(3, ['#8d4a21', '#5a2c12', '#b87436', '#24140a']) }),
-  'Biome: Crimson Forest': T('#6a646a', '#4a4448', '#1e1a1e', '#5e565c', { pf: FIN.matte, cc: CM(1, ['#6a646a', '#4a4448', '#7a2030', '#2a2428']) }),
-  'Biome: Coniferous (unreleased)': T('#2e4a34', '#4a3a2a', '#1a1e1a', '#5a6a5a', { pf: FIN.matte, cc: CM(3, ['#2e4a34', '#1a2a1e', '#4a3a2a', '#0e140e']) }),
-  'Biome: Hive World': T('#8a5e1e', '#4c340d', '#2a1e0a', '#73633f', { pf: FIN.rough, cc: CM(1, ['#8a5e1e', '#5a4422', '#a7844a', '#2d200a']) }),
-  'Biome: Magma Desert': T('#2e2624', '#1a1414', '#0e0c0c', '#3a302c', { pf: FIN.rough, cc: CM(1, ['#2e2624', '#1a1414', '#4a3a34', '#5a2a1e']) }),
-  'Biome: Void Source Forest': T('#1e3050', '#121e34', '#0a1220', '#2a3e66', { pf: FIN.matte, cc: CM(3, ['#1e3050', '#0e1828', '#3a4e7e', '#0a1220']) }),
+  'Biome: Plains': T('#474d30', '#393122', '#282218', '#42472c', { pf: FIN.matte, cc: CM(3, ['#474d30', '#393122', '#7d7d7c', '#48483c']) }),
+  'Biome: Ionic Crimson': T('#544b48', '#511e0c', '#391508', '#4d4543', { pf: FIN.matte, cc: CM(1, ['#544b48', '#511e0c', '#7d7b7a', '#5f221c']) }),
+  'Biome: Scorched Moor': T('#6d645e', '#403a36', '#2d2925', '#655c56', { pf: FIN.matte, cc: CM(1, ['#6d645e', '#403a36', '#87806c', '#524c4c']) }),
+  'Biome: Tundra': T('#5c422c', '#6e550b', '#2c261f', '#543d29', { pf: FIN.matte, cc: CM(3, ['#5c422c', '#3f372c', '#606464', '#6e550b']) }),
+  'Biome: Volcanic Jungle': T('#686c0d', '#9b948b', '#3d280a', '#60630c', { pf: FIN.matte, cc: CM(4, ['#686c0d', '#57390f', '#9b948b', '#655a38'], 1.3) }),
+  'Biome: Ionic Jungle': T('#48525c', '#2e353f', '#20252c', '#424b54', { pf: FIN.matte, cc: CM(4, ['#48525c', '#2e353f', '#303b37', '#25392d'], 1.3) }),
+  'Biome: Ethereal Jungle': T('#959a9c', '#5f5960', '#433e43', '#898d90', { pf: FIN.matte, cc: CM(4, ['#959a9c', '#5f5960', '#b1a8aa', '#706b6d'], 1.3) }),
+  'Biome: Deadlands': T('#605f5e', '#6c6b69', '#333030', '#595856', { pf: FIN.matte, cc: CM(3, ['#605f5e', '#484444', '#6c6b69', '#555552']) }),
+  'Biome: Supercolony': T('#686c0d', '#9b948b', '#3d280a', '#60630c', { pf: FIN.rough, cc: CM(1, ['#686c0d', '#57390f', '#9b948b', '#655a38']) }),
+  'Biome: Desert Dunes': T('#c69861', '#865443', '#553d13', '#b68c59', { pf: FIN.matte, cc: CM(1, ['#c69861', '#79571c', '#a37140', '#865443']) }),
+  'Biome: Desert Cliffs': T('#81503f', '#944e33', '#45302b', '#774a3a', { pf: FIN.matte, cc: CM(1, ['#81503f', '#62443e', '#7f6d63', '#944e33']) }),
+  'Biome: Acidic Badlands': T('#c3ad65', '#957854', '#69543b', '#b39f5d', { pf: FIN.matte, cc: CM(1, ['#c3ad65', '#957854', '#928e97', '#a18743']) }),
+  'Biome: Rocky Canyons': T('#565151', '#704b42', '#3c3939', '#4f4a4b', { pf: FIN.matte, cc: CM(1, ['#565151', '#704b42', '#4a5c5f', '#4c5a5d']) }),
+  'Biome: Moon': T('#8c8c8b', '#9c9b99', '#4c4240', '#818180', { pf: FIN.matte, cc: CM(0, ['#8c8c8b', '#6c5f5b', '#9c9b99', '#787878'], 2.2) }),
+  'Biome: Desert Oasis': T('#ddb797', '#86795b', '#5e5440', '#cba88b', { pf: FIN.matte, cc: CM(1, ['#ddb797', '#86795b', '#cbaa91', '#b69178']) }),
+  'Biome: Bleak Oasis': T('#3e3b38', '#78726c', '#2b2927', '#393633', { pf: FIN.matte, cc: CM(1, ['#3e3b38', '#464542', '#78726c', '#585857']) }),
+  'Biome: Icy Glaciers': T('#dbdbdb', '#8a96a0', '#3e4650', '#cacaca', { pf: FIN.matte, cc: CM(1, ['#dbdbdb', '#657178', '#f0f2f4', '#8a96a0']) }),
+  'Biome: Boneyard': T('#8e98a2', '#484a4a', '#2c2e30', '#848c94', { pf: FIN.matte, cc: CM(1, ['#8e98a2', '#484a4a', '#c8daeb', '#5e6266']) }),
+  'Biome: Cyberstan Megafactory': T('#5e6064', '#424646', '#2a2c2e', '#56585c', { pf: FIN.matte, cc: CM(1, ['#5e6064', '#424646', '#a8b8c8', '#533b3a']) }),
+  'Biome: Basic Swamp': T('#4f5135', '#423a2e', '#2e2920', '#484b31', { pf: FIN.matte, cc: CM(4, ['#4f5135', '#423a2e', '#50472e', '#3f4916'], 1.3) }),
+  'Biome: Haunted Swamp': T('#645847', '#56544a', '#333125', '#5c5141', { pf: FIN.matte, cc: CM(4, ['#645847', '#494635', '#5f573b', '#56544a'], 1.3) }),
+  'Biome: Deciduous Forest': T('#676924', '#534b36', '#2b3005', '#5f6021', { pf: FIN.matte, cc: CM(3, ['#676924', '#3d4508', '#736b63', '#534b36']) }),
+  'Biome: Autumn Forest': T('#726458', '#63481d', '#3b2f1b', '#695c51', { pf: FIN.matte, cc: CM(3, ['#726458', '#544326', '#7c5603', '#63481d']) }),
+  'Biome: Crimson Forest': T('#5d100f', '#6c6966', '#410b0a', '#550f0d', { pf: FIN.matte, cc: CM(1, ['#5d100f', '#553837', '#6c6966', '#53504f']) }),
+  'Biome: Coniferous (unreleased)': T('#514836', '#444a03', '#2d2e0c', '#4a4232', { pf: FIN.matte, cc: CM(3, ['#514836', '#404111', '#7f724c', '#444a03']) }),
+  'Biome: Hive World': T('#a89f96', '#a89f8c', '#563326', '#9b928a', { pf: FIN.rough, cc: CM(1, ['#a89f96', '#7b4936', '#a89f8c', '#78706a']) }),
+  'Biome: Magma Desert': T('#353331', '#504d4b', '#1f1b0f', '#31302e', { pf: FIN.rough, cc: CM(1, ['#353331', '#1f1b0f', '#504d4b', '#46403c']) }),
+  'Biome: Void Source Forest': T('#4a5124', '#524a3f', '#332f1f', '#444b21', { pf: FIN.matte, cc: CM(3, ['#4a5124', '#49442c', '#634f36', '#524a3f']) }),
   'Biome: Super Earth Metropolis': T('#6a6a66', '#3a3c3e', '#1a1c1e', '#5a5a56', { pf: FIN.matte, cc: CM(1, ['#6a6a66', '#3a3c3e', '#8e8c86', '#222426']) }),
 });
 

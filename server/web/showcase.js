@@ -6,6 +6,7 @@
 // a vignette and the title. The frame is 16:9 (the exported image's), letterboxed in the viewport; the camera moves
 // as ever. exportCanvas(w, h) draws the same frame at that size into a 2D canvas.
 import { M4 } from './render.js';
+import { groundTile } from './planet.js';
 
 // the look's settings (the Showcase sliders: 1 = the default look; color: the light's, '' = the theme's)
 export const LOOK = {
@@ -47,6 +48,15 @@ uniform mat4 uInv; uniform vec3 uEye; uniform vec2 uNF; uniform float uFocus; un
 uniform vec3 uAccent; uniform float uK; uniform vec2 uDisc; uniform vec3 uFloorC;
 uniform mat4 uContactMat; uniform float uContactRange;
 uniform float uBg, uGlowAmt, uGlowSize, uReflect, uShadow, uHaze, uAura, uEmbers, uSeed;
+// planet lighting (uPlanet = 1): the planet's sky behind, its ground (uGroundTex: sRGB albedo, a 4 m tile) lit as the
+// renderer lights a level surface (uSunE: the sun's diffuse, uSkyUp: the sky's), exposed and graded as the scene is
+uniform float uPlanet, uExposure; uniform sampler2D uGroundTex; uniform highp sampler3D uGrade;
+uniform vec3 uSunE, uSkyUp, uSkyZ, uSkyH;
+vec3 gradeOut(vec3 c) {
+  vec3 s = clamp((log2(max(c, vec3(1e-6)) / 0.18) + 12.0) / 18.5, 0.0, 1.0);
+  return texture(uGrade, s * (32.0 / 33.0) + 0.5 / 33.0).rgb;
+}
+vec3 s2l(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 float lin(float d) { float z = d * 2.0 - 1.0; return 2.0 * uNF.x * uNF.y / (uNF.y + uNF.x - z * (uNF.y - uNF.x)); }
 vec3 unproj(vec2 uv, float d) { vec4 p = uInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return p.xyz / p.w; }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + uSeed) * 43758.5453); }
@@ -67,6 +77,28 @@ float dots(vec2 q, float cell, float rmin, float rmax, float chance, float soft_
 }
 void main() {
   vec2 px = vUv * uRes; float H = uRes.y; vec2 q = px / H;   // (frame heights)
+  if (uPlanet > 0.5) {
+    vec3 ray = normalize(unproj(vUv, 1.0) - uEye);
+    vec3 col = gradeOut(mix(uSkyH, uSkyZ, pow(clamp(ray.y, 0.0, 1.0), 0.6)) * uExposure * 0.6);
+    if (ray.y < -1e-4 && uEye.y > 0.0) {
+      float t = -uEye.y / ray.y; vec3 P = uEye + ray * t;
+      vec4 cp = uContactMat * vec4(P, 1.0); vec2 cuv = cp.xy / cp.w * 0.5 + 0.5; float occ = 0.0;
+      if (all(greaterThan(cuv, vec2(0.0))) && all(lessThan(cuv, vec2(1.0)))) {
+        for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) {
+          float hz = texture(uContact, cuv + vec2(i, j) * 0.004).r;
+          if (hz < 1.0) occ += exp(-hz * uContactRange / 0.22);
+        }
+        occ /= 25.0;
+      }
+      vec3 alb = s2l(texture(uGroundTex, P.xz / 4.0).rgb);
+      vec3 g = gradeOut(alb * (uSunE * (1.0 - 0.9 * clamp(occ * 1.6, 0.0, 1.0)) + uSkyUp) * uExposure);
+      col = mix(g, col, smoothstep(12.0, 40.0, t));
+    }
+    vec4 sc = texture(uScene, vUv);   // (drawn shaped: graded here)
+    if (sc.a > 0.0) col = texture(uGrade, sc.rgb / sc.a * (32.0 / 33.0) + 0.5 / 33.0).rgb * sc.a + col * (1.0 - sc.a);
+    o = vec4(col, 1.0);
+    return;
+  }
   vec3 col = vec3(0.0235, 0.0275, 0.0353) * uBg;
   // the light behind: a wide soft glow, a brighter core, a hot center (around the projected anchor)
   float d = length(q - uDisc);
@@ -228,7 +260,11 @@ export class Showcase {
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     gl.useProgram(prog.p);
     let unit = 0;
-    for (const [name, tex] of Object.entries(textures)) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(u[name], unit); unit++; }
+    for (const [name, tex] of Object.entries(textures)) {   // (a 3D texture: {tex3d})
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      if (tex?.tex3d) gl.bindTexture(gl.TEXTURE_3D, tex.tex3d); else gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(u[name], unit); unit++;
+    }
     for (const [name, v] of Object.entries(uniforms)) {
       if (!u[name]) continue;
       if (typeof v === 'number') gl.uniform1f(u[name], v);
@@ -306,21 +342,55 @@ export class Showcase {
     const a = this.anchor, cl = [0, 1, 2, 3].map(r => vp[r] * a[0] + vp[4 + r] * a[1] + vp[8 + r] * a[2] + vp[12 + r]);
     const disc = [(cl[0] / cl[3] * 0.5 + 0.5) * W / H, (cl[1] / cl[3] * 0.5 + 0.5)];
     const accent = hex01(L.color || this.accent), seed = 0.123;
+    const pe = R.env?.planet && R.env.grade?.tex ? R.env : null, pl = this.planetUniforms(pe);
     this.pass(this.p.comp, this.comp, {
+      ...pl.u,
       uInv: inv, uEye: eye, uNF: [near, far], uFocus: focus, uRes: [W, H], uAccent: accent, uK: this.k, uDisc: disc,
       uFloorC: this.floorC, uContactMat: cm, uContactRange: 2.5,
       uBg: L.bg, uGlowAmt: L.glow, uGlowSize: L.glowSize, uReflect: L.reflect, uShadow: L.shadow, uHaze: L.haze, uAura: L.aura,
       uEmbers: L.embers, uSeed: seed,
-    }, { uScene: this.scene.tex, uDepth: this.scene.depth, uRefl: this.refl.tex, uReflDepth: this.refl.depth, uContact: this.contact.depth, uGlow: this.glowA.tex });
+    }, { uScene: this.scene.tex, uDepth: this.scene.depth, uRefl: this.refl.tex, uReflDepth: this.refl.depth, uContact: this.contact.depth, uGlow: this.glowA.tex,
+      uGroundTex: pl.ground, uGrade: { tex3d: pl.grade } });
     // bloom (22 px at 2560 wide)
-    this.pass(this.p.bright, this.bloomA, { uAmt: L.bloom }, { uSrc: this.comp.tex });
+    this.pass(this.p.bright, this.bloomA, { uAmt: pe ? 0 : L.bloom }, { uSrc: this.comp.tex });
     this.blur(this.bloomA, this.bloomB, 22 * s / 4);
     const hasTitle = this.titleTexture(W, H) ? 1 : 0;
     if (!size) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.05, 0.055, 0.06, 1); gl.clear(gl.COLOR_BUFFER_BIT); }
-    this.pass(this.p.final, size ? this.out : null, { uRes: [W, H], uPunch: L.punch, uGrain: L.grain, uVignette: L.vignette, uHasTitle: hasTitle, uSeed: 0.71 },
+    this.pass(this.p.final, size ? this.out : null, { uRes: [W, H], uPunch: pe ? 0 : L.punch, uGrain: L.grain, uVignette: L.vignette, uHasTitle: hasTitle, uSeed: 0.71 },
       { uComp: this.comp.tex, uBloom: this.bloomA.tex, uTone: this.toneTex, uTitle: this.titleTex }, size ? null : rect);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return null;
+  }
+  // planet lighting's uniforms and textures (pe: the planet environment, or null: off). The ground tile is built once
+  // per planet (planet.js); until it is, the ground's mean color
+  planetUniforms(pe) {
+    const gl = this.R.gl;
+    if (!this.blankGround) {
+      this.blankGround = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.blankGround);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([90, 90, 90, 255]));
+      this.blank3 = gl.createTexture(); gl.bindTexture(gl.TEXTURE_3D, this.blank3);
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, 1, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    }
+    if (!pe) return { u: { uPlanet: 0 }, ground: this.blankGround, grade: this.blank3 };
+    const p = pe.planet;
+    if (this.groundFor !== p.id) {
+      this.groundFor = p.id; this.groundTex = null;
+      groundTile(p).then(t => {
+        if (this.groundFor !== p.id) return;
+        const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, t.w, t.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(t.px.buffer));
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        this.groundTex = tex;
+      });
+    }
+    const sunE = pe.sun.map(c => c * pe.sunIntensity * (this.R.sunOn === false ? 0 : 1) * Math.max(Math.sin(pe.sunElev), 0) / Math.PI);
+    return {
+      u: { uPlanet: 1, uExposure: pe.exposure, uSunE: sunE, uSkyUp: pe.zenith.map((z, k) => 0.6 * z + 0.4 * pe.horizon[k]),
+        uSkyZ: pe.zenith, uSkyH: pe.horizon },
+      ground: this.groundTex ?? this.blankGround, grade: pe.grade.tex,
+    };
   }
   // the frame at w x h -> a 2D canvas
   exportCanvas(w, h) {

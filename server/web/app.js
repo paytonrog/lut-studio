@@ -72,6 +72,7 @@ async function init() {
   $('env').append(own);
   $('env').value = 'Studio';
   await loadGameEnvs();
+  await loadPlanets();
   for (const [name, v] of DEBUG_VIEWS) $('debugView').add(new Option(name, v));
   setEnv(); showSunElev();
   fillVariants();
@@ -146,9 +147,44 @@ async function loadGameEnvs() {
   $('env').append(g);
 }
 
+// planet lighting (planets/planets.json, from the game's environment settings): per planet biome its sun's color,
+// its auto exposure's target, its ground (the terrain layers' graded albedo, linear; snow) and its day grading with
+// the game's SDR output (planets/<id>.png, R.loadGrade). The game exposes the frame to put its mean luminance at the
+// target: here the ground's mean, lit by the sun and the sky, is put there; the sky is LUT Studio's (the game's is
+// computed at run time), tinted toward the planet's fog
+S.planets = [];
+const gradeCache = new Map();   // planet id -> promise of {tex, n}
+async function loadPlanets() {
+  try { S.planets = (await (await fetch('planets/planets.json')).json()).planets; } catch { S.planets = []; }
+  if (!S.planets.length) return;
+  const g = document.createElement('optgroup'); g.label = 'Planets (the game\'s light)';
+  for (const p of S.planets) g.append(new Option(p.name, 'planet:' + p.id));
+  $('env').append(g);
+}
+const lum709 = c => 0.2127 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+// the ground's mean albedo (linear): its layers, snow (where it has some) counting as much as all of them
+function planetGround(p) {
+  const L = p.ground.map(l => l.albedo), m = [0, 1, 2].map(k => L.reduce((s, a) => s + a[k], 0) / Math.max(L.length, 1));
+  return p.snow ? m.map((v, k) => 0.5 * v + 0.5 * p.snow[k]) : m;
+}
+function planetEnv(p) {
+  const amb = 0.55 * (p.ambient ?? 1), sunI = 3, elev = 0.7;
+  const horizon = p.fog.map((c, k) => c * amb * p.ambientTint[k]);
+  const zenith = p.fog.map((c, k) => (0.6 * c + 0.4 * [0.35, 0.5, 0.8][k]) * amb * 0.8 * p.ambientTint[k]);
+  const gnd = planetGround(p);
+  // a level surface's light, as the shader lights it (shaders.js: the sun's diffuse over pi, the sky's hemisphere)
+  const E = sunI * Math.sin(elev) * lum709(p.sun) / Math.PI + lum709(zenith.map((z, k) => 0.6 * z + 0.4 * horizon[k]));
+  const e = { ...ENVS['Studio'], sun: p.sun, sunIntensity: sunI, sunElev: elev, zenith, horizon,
+    ground: gnd.map(v => v * E), exposure: p.exposureTarget / Math.max(lum709(gnd) * E, 1e-4), planet: p, grade: {} };
+  if (!gradeCache.has(p.id)) gradeCache.set(p.id, R.loadGrade('planets/' + p.id + '.png'));
+  gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => status('Planet light: ' + err.message, true));
+  return e;
+}
+
 function setEnv() {
   const v = $('env').value, ge = v.startsWith('game:') ? S.gameEnvs.find(e => 'game:' + e.name === v) : null;
-  const e = ge ? { ...ENVS['Studio'], sunIntensity: 0, ...GAME_ENV_LOOK[ge.name], game: ge } : { ...ENVS[v] };
+  const pl = v.startsWith('planet:') ? S.planets.find(p => 'planet:' + p.id === v) : null;
+  const e = pl ? planetEnv(pl) : ge ? { ...ENVS['Studio'], sunIntensity: 0, ...GAME_ENV_LOOK[ge.name], game: ge } : { ...ENVS[v] };
   const az = e.sunAz ?? +$('sunAz').value;
   if (e.sunAz !== undefined) $('sunAz').value = e.sunAz;
   e.sunAz = az * Math.PI / 180;

@@ -1,6 +1,6 @@
 // WebGL2 renderer for LUT Studio: armor pieces exported by filediver (glTF binary), drawn with the ported armor
 // shader (shaders.js). No external libraries, so the editor works offline.
-import { VERT, FRAG, CAPE_FRAG, BG_VERT, BG_FRAG, SHADOW_FRAG, SHADOW_CAPE_FRAG } from './shaders.js';
+import { VERT, FRAG, CAPE_FRAG, BG_VERT, BG_FRAG, SHADOW_FRAG, SHADOW_CAPE_FRAG, GRADE_FRAG } from './shaders.js';
 
 // ---------- small matrix helpers (column-major, like WebGL)
 export const M4 = {
@@ -479,6 +479,7 @@ export class Renderer {
     this.prog = this.program(VERT, FRAG);
     this.capeProg = this.program(VERT, CAPE_FRAG);
     this.bg = this.program(BG_VERT, BG_FRAG);
+    this.gradeProg = this.program(BG_VERT, GRADE_FRAG);
     this.tex = new Map();        // hash -> {tex, layers}
     this.luts = new Map();       // key -> {tex, w, h}
     this.pieces = [];            // drawable primitives
@@ -515,6 +516,50 @@ export class Renderer {
     const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
     for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); u[info.name.replace(/\[0\]$/, '')] = gl.getUniformLocation(p, info.name); }
     return { p, u };
+  }
+
+  // the frame drawn shaped into a target, then graded onto the canvas (size: an export at w x h, left in this.gradeT)
+  gradeDraw(time, size) {
+    const gl = this.gl, W = size ? size[0] : this.canvas.width, H = size ? size[1] : this.canvas.height;
+    let t = this.gradeT;
+    if (!t || t.w !== W || t.h !== H) {
+      if (t) { gl.deleteFramebuffer(t.fbo); gl.deleteTexture(t.tex); gl.deleteRenderbuffer(t.rb); }
+      t = this.gradeT = { w: W, h: H, fbo: gl.createFramebuffer(), tex: gl.createTexture(), rb: gl.createRenderbuffer() };
+      gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, W, H);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, t.rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, W, H);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.tex, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.rb);
+    }
+    this.target = t;
+    try { this.draw(time); } finally { this.target = null; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
+    gl.useProgram(this.gradeProg.p);
+    this.bindTex(0, gl.TEXTURE_2D, t.tex, this.gradeProg.u.uSrc);
+    this.bindTex(1, gl.TEXTURE_3D, this.env.grade.tex, this.gradeProg.u.uGrade);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.enable(gl.DEPTH_TEST);
+    return null;
+  }
+
+  // a planet look's 3D LUT from its strip (planets/<id>.png: n*n x n, x = r + n b, y = g) -> {tex, n}
+  async loadGrade(url) {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('no ' + url)); i.src = url; });
+    const n = img.height, cv = document.createElement('canvas'); cv.width = img.width; cv.height = n;
+    const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const src = cx.getImageData(0, 0, img.width, n).data, px = new Uint8Array(n * n * n * 4);
+    for (let b = 0; b < n; b++) for (let g = 0; g < n; g++) for (let r = 0; r < n; r++) {
+      const i = (g * img.width + b * n + r) * 4, o = ((b * n + g) * n + r) * 4;
+      px[o] = src[i]; px[o + 1] = src[i + 1]; px[o + 2] = src[i + 2]; px[o + 3] = 255;
+    }
+    const gl = this.gl, tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_3D, tex);
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, n, n, n, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE],
+      [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_3D, k, v);
+    return { tex, n };
   }
 
   makeArray(w, h, layers, data, mips, float = false) {
@@ -832,6 +877,8 @@ export class Renderer {
       for (let f = 0; f < 6; f++) gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, 2 + f, b, b, 1, gl.RGBA, gl.FLOAT, c.diff.data.subarray(f * b * b * 4, (f + 1) * b * b * 4));
       this.tables.diff = c;
     }
+    // planet lighting: the frame written shaped, graded after (draw's grade pass; the showcase's composite)
+    if (u.uGradeOn) gl.uniform1i(u.uGradeOn, e.grade?.tex ? 1 : 0);
     if (!c) return;
     gl.uniform1f(u.uEnvMips, c.mips); gl.uniform1f(u.uEnvScale, e.envScale ?? 1); gl.uniform1f(u.uEnvRot, e.envRot ?? 0);
     if (u.uSH) gl.uniform3fv(u.uSH, c.sh);
@@ -944,6 +991,8 @@ export class Renderer {
   draw(time = 0, pick = null, size = null) {
     // the showcase (showcase.js): its passes draw the scene through here (into its own targets) and finish the frame
     if (!pick && this.post && !this.postInner) return this.post.draw(this, time, size);
+    // planet lighting: the frame into a target of its own (shaped), then through the planet's 3D LUT
+    if (!pick && !this.target && !this.postInner && this.env?.grade?.tex) return this.gradeDraw(time, size);
     const gl = this.gl, cv = this.canvas, tg = !pick ? this.target : null;   // (target: {fbo, w, h}, an offscreen one)
     const W = tg ? tg.w : size ? size[0] : cv.width, H = tg ? tg.h : size ? size[1] : cv.height;
     const m = this.matrices(W / H);

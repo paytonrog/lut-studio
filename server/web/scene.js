@@ -169,9 +169,9 @@ export async function buildScene(app, opts = {}) {
     await loadSlot(si);
   }
   sync(); R.pose = null;
-  const prevEnv = await app.setEnv(ENV);
+  const prevEnv = await app.setEnv(opts.env ?? ENV);   // (opts.env: another lighting, e.g. a planet's: 'planet:<id>')
   await sleep(500);
-  const baseExposure = R.env.exposure;
+  let baseExposure = R.env.exposure;
   sc = new Showcase(R);
   // the glow behind the squad, the pool of light at its feet (world: x is the scene's mirrored)
   const cx = divers.length ? -divers.reduce((a, it) => a + it.at[0], 0) / divers.length : 0, cz = divers.length ? divers.reduce((a, it) => a + it.at[1], 0) / divers.length : 0;
@@ -181,11 +181,14 @@ export async function buildScene(app, opts = {}) {
   R.post = sc;
   let n = 0, auto = 1, theme = null, busy = Promise.resolve();
   const rimLight = () => {
+    if (R.env.planet) { R.rim = []; return; }   // (a planet's light: its sun and sky only)
     const lin = hexRGB(sc.look.color || sc.accent).map(c => Math.pow(c / 255, 2.2)), top = Math.max(...lin, 1e-3), I = RIM * sc.look.rim * (0.35 + 0.65 * sc.sat);
     R.rim = [{ on: true, az: 200, el: 22, color: lin.map(c => c / top), intensity: I }, { on: true, az: 160, el: 22, color: lin.map(c => c / top), intensity: I }];
   };
   const out = {
     notes, items, slots, showcase: sc,
+    // another lighting for the scene (a Light menu value, e.g. 'planet:<id>'); the next setTheme exposes for it
+    async setEnv(name) { await app.setEnv(name); await sleep(300); baseExposure = R.env.exposure; },
     // a theme on the scene: { name, looksFor(zones, rowOf) -> {role: LUT row}, colors: [[role, hex]], base } (no
     // looksFor: the items as they are; base 'vanilla': as the game has them, else as in the mod): the items' LUTs, the
     // light's color (the theme's colors, else the squad's), the exposure (lowered while the squad's lit parts would
@@ -198,7 +201,7 @@ export async function buildScene(app, opts = {}) {
       sc.accent = pal.accent; sc.text = pal.text; sc.k = pal.k; sc.sat = pal.sat; sc.titleKey = null;
       rimLight();
       await sleep(200);   // (the LUTs uploaded)
-      auto = autoExposure(R, items, baseExposure);
+      auto = R.env.planet ? 1 : autoExposure(R, items, baseExposure);   // (a planet: its own exposure)
       R.env.exposure = baseExposure * auto * sc.look.exposure;
       say('');
     },

@@ -325,6 +325,11 @@ uniform vec3 uDLDir[4]; uniform vec3 uDLColor[4]; uniform float uUiAmbient; unif
 uniform vec4 uTone; uniform float uToneE;
 uniform int uRawOut;   // 1: the tone curve's output is the sRGB value (the 3D UI pass writes it as is; no encode)
 uniform float uExposure; uniform float uEmissiveScale;
+// a planet's look (planet lighting, uGradeOn): the exposed scene color written shaped, log2(x / 0.18) + 12 over 18.5,
+// for a pass after (GRADE_FRAG; the showcase's composite) to grade with the planet's 3D LUT (no sampler here: this
+// shader has the 16 a GPU must give)
+uniform int uGradeOn;
+vec3 shaped(vec3 c) { return clamp((log2(max(c, vec3(1e-6)) / 0.18) + 12.0) / 18.5, 0.0, 1.0); }
 ${LIGHTING}
 // sun shadows: LUT Studio's own shadow map (orthographic along the sun over the scene, render.js), not the game's
 // cascades: 3x3 bilinear PCF (the game's footprint: 4 gathers at +-1 texel / 9, lit:1360-1438) with a normal offset.
@@ -975,8 +980,11 @@ void main() {
   vec3 col = dif + spe + sub + emis * uEmissiveScale;
 
   col *= uExposure;
-  col = (col * (uTone.x * col + uTone.y)) / (col * (uTone.z * col + uTone.w) + uToneE);  // (default: the ACES fit)
-  col = uRawOut == 1 ? sat(col) : linearToSrgb(sat(col));
+  if (uGradeOn == 1) col = shaped(col);
+  else {
+    col = (col * (uTone.x * col + uTone.y)) / (col * (uTone.z * col + uTone.w) + uToneE);  // (default: the ACES fit)
+    col = uRawOut == 1 ? sat(col) : linearToSrgb(sat(col));
+  }
   if (uHighlightZone >= 0 && zone == uHighlightZone) col = mix(col, vec3(1.0, 0.85, 0.2), 0.25 + 0.15 * sin(uTime * 6.0));
   outColor = vec4(col, 1.0);
 }`;
@@ -1013,6 +1021,11 @@ in vec2 vNdc; out vec4 o;
 uniform mat4 uInvViewProj; uniform vec3 uCamPos;
 uniform vec3 uSkyZenith; uniform vec3 uSkyHorizon; uniform vec3 uGround; uniform float uExposure;
 uniform int uEnvCube; uniform samplerCube uEnvSpec; uniform float uEnvScale; uniform float uEnvRot; uniform float uBgLod;
+// a planet's look (planet lighting, uGradeOn): the exposed scene color written shaped, log2(x / 0.18) + 12 over 18.5,
+// for a pass after (GRADE_FRAG; the showcase's composite) to grade with the planet's 3D LUT (no sampler here: this
+// shader has the 16 a GPU must give)
+uniform int uGradeOn;
+vec3 shaped(vec3 c) { return clamp((log2(max(c, vec3(1e-6)) / 0.18) + 12.0) / 18.5, 0.0, 1.0); }
 uniform vec2 uBackdrop;   // > 0: a dimmed grey backdrop, sRGB uBackdrop.x at the left edge to .y at the right (the
                           // Armory menu's blurred, darkened scene), the cube's brightness only varying it a little
 vec3 cubeDir(vec3 v) {
@@ -1028,8 +1041,20 @@ void main() {
   vec3 s = h >= 0.0 ? mix(uSkyHorizon, uSkyZenith, pow(clamp(h, 0.0, 1.0), 0.6)) : mix(uSkyHorizon, uGround, clamp(-h * 4.0, 0.0, 1.0));
   vec3 col = s * uExposure * 0.6;
   if (uEnvCube == 1) col = textureLod(uEnvSpec, cubeDir(d), uBgLod).rgb * uEnvScale * uExposure;
-  col = (col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14);
-  vec3 sr = linearToSrgb(clamp(col, 0.0, 1.0));
+  vec3 sr = uGradeOn == 1 ? shaped(col)
+    : linearToSrgb(clamp((col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14), 0.0, 1.0));
   if (uBackdrop.x > 0.0) sr = vec3(mix(uBackdrop.x, uBackdrop.y, clamp(vNdc.x * 0.5 + 0.5, 0.0, 1.0)) * (0.7 + 0.6 * dot(sr, vec3(0.2126, 0.7152, 0.0722))));
   o = vec4(sr, 1.0);
+}`;
+
+// planet lighting's grading: the frame drawn shaped (uGradeOn) through the planet's 3D LUT (planets/<id>.png: its day
+// grading and the game's SDR output) onto the canvas
+export const GRADE_FRAG = `#version 300 es
+precision highp float;
+precision highp sampler3D;
+in vec2 vNdc; out vec4 o;
+uniform sampler2D uSrc; uniform sampler3D uGrade;
+void main() {
+  vec4 c = texture(uSrc, vNdc * 0.5 + 0.5);
+  o = vec4(texture(uGrade, c.rgb * (32.0 / 33.0) + 0.5 / 33.0).rgb, 1.0);
 }`;

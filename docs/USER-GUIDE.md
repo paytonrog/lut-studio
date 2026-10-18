@@ -160,8 +160,12 @@ whenever it's worn.
   own output (no exposure; matched against an in-game screenshot). **Warbond reward showroom** is the studio rewards are
   shown in (a black box, its five spot lights) and **Ship customization chamber** the ship's chamber (its light
   above the center, the ship's exposure). Also the **Super Destroyer** hub and interior, a **desert planet** by day and **space**, shown behind the armor
-  and in its reflections, and lit with the game's own lighting math (see Accuracy). The other presets are LUT
-  Studio's own light setups (snow, jungle, night…), lit the same way. **Adjust ▾** next to it holds the rest:
+  and in its reflections, and lit with the game's own lighting math (see Accuracy). *Planets* lights the armor as
+  a planet biome does by day: its sun's color, the game's auto exposure aimed at the planet's ground, and the
+  planet's own color grading and the game's screen output (from the game's environment settings and shaders); in the
+  Showcase the squad stands on a patch of the planet's ground (its terrain textures, in their graded colors, with its
+  snow), so you can judge a camo against it. The sky is LUT Studio's (the game's is computed as it runs), tinted
+  toward the planet's fog. The other presets are LUT Studio's own light setups (snow, jungle, night…), lit the same way. **Adjust ▾** next to it holds the rest:
   **Exposure**; the **Sun** (in a game environment: a key light at the capture's brightest spot) with **On**, its
   **Direction** around the armor and **Height** (each lighting preset sets its own height until you move it);
   **Shadows**; and LUT Studio's two side lights, **Blue light** and **Yellow light** (cool on the left, warm on the
@@ -243,7 +247,7 @@ whenever it's worn.
   with LUTs left to confirm, and the progress line counts them. LUT Studio ships reviewed roles; yours come on top.
   **Export roles.json** saves the built-in roles with yours on top; **Forget mine here** drops yours on screen.
 - **Theme…**: pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
-  Legion and Neon Circuit, some very silly ones, and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the colors of its planets' ground, plants and rock: the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
+  Legion and Neon Circuit, some very silly ones, and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,

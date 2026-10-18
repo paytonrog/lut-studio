@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'dist' / 'web'
 WEB = ROOT / 'server' / 'web'
 SKIP = set()   # files of server/web/ that stay out of the site
+DIRS = {'planets'}   # folders of server/web/ that go in the site (planet lighting data)
 
 
 def run(cmd, **kw):
@@ -98,11 +99,13 @@ def main():
     for f in WEB.iterdir():
         if f.is_file() and f.name not in SKIP and f.name != 'index.html':
             shutil.copy(f, stage)
+        elif f.is_dir() and f.name in DIRS:
+            shutil.copytree(f, stage / f.name)
     text, n = notices(wasm)
     (stage / 'THIRD-PARTY-NOTICES.txt').write_text(text, encoding='utf-8')
     h = hashlib.sha256()
-    for f in sorted(stage.iterdir()):
-        h.update(f.name.encode() + f.read_bytes())
+    for f in sorted(p for p in stage.rglob('*') if p.is_file()):
+        h.update(f.relative_to(stage).as_posix().encode() + f.read_bytes())
     folder = f'{version}-{h.hexdigest()[:10]}'
     stage.rename(OUT / folder)
     page = (WEB / 'index.html').read_text(encoding='utf-8')

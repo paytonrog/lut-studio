@@ -28,6 +28,9 @@ const opts = {
   weapons: list('weapons')?.map(w => (w === '' ? undefined : /^(none|-)$/i.test(w) ? null : w)),
   poses: list('pose')?.map(q => (q === '' ? undefined : /^\d+$/.test(q) ? +q : q)),
 };
+// --env=planet:<id>: a planet's lighting (or any Light menu value); --env=planets: each "Biome: X" preset on its own
+// planet's (the planet named X)
+if (flag('env') && flag('env') !== 'planets') opts.env = flag('env');
 if (flag('scene')) { const j = JSON.parse(readFileSync(flag('scene'), 'utf8')); if (j.items) opts.scene = j.items; if (j.cam) opts.cam = j.cam; }
 
 const browsers = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'];
@@ -89,6 +92,10 @@ for (const name of presets) {
     const { PRESETS, presetTheme } = await import('./theme.js'), name = ${JSON.stringify(name)};
     if (!PRESETS[name] && name !== 'game') return null;
     const theme = PRESETS[name] ? presetTheme(name) : { name, colors: [], looksFor: () => ({}) };
+    if (${JSON.stringify(flag('env') === 'planets')}) {
+      const pl = window.lutstudio.S.planets.find(p => name.replace(/^Biome: /, '').replace(/ \(showcase\)$/, '') === p.name);
+      if (pl) await window.themeScene.setEnv('planet:' + pl.id);
+    }
     const c = await window.themeScene.render({ ...theme, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)});
     return c.toDataURL('image/png');
   })()`);
