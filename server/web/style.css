@@ -49,6 +49,21 @@ aside { background: var(--panel); overflow: auto; }
 #leftTabs.dropEnd, #rightTabs.dropEnd { box-shadow: inset -2px 0 0 var(--accent, #f2c94c); }
 body.sideOpen main { grid-template-columns: min(560px, 42vw) minmax(0, 1fr) 380px; }
 #partsActions { padding: 8px 10px 0; }
+.buildCard { display: flex; gap: 14px; align-items: center; margin: 8px 0; }
+.buildCard img { width: 96px; height: 96px; border-radius: 8px; background: var(--panel2); flex: none; object-fit: cover; }
+.buildCard .bcName { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.buildLog pre { max-height: 240px; overflow: auto; }
+#modalBody ol { margin: 4px 0 10px; padding-left: 20px; }
+#zoneList .item.sel.also { background: color-mix(in srgb, var(--accent, #f2c94c) 10%, transparent); }
+#fieldsHead .multi { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--accent, #f2c94c); font-size: 12px; }
+.field input.rgb { width: 56px; }
+.field input.hex { width: 10ch; flex: none; font-family: ui-monospace, monospace; }
+.field button.drop { padding: 0 8px; min-width: 0; flex: none; font-size: 15px; line-height: 1; }
+.field .recent { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
+.field .recent:empty { display: none; }
+.field .recent .sw { width: 16px; height: 16px; padding: 0; min-width: 0; border: 1px solid var(--line); border-radius: 3px; }
+body.eyedrop #canvas { cursor: crosshair; }
+.roleTag { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--rc); color: var(--rc); white-space: nowrap; flex: none; }
 #partsActions button { width: 100%; }
 #thGroups.off { opacity: 0.45; pointer-events: none; }
 .thTint { width: 26px; height: 22px; padding: 0; border: 1px solid var(--line); flex: none; }

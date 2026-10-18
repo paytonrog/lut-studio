@@ -13,7 +13,7 @@
   <button id="projects" title="Back to your projects (everything is saved)">☰ Projects</button>
   <div class="brand">LUT Studio <span id="projName"></span></div>
   <button id="projectBtn" title="Save as, export">Project…</button>
-  <label>Variant <select id="variant"></select></label>
+  <label title="A variant is one color scheme of this mod: players pick one of them in their mod manager">Variant <select id="variant"></select></label>
   <button id="newVariant" title="Copy the current variant as a new color scheme">+ Variant</button>
   <label title="What the preview shows: one of this mod's items (an armor, helmet or cape goes on the Helldiver; a vehicle, weapon, backpack or SEAF item on its own), or one that shares its LUTs">Show <select id="kit"></select></label>
   <button id="addArmor" title="Add another armor, helmet, cape, vehicle, weapon, backpack or SEAF item to this mod (its LUTs, in every variant)">+ Item</button>
@@ -31,7 +31,7 @@
 <main>
   <aside id="left">
     <nav id="leftTabs" role="tablist">
-      <button id="partsTab" class="on" role="tab" title="The mod's LUTs and the zones of the one picked">Parts</button>
+      <button id="partsTab" class="on" role="tab" title="The mod's materials (LUTs) and the zones of the one picked">Materials</button>
       <button id="themeBtn" role="tab" title="Give every armor, helmet, cape or weapon the looks of the item on screen, one per zone role">Theme</button>
       <button id="modPageBtn" role="tab" title="The mod's name, description, icon, variants and their pictures, as the mod managers show them">Mod page</button>
       <button id="decals" role="tab" hidden title="Replace emblems, numbers and markings on this model's decal sheet with your own images">Decals</button>
@@ -42,11 +42,11 @@
     <div id="partsPane">
       <div class="row" id="partsActions"><button id="recolorBtn" title="New colors for the whole item on screen in one go: a color per role (primary, secondary, trim, cloth...) or a ready-made theme, on every zone of that role">Recolor this item…</button></div>
       <section>
-        <h2>LUTs</h2>
+        <h2 title="Each part's paint, finish and wear. A LUT is the game's table of a material's looks: one row per zone">Materials <span class="hint">(LUTs)</span></h2>
         <div id="lutList" class="list"></div>
       </section>
       <section>
-        <h2>Zones <span class="hint">click the model to pick</span></h2>
+        <h2 title="A zone is one area of a material that takes its own look (its color, finish, wear...)">Zones <span class="hint">areas with their own look: click the model to pick one</span></h2>
         <div id="zoneList" class="list"></div>
       </section>
     </div>

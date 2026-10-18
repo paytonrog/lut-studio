@@ -10,7 +10,7 @@ import { showHome } from './home.js';
 import { decalDialog } from './decals.js';
 import { designDialog } from './designs.js';
 import { maskDialog } from './masks.js';
-import { rolesDialog } from './roles.js';
+import { rolesDialog, ROLE_INFO } from './roles.js';
 import { themeDialog } from './theme.js';
 import { track, trackErrors } from './analytics.js';
 import { modPage } from './modpage.js';
@@ -52,7 +52,7 @@ const REVIEW = (() => {
 const S = {
   schema: null, state: null, variant: null, kit: null, body: 'slim',
   luts: new Map(),       // hash -> {w, h, kind, vanilla, edited|null, labels, note, dirty}
-  sel: { lut: null, zone: 0 },
+  sel: { lut: null, zone: 0, more: new Set() },   // more: other zones of that LUT selected with it (Ctrl / Shift)
   undo: [], redo: [], lastSnap: 0, saving: null, clip: null, loadGen: 0, varGen: 0,
 };
 let R;
@@ -749,8 +749,15 @@ function snapshot() {
 
 function setCell(zone, col, ch, v) {
   const l = selLut(); if (!l?.edited || S.varLoading) return;   // (a variant loading: its LUTs aren't in yet)
-  l.edited[cell(l, zone, col, ch)] = v;
+  for (const z of selZones(zone)) l.edited[cell(l, z, col, ch)] = v;
 }
+// the zones an edit of zone goes to: it and the others selected with it (when it's the selected one)
+function selZones(zone = S.sel.zone) {
+  const l = selLut();
+  return zone === S.sel.zone ? [zone, ...[...S.sel.more].filter(z => z !== zone && z < (l?.h ?? 0))] : [zone];
+}
+// one zone selected again (another LUT, a plain click)
+function selectOnly() { S.sel.more.clear(); }
 
 function changed(l) {
   if (l.pull) adopt(l);
@@ -768,6 +775,7 @@ function restore(stack, other) {
   l.edited.set(s.px); l.labels = s.labels;
   S.sel.lut = s.lut;
   S.sel.zone = Math.min(S.sel.zone, l.h - 1);
+  if (S.luts.get(S.sel.lut) !== l) selectOnly();
   changed(l);
   renderLists(); renderFields();
 }
@@ -861,7 +869,7 @@ function renderLists() {
   if (big) {
     const t = document.createElement('div');
     t.className = 'item more';
-    t.textContent = S.showAllLuts ? `Show only this item's LUTs` : `Show all ${(v.luts ?? []).length} LUTs of the mod (${hidden} more)`;
+    t.textContent = S.showAllLuts ? `Show only this item's materials` : `Show all ${(v.luts ?? []).length} materials of the mod (${hidden} more)`;
     t.onclick = () => { S.showAllLuts = !S.showAllLuts; renderLists(); };
     list.appendChild(t);
   }
@@ -949,28 +957,53 @@ function renderZones() {
   const zl = $('zoneList');
   zl.innerHTML = '';
   const l = selLut();
-  if (!l?.edited) { zl.innerHTML = '<div class="empty">Select a LUT.</div>'; return; }
+  if (!l?.edited) { zl.innerHTML = '<div class="empty">Pick a material above.</div>'; return; }
   const rows = l.kind === 'pattern' ? 1 : l.h;
+  const roles = l.kind === 'material' ? zoneRoles(S.sel.lut) : null;   // (each zone's role, once read: what it is)
   for (let z = 0; z < rows; z++) {
     const it = document.createElement('div');
-    it.className = 'item' + (z === S.sel.zone ? ' sel' : '');
+    it.className = 'item' + (z === S.sel.zone ? ' sel' : S.sel.more.has(z) ? ' sel also' : '');
     const c = [0, 1, 2].map(ch => l.edited[cell(l, z, 0, ch)]);   // (cape LUT: col 0 is the trim color - no swatch)
     it.innerHTML = `<span class="swatch" style="${l.kind === 'cape' ? 'visibility:hidden' : `background:#${c.map(hex).join('')}`}"></span>
-      <input class="zoneLabel" value="${esc(l.labels[z] || `zone ${z}`)}"><span class="dot"></span>`;
+      <input class="zoneLabel" value="${esc(l.labels[z] || `zone ${z}`)}">${roleTag(roles?.[z])}<span class="dot"></span>`;
     it.querySelector('.dot').classList.add(zoneChanged(l, z) ? 'changed' : 'x');
     const inp = it.querySelector('input');
     inp.onchange = () => { snapshot(); l.labels[z] = inp.value; changed(l); renderFields(); };
     it.onclick = e => {
-      if (e.target === inp && S.sel.zone === z) return;
-      selectZone(z);
-      if (e.target === inp) $('zoneList').querySelectorAll('.zoneLabel')[z]?.focus();
+      if (e.target === inp && S.sel.zone === z && !e.ctrlKey && !e.metaKey && !e.shiftKey) return;
+      selectZone(z, e);
+      if (e.target === inp && !e.ctrlKey && !e.metaKey && !e.shiftKey) $('zoneList').querySelectorAll('.zoneLabel')[z]?.focus();
     };
+    it.title = 'Ctrl+click (Cmd on a Mac): add the zone to the ones you edit together; Shift+click: every zone up to it';
     it.onmouseenter = () => { R.highlight = { lut: 'e:' + S.sel.lut, zone: z, piece: -1 }; };
     it.onmouseleave = () => { R.highlight = { lut: null, zone: -1, piece: -1 }; };
     keyable(it);
     zl.appendChild(it);
   }
 }
+
+// the role of each zone of a material LUT (yours, built in or suggested: /api/roles, /api/roles/suggest), for the
+// zone list; null until read (the list is drawn again then)
+const roleCache = new Map();   // hash -> roles | promise
+let rolesData = null;
+document.addEventListener('lutstudio:roles', () => { roleCache.clear(); rolesData = null; renderZones(); });
+function zoneRoles(hash) {
+  const c = roleCache.get(hash);
+  if (Array.isArray(c)) return c;
+  if (c || !S.state) return null;
+  roleCache.set(hash, (async () => {
+    try {
+      rolesData ??= await api('/api/roles');
+      let r = rolesData.mine[hash] ?? rolesData.builtin[hash];
+      if (!r) r = (await api(`/api/roles/suggest?variant=${encodeURIComponent(S.variant)}&luts=${hash}`))[hash]?.roles;
+      roleCache.set(hash, r ?? []);
+    } catch { roleCache.set(hash, []); }
+    if (S.sel.lut === hash) renderZones();
+  })());
+  return null;
+}
+const roleTag = r => (!r || r === 'keep' ? '' : `<span class="roleTag" title="This zone's role: ${esc(ROLE_INFO[r]?.tip ?? r)} (what a theme or Recolor gives it)"
+  style="--rc:rgb(${(ROLE_INFO[r]?.color ?? [0.5, 0.5, 0.5]).map(v => Math.round(v * 255)).join(',')})">${esc(r)}</span>`);
 
 function refreshMarks() {
   const l = selLut();
@@ -989,6 +1022,7 @@ function refreshMarks() {
 
 async function selectLut(hash) {
   S.sel.lut = hash;
+  if (hash !== S.sel.lut) selectOnly();
   S.sel.zone = Math.min(S.sel.zone, (S.luts.get(hash)?.h ?? 1) - 1);
   const onArmor = R.pieces.some(p => p.info.lut === hash || p.info.pattern === hash || p.info.cape === hash);
   if (!onArmor) {
@@ -1001,8 +1035,21 @@ async function selectLut(hash) {
   renderFields();
 }
 
-function selectZone(z) {
-  S.sel.zone = z;
+// a zone picked: alone, or with Ctrl / Cmd added to (or taken out of) the zones selected, with Shift the range to it
+function selectZone(z, e = null) {
+  const add = e && (e.ctrlKey || e.metaKey), range = e?.shiftKey;
+  if (add) {
+    if (z === S.sel.zone) {   // (the main one taken out: the next selected becomes it)
+      const next = [...S.sel.more][0];
+      if (next === undefined) return;
+      S.sel.more.delete(next); S.sel.zone = next;
+    } else if (S.sel.more.has(z)) S.sel.more.delete(z);
+    else S.sel.more.add(z);
+  } else if (range) {
+    const a = Math.min(S.sel.zone, z), b = Math.max(S.sel.zone, z);
+    S.sel.more.clear();
+    for (let i = a; i <= b; i++) if (i !== S.sel.zone) S.sel.more.add(i);
+  } else { selectOnly(); S.sel.zone = z; }
   renderZones();
   renderFields();
 }
@@ -1032,7 +1079,9 @@ function renderFieldsInto(box, head) {
   const l = selLut();
   if (!l?.edited) { head.innerHTML = '<div class="t">No LUT selected</div>'; return; }
   const z = l.kind === 'pattern' ? 0 : S.sel.zone;
+  const zs = l.kind === 'pattern' ? [0] : selZones(z);
   head.innerHTML = `<div class="t">${l.kind === 'pattern' ? 'Pattern LUT' : esc(l.labels[z] || 'zone ' + z)} <span class="hint">${S.sel.lut}</span></div>
+    ${zs.length > 1 ? `<div class="multi">Editing ${zs.length} zones together (${zs.map(i => esc(l.labels[i] || 'zone ' + i)).join(', ')}): a change goes to all of them; the values shown are ${esc(l.labels[z] || 'zone ' + z)}'s. <a href="#" id="zOne">Just this one</a></div>` : ''}
     ${(() => { if (l.pull || !S.state.parts?.[S.sel.lut]) return `<div class="s" title="${esc(l.note || '')}">${esc(l.note || '')}</div>`; const d = describeLut(S.sel.lut, l.kind); return `<div class="s" title="${esc(d.parts + ' · ' + d.shared)}"><span class="badge ${d.cls}">${esc(d.badge)}</span>${esc(d.parts)} · ${esc(d.shared)}</div>`; })()}
     <div class="row" style="margin-top:6px"><button id="zCopy">Copy zone</button><button id="zPaste">Paste zone</button><button id="zReset">Reset zone</button></div>
     <div id="zLooks" class="looks"></div>`;
@@ -1042,16 +1091,21 @@ function renderFieldsInto(box, head) {
     apply: fn => {
       const u = S.undo.length, redo = S.redo;
       snapshot(); S.lastSnap = 0;
+      const was = l.edited.slice(z * l.w * 4, (z + 1) * l.w * 4);
       try { fn(); } catch (e) { S.undo.length = u; S.redo = redo; throw e; }   // (a look that fails: no undo step)
+      // the other zones selected: the values the look changed on this one
+      for (const o of zs.slice(1)) for (let i = 0; i < l.w * 4; i++) if (l.edited[z * l.w * 4 + i] !== was[i]) l.edited[o * l.w * 4 + i] = l.edited[z * l.w * 4 + i];
       changed(l); renderFields();
     },
   });
   $('zCopy').onclick = () => { S.clip = l.edited.slice(z * l.w * 4, (z + 1) * l.w * 4); status('Zone copied'); };
   $('zPaste').onclick = () => {
     if (!S.clip || S.clip.length !== l.w * 4) return status('Nothing to paste (copy a zone of a LUT of the same kind)', true);
-    snapshot(); S.lastSnap = 0; l.edited.set(S.clip, z * l.w * 4); changed(l); renderFields();
+    snapshot(); S.lastSnap = 0; for (const o of zs) l.edited.set(S.clip, o * l.w * 4); changed(l); renderFields();
   };
-  $('zReset').onclick = () => { snapshot(); S.lastSnap = 0; l.edited.set(l.vanilla.slice(z * l.w * 4, (z + 1) * l.w * 4), z * l.w * 4); changed(l); renderFields(); };
+  $('zReset').onclick = () => { snapshot(); S.lastSnap = 0; for (const o of zs) l.edited.set(l.vanilla.slice(o * l.w * 4, (o + 1) * l.w * 4), o * l.w * 4); changed(l); renderFields(); };
+  if ($('zOne')) $('zOne').onclick = e => { e.preventDefault(); selectOnly(); renderZones(); renderFields(); };
+  if (zs.length > 1) { $('zPaste').textContent = `Paste into ${zs.length} zones`; $('zReset').textContent = `Reset ${zs.length} zones`; }
   const fields = S.schema[l.kind].filter(f => !f.hidden);   // (hidden: the build mark's channels)
   const groups = [...new Set(fields.map(f => f.group))];
   for (const g of groups) {
@@ -1179,6 +1233,16 @@ async function pickEmblem(l, z, di) {
   $('modal').hidden = false;
 }
 
+// the colors used last (picked, typed, taken off the model), newest first: under every color field, kept in this browser
+const RECENT = (() => { try { const v = JSON.parse(localStorage.getItem('lutstudio.recentColors') ?? '[]'); return Array.isArray(v) ? v.filter(c => /^#[0-9a-f]{6}$/.test(c)).slice(0, 12) : []; } catch { return []; } })();
+function keepRecent(c) {
+  c = c.toLowerCase();
+  const i = RECENT.indexOf(c); if (i >= 0) RECENT.splice(i, 1);
+  RECENT.unshift(c); RECENT.length = Math.min(RECENT.length, 12);
+  try { localStorage.setItem('lutstudio.recentColors', JSON.stringify(RECENT)); } catch { }
+  document.querySelectorAll('#fields .field').forEach(f => f.update?.());
+}
+
 function fieldEditor(l, z, f) {
   const el = document.createElement('div');
   el.className = 'field';
@@ -1194,20 +1258,50 @@ function fieldEditor(l, z, f) {
     const pick = document.createElement('input'); pick.type = 'color';
     row.appendChild(pick);
     const nums = [0, 1, 2].map(i => {
-      const n = document.createElement('input'); n.type = 'number'; n.step = '0.01';
+      const n = document.createElement('input'); n.type = 'number'; n.step = '0.01'; n.className = 'rgb';
       n.oninput = () => { if (n.value === '' || isNaN(+n.value)) return; snapshot(); set(i, +n.value); pick.value = '#' + [0, 1, 2].map(k => hex(get(k))).join(''); commit(); };
       row.appendChild(n);
       return n;
     });
-    pick.oninput = () => {
-      snapshot();
-      const h = pick.value.slice(1);
-      [0, 1, 2].forEach(i => set(i, parseInt(h.slice(i * 2, i * 2 + 2), 16) / 255));
-      nums.forEach((n, i) => (n.value = fmt(get(i))));
-      commit();
+    const setHex = h => { snapshot(); [0, 1, 2].forEach(i => set(i, parseInt(h.slice(1 + i * 2, 3 + i * 2), 16) / 255)); commit(); el.update(); };
+    pick.oninput = () => setHex(pick.value);
+    pick.onchange = () => keepRecent(pick.value);
+    // #rrggbb typed or pasted (#rgb too)
+    const hx = document.createElement('input'); hx.type = 'text'; hx.className = 'hex'; hx.spellcheck = false; hx.maxLength = 7;
+    hx.title = 'The color as #rrggbb: type or paste one';
+    hx.onchange = () => {
+      let v = hx.value.trim().toLowerCase(); if (!v.startsWith('#')) v = '#' + v;
+      if (/^#[0-9a-f]{3}$/.test(v)) v = '#' + [...v.slice(1)].map(c => c + c).join('');
+      if (!/^#[0-9a-f]{6}$/.test(v)) { status('A color is #rrggbb (six hex digits), e.g. #2a3b4c', true); el.update(); return; }
+      setHex(v); keepRecent(v);
     };
-    updaters.push(() => { pick.value = '#' + [0, 1, 2].map(k => hex(get(k))).join(''); nums.forEach((n, i) => document.activeElement !== n && (n.value = fmt(get(i)))); });
+    // picked off the model: the next zone clicked gives its own value of this field
+    const drop = document.createElement('button'); drop.className = 'drop'; drop.textContent = '⌖';
+    drop.title = 'Pick a color off the model: click a zone and this takes its color (Esc: cancel)';
+    drop.onclick = () => {
+      if (S.eyedrop) { S.eyedrop = null; document.body.classList.remove('eyedrop'); return status(''); }
+      document.body.classList.add('eyedrop');
+      status('Click a zone on the model to take its color… (Esc: cancel)');
+      S.eyedrop = (hash, zz) => {
+        S.eyedrop = null; document.body.classList.remove('eyedrop');
+        const src = S.luts.get(hash), a = src && (src.edited ?? src.vanilla);
+        if (!a || src.w !== l.w) return status('That zone is another kind of LUT: pick a zone of the same kind', true);
+        const h = '#' + f.leaves.slice(0, 3).map(([col, ch]) => hex(a[cell(src, zz, col, ch)])).join('');
+        setHex(h); keepRecent(h);
+        status(`Color ${h} taken from ${src.labels?.[zz] || 'zone ' + zz}`);
+      };
+    };
+    row.append(hx, drop);
+    const recent = document.createElement('div'); recent.className = 'recent';
+    updaters.push(() => {
+      const h = '#' + [0, 1, 2].map(k => hex(get(k))).join('');
+      pick.value = h; if (document.activeElement !== hx) hx.value = h;
+      nums.forEach((n, i) => document.activeElement !== n && (n.value = fmt(get(i))));
+      recent.innerHTML = RECENT.map(c => `<button class="sw" data-c="${c}" title="${c}" style="background:${c}"></button>`).join('');
+      recent.querySelectorAll('button').forEach(b => (b.onclick = () => { setHex(b.dataset.c); keepRecent(b.dataset.c); }));
+    });
     el.appendChild(row);
+    el.appendChild(recent);
   } else {
     const names = f.kind === 'recipe' ? f.sub : [null];
     names.forEach((name, i) => {
@@ -1224,7 +1318,11 @@ function fieldEditor(l, z, f) {
       el.appendChild(row);
     });
   }
-  el.querySelector('.reset').onclick = () => { snapshot(); S.lastSnap = 0; f.leaves.forEach((_, i) => set(i, van(i))); commit(); el.update(); };
+  el.querySelector('.reset').onclick = () => {
+    snapshot(); S.lastSnap = 0;
+    for (const o of selZones(z)) f.leaves.forEach(([col, ch]) => { l.edited[cell(l, o, col, ch)] = l.vanilla[cell(l, o, col, ch)]; });
+    commit(); el.update();
+  };
   el.update = () => {
     updaters.forEach(u => u());
     el.classList.toggle('changed', f.leaves.some((_, i) => get(i) !== van(i)));
@@ -1525,7 +1623,11 @@ function wire() {
   const pops = [...document.querySelectorAll('details.pop')];
   pops.forEach(d => d.addEventListener('toggle', () => { if (d.open) pops.forEach(o => { if (o !== d) o.open = false; }); }));
   document.addEventListener('pointerdown', e => pops.forEach(d => { if (d.open && !d.contains(e.target)) d.open = false; }));
-  window.addEventListener('keydown', e => { if (e.key === 'Escape') pops.forEach(d => { d.open = false; }); });
+  window.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    pops.forEach(d => { d.open = false; });
+    if (S.eyedrop) { S.eyedrop = null; document.body.classList.remove('eyedrop'); status(''); }
+  });
   for (const id of ['snapIcon', 'snapVariant']) $(id).addEventListener('click', () => { $('snapPop').open = false; });
   setupTabs();
   // a sidebar's own tab (Parts, Zone): the editor open in that sidebar closed
@@ -1627,8 +1729,11 @@ function pickAt(e) {
   if (!p) return;
   if (S.onPick) return S.onPick({ lut: p.info.lut, zone: hit.zone, piece: hit.piece });   // the Roles panel
   // not in the project: edit its game values right away; the first change adds it (a worn cape: both its LUTs)
+  if (S.eyedrop) return S.eyedrop(p.info.lut, hit.zone);   // (a color picked off the model)
+  if ((e.ctrlKey || e.metaKey || e.shiftKey) && p.info.lut === S.sel.lut) return selectZone(hit.zone, e);   // (another zone to edit with it)
   preview(p.info.lut, p.info.kitRef ?? p.info.lut);
   if (p.info.cape) preview(p.info.cape, p.info.kitRef ?? p.info.cape);
+  if (p.info.lut !== S.sel.lut) selectOnly();
   S.sel.lut = p.info.lut;
   S.sel.zone = hit.zone;
   renderLists();
@@ -1726,14 +1831,36 @@ async function build() {
   try {
     await autoImages();
     const r = await api('/api/build', { method: 'POST' });
-    track('mod built', { ok: !!r.ok, error: r.ok ? '' : String(r.error ?? '').slice(0, 300), ...buildSummary(r) });
-    showModal(r.ok ? 'Mod built - downloading' : 'Build failed', (r.log || '') + (r.error ? '\n' + r.error : '') +
-      (r.ok ? `\nAlso saved in the project: ${r.path}\nImport the downloaded zip into HD2Arsenal / HD2 Mod Manager.` : ''));
-    if (r.ok) {
-      await window.lutstudioWeb.download('/api/download', 'mod.zip');
-    }
+    const sum = buildSummary(r);
+    track('mod built', { ok: !!r.ok, error: r.ok ? '' : String(r.error ?? '').slice(0, 300), ...sum });
+    buildCard(r, sum);
+    if (r.ok) await window.lutstudioWeb.download('/api/download', 'mod.zip');
   } catch (e) { showModal('Build failed', e.message); track('mod built', { ok: false, error: String(e.message).slice(0, 300) }); }
   finally { S.building = false; $('modalClose').disabled = false; }
+}
+
+// the build's result as a card: what the mod is (its icon, name, variants, items, the LUTs it changes), the file,
+// how to install it, the log folded away; a failure: what went wrong first
+function buildCard(r, sum) {
+  const st = S.state, vs = st.variants ?? [];
+  const file = String(r.path ?? '').split(/[\\/]/).pop() || 'mod.zip';
+  const n = (k, one, many = one + 's') => `${k} ${k === 1 ? one : many}`;
+  const log = `<details class="buildLog"><summary>Build log</summary><pre>${esc((r.log || '') + (r.error ? '\n' + r.error : ''))}</pre></details>`;
+  $('modalBody').innerHTML = r.ok ? `<h3>Mod built - downloading</h3>
+    <div class="buildCard"><img id="bcIcon" alt="">
+      <div><div class="bcName">${esc(st.project.name)}</div>
+        <div class="hint">${n(vs.length || 1, 'variant')} · ${n(sum.luts_in_mod, 'changed LUT')}${sum.textures ? ' · ' + n(sum.textures, 'texture') : ''}</div>
+        <div class="hint">File: <b>${esc(file)}</b> (your browser's downloads; a copy stays in the project's dist folder)</div></div></div>
+    <h4>To install it</h4>
+    <ol class="hint"><li>Open <b>HD2 Mod Manager</b> or <b>HD2Arsenal</b>.</li><li>Add / import the downloaded zip, then deploy (apply) the mods.</li>
+      ${vs.length > 1 ? '<li>Pick the variant you want in the manager: one of them is used at a time.</li>' : ''}<li>Start the game. Other players see your colors only if they run the mod too.</li></ol>
+    ${log}<div class="row"><button id="bcAgain">Download again</button></div>`
+    : `<h3>Build failed</h3><p class="warn">${esc(String(r.error || 'The build stopped: see the log.').split('\n')[0])}</p>${log}`;
+  if (r.ok) {
+    fetch('/api/image?target=icon').then(x => (x.ok ? x.blob() : null)).then(b => { if (b && $('bcIcon')) $('bcIcon').src = URL.createObjectURL(b); }).catch(() => { });
+    $('bcAgain').onclick = () => window.lutstudioWeb.download('/api/download', 'mod.zip');
+  } else $('modalBody').querySelector('.buildLog').open = true;
+  $('modal').hidden = false;
 }
 
 // what a build holds, for the usage event: the mod's names, its items, and what was edited (the loaded variant's

@@ -175,6 +175,7 @@ export async function rolesDialog(app) {
     try { await app.api('/api/roles', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
     catch (e) { return info(e.message); }
     for (const [h, r] of Object.entries(body)) { data.mine[h] = [...r]; Object.assign(work.get(h), { from: 'mine', dirty: false }); }
+    document.dispatchEvent(new Event('lutstudio:roles'));   // (the zone list's roles read again)
     list();
     info(`Confirmed ${Object.keys(body).length} LUT(s).`);
   };
@@ -199,6 +200,7 @@ export async function rolesDialog(app) {
     if (!confirm(`Forget your roles of ${Object.keys(body).length} LUT(s)?`)) return;
     await app.api('/api/roles', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     for (const h of Object.keys(body)) { delete data.mine[h]; work.delete(h); }
+    document.dispatchEvent(new Event('lutstudio:roles'));
     await refresh();
   };
   $('rlView').onchange = () => setView($('rlView').checked);

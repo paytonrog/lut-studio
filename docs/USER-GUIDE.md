@@ -45,7 +45,7 @@ list of items is a small table of ids whose names come from your install (see **
    each of their skins (Standard is the default look); and every weapon, in its default look and in each paint
    scheme. A vehicle shows with its guns and parts on it (exosuit arms, the FRV's gun, the tanks' main guns, the
    Maelstrom's silos), each in the skin's LUT, which you edit like the body's. Many of these share LUTs: the three FRVs share their body LUTs per skin, the exosuits their body, and a
-   weapon paint scheme's LUT recolors that scheme on **every** weapon. The LUT list tells you ("also changes …").
+   weapon paint scheme's LUT recolors that scheme on **every** weapon. The **Materials** list tells you ("also changes …").
    Weapons show with their default attachments (magazine, scope, muzzle, underbarrel); a paint scheme recolors those
    too. The **Attachments** menus (under the view) put another attachment on the preview: the ones the game offers
    that weapon, each with the weapon level that unlocks it ("Drum Magazine · lvl 24"). These lists come from the
@@ -56,7 +56,7 @@ list of items is a small table of ids whose names come from your install (see **
    you downloaded it (HD2 Mod Manager / HD2Arsenal), or its patch files (for a mod made with the HD2 SDK: select the `.patch_0` together with
    its `.gpu_resources` and `.stream`). Each option of the mod becomes a variant. Everything LUT Studio can edit
    comes in: the LUTs of every kind of item (armor, helmets, capes, vehicles, weapons and their attachments,
-   backpacks, equipment, stratagems, SEAF…), LUTs of game materials no listed item uses (in the LUT list, shown on
+   backpacks, equipment, stratagems, SEAF…), LUTs of game materials no listed item uses (in the **Materials** list, shown on
    no model), and the mod's decal sheets, cape designs, ID masks and pattern masks (for the **Decals**, **Cape design** and **Masks** editors). The mod's
    identity (its GUID) comes in too, so building it again updates the installed mod instead of adding a second copy.
    Its icon, the variants' descriptions and pictures and the name of the choice come along to the **Mod page** tab.
@@ -65,7 +65,7 @@ list of items is a small table of ids whose names come from your install (see **
    has nothing to show them on). An option that only changed such files changes nothing in the project; the build
    leaves it out.
    Overhauls (one option per armor, players switch on many at once) come in as one project with all of them; their
-   styles (e.g. Chrome, Cavalier) become the variants. In a big project the LUT list shows the item on screen;
+   styles (e.g. Chrome, Cavalier) become the variants. In a big project the **Materials** list shows the item on screen;
    **Show all … LUTs** lists the rest.
 
 Some names belong to several different armors: there are 9 armors and 15 helmets called **B-01 Tactical** (color
@@ -76,7 +76,7 @@ main colors, e.g. "B-01 Tactical (version 2 of 9, tan / gray, 0x1d0e3431)".
 
 - An armor set is several **pieces** (helmet, torso, hips, arms, legs, shoulders), and a slot can be several
   models. Each piece wears one **LUT**; pieces can share a LUT (on the FS-37 Ravager the hips and legs share
-  one). Editing a LUT recolors every piece that uses it. The LUT list on the left says, for each LUT:
+  one). Editing a LUT recolors every piece that uses it. The **Materials** list on the left says, for each LUT:
   - what it colors: **Armor** (the armor plates), **Undersuit** (the body suit under the armor), **Accessory**
     (pouches, straps and other add-ons), **Pattern**, **Cape** / **Cape trim**, and on which body parts ("torso
     (stocky)" = only the stocky body's torso);
@@ -105,7 +105,7 @@ main colors, e.g. "B-01 Tactical (version 2 of 9, tan / gray, 0x1d0e3431)".
 
 ## Capes
 
-Pick a cape from the start page's list (under *Capes*). A cape has two tables, both in the LUT list:
+Pick a cape from the start page's list (under *Capes*). A cape has two tables, both in the **Materials** list:
 - **cape**: its material: colors, cloth look, wear, camo (the same fields as armor).
 - **cape trim / gradient / decals**: trim lines along the panel edges, a color gradient from the collar or the hem,
   and up to 4 emblems (decals). **Pick emblem…** shows the cape's emblem sheet: choose a grid size and click an
@@ -136,8 +136,15 @@ whenever it's worn.
   - **shine**: roughness (0 mirror-like … 1 matte) and highlight strength.
   - **clearcoat** (modes 2–4), **cloth** (mode 1), **glow**, **iridescence** (oil-slick sheen, shows on dark
     colors), **camo** (4 colors on one of the game's camo patterns).
-  Each field has a short explanation, a slider over its useful range and a **↺ vanilla** button. Colors accept
-  `#rrggbb`.
+  Each field has a short explanation, a slider over its useful range and a **↺ vanilla** button. A color has its
+  picker, its three numbers, a **#rrggbb** box (type or paste a color; `#rgb` works too) and **⌖** (click a zone on
+  the model and the color takes that zone's own color; Esc cancels); the colors you used last are under it, one
+  click to use again (kept in this browser).
+- **Several zones at once**: Ctrl+click (Cmd on a Mac) zones in the zone list, or on the model, to edit them
+  together; Shift+click selects every zone up to the one clicked. The panel says how many you're editing: a change
+  to a field, **↺ vanilla**, **Paste zone**, **Reset zone** and a look go to all of them (a look: the settings it
+  changes). **Just this one** goes back to one zone. Each zone in the list shows its role (primary, trim, cloth…),
+  what a theme or **Recolor this item** gives it.
 - **Looks**: under the zone, in categories. The built-in ones (Paint: matte / satin / gloss, lacquer; Metal: bare,
   brushed; Wear; Camo; Effects: glow, oil-slick; Cloth) set only what they're about. **Save look** keeps the zone's
   settings as a look of your own, with a name and a category (a new name adds one; the same name replaces it). One
@@ -195,10 +202,10 @@ whenever it's worn.
   nothing), so the box is off there.
 - **The right panel** keeps its place when you pick another zone: same scroll position, and the sections you
   opened or closed stay that way.
-- **The sidebars' tabs**: each sidebar has its own pane (**Parts** on the left: the LUTs and zones; **Zone** on the
+- **The sidebars' tabs**: each sidebar has its own pane (**Materials** on the left: the materials (LUTs) and their zones, each zone tagged with its role (primary, trim, cloth…); **Zone** on the
   right: the picked zone's settings) and the editors' tabs: **Theme**, **Mod page**, **Decals**, **Cape design**,
   **Masks** on the left, **Showcase** on the right (only the editors the item on screen has are shown). An editor
-  opens in the sidebar its tab is in, in place of that sidebar's pane; the pane's own tab (**Parts** or **Zone**)
+  opens in the sidebar its tab is in, in place of that sidebar's pane; the pane's own tab (**Materials** or **Zone**)
   closes it. One editor is open at a time. To put a tab in the other sidebar, drag it there (or to another place in
   the same strip), or right-click it; where the tabs are is kept in this browser.
 - **Decals** (models with decals: armor, vehicles, the hellpod…): edits the decal sheet, the picture the
@@ -253,13 +260,13 @@ whenever it's worn.
   for every item sharing those LUTs; **Next unconfirmed ▸** shows the next item of the chosen group (the menu)
   with LUTs left to confirm, and the progress line counts them. LUT Studio ships reviewed roles; yours come on top.
   **Export roles.json** saves the built-in roles with yours on top; **Forget mine here** drops yours on screen.
-- **Theme** (a sidebar tab: on the left at first; its panel takes the sidebar while open, the **Parts** tab goes back): pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
+- **Theme** (a sidebar tab: on the left at first; its panel takes the sidebar while open, the **Materials** tab goes back): pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
   Legion and Neon Circuit, some very silly ones (Turd: all brown, rusted and grimed as far as it goes; Pink Void: one glowing pink shade, a pink hole where a Helldiver was), looks after Destiny 2's shaders (Bitterpearl, Gilded Frost, Metro Shift, Calus's Selected, Jacarina…), and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
   zone of that role, or pick another one, or **(not changed)** to leave that role alone. The color box in front of a
   role recolors its look (its finish, wear and camo stay; **↺** goes back to the look's own color), so a preset or
   your own zones can be put in any colors. **Apply to** the **item on screen** (the armor, helmet and cape, or
-  the item, shown; **Recolor this item…** at the top of the **Parts** tab opens the panel this way: a color per role
+  the item, shown; **Recolor this item…** at the top of the **Materials** tab opens the panel this way: a color per role
   and the whole item is recolored in one go), or **every item of these kinds**: tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,
   **Eagle & craft**, **SEAF** (the soldier, medic and their weapons in every camo look, their backpacks and shells), **Super Destroyer** (the ship, its support cannons, the Eagle ordnance on display, the emblems, the cryo pods), **Ship interior** (terminals, screens, lamps, floors, walls…) or **Ship crew**; **only items already in this mod** to stay within it). In the last four, a LUT the game shares with something outside the group stays as it is (a cryo pod's frozen Helldiver wears B-01 armor; generic metals) and
@@ -316,7 +323,7 @@ warbond poses holding their weapons (backpacks on when you pick them), two vehic
 the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
 a title. The items load one by one (a few seconds each the first time); then orbit, pan and zoom as ever (the frame in
 the viewport is the image's, 16:9). The other sidebar and the bars step aside and the Showcase tab's sidebar holds the options (its own tab,
-**Parts** or **Zone**, or **Exit showcase** goes back):
+**Materials** or **Zone**, or **Exit showcase** goes back):
 
 - **Show**: the items as in this mod (its edits, this variant), as the game has them, the Theme panel's looks (when
   opened from there), or any theme preset.
@@ -335,7 +342,9 @@ the viewport is the image's, 16:9). The other sidebar and the bars step aside an
 ## Build and install
 
 1. **Build & download mod** renders the mod icon and the variant pictures, builds the zip and downloads it (a
-   copy also stays in the project's `dist` folder). To choose the pictures yourself, use the **Mod page** tab (or the
+   copy also stays in the project's `dist` folder). A card then shows the mod (its icon, name, variants and how many
+   LUTs it changes), the file's name, how to install it and **Download again**; the build log is folded under it
+   (open when the build failed, with the error first). To choose the pictures yourself, use the **Mod page** tab (or the
    quick **Snapshot ▾** → *Use as the mod icon* / *Use as this variant's picture*); the build keeps those. A variant that changes nothing is left
    out of the mod. The zip is the mod managers' format (manifest v1): the variants are one option's sub-options,
    or with several options (Mod page), each option is a switch or a choice of sub-options.
