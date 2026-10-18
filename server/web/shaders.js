@@ -1026,6 +1026,13 @@ uniform int uEnvCube; uniform samplerCube uEnvSpec; uniform float uEnvScale; uni
 // shader has the 16 a GPU must give)
 uniform int uGradeOn;
 vec3 shaped(vec3 c) { return clamp((log2(max(c, vec3(1e-6)) / 0.18) + 12.0) / 18.5, 0.0, 1.0); }
+// planet lighting's ground (uPlanetGround): the planet's ground tile (sRGB albedo, 4 m) at the model's feet (uFloorY),
+// lit as the model is (uSunE: the sun on a level surface, uSkyUp: the sky's), a soft contact shadow under the model
+// (uFoot: center xz, radii) and its cast shadow away from the sun (uCast: xz offset of the shadow's far end)
+uniform int uPlanetGround; uniform sampler2D uGroundTex; uniform vec3 uSunE; uniform vec3 uSkyUp; uniform float uFloorY;
+uniform vec4 uFoot; uniform vec2 uCast; uniform float uFogDist;
+vec3 s2l(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
+float segDist(vec2 p, vec2 a, vec2 b) { vec2 ab = b - a; float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0); return length(p - a - ab * t); }
 uniform vec2 uBackdrop;   // > 0: a dimmed grey backdrop, sRGB uBackdrop.x at the left edge to .y at the right (the
                           // Armory menu's blurred, darkened scene), the cube's brightness only varying it a little
 vec3 cubeDir(vec3 v) {
@@ -1041,6 +1048,17 @@ void main() {
   vec3 s = h >= 0.0 ? mix(uSkyHorizon, uSkyZenith, pow(clamp(h, 0.0, 1.0), 0.6)) : mix(uSkyHorizon, uGround, clamp(-h * 4.0, 0.0, 1.0));
   vec3 col = s * uExposure * 0.6;
   if (uEnvCube == 1) col = textureLod(uEnvSpec, cubeDir(d), uBgLod).rgb * uEnvScale * uExposure;
+  if (uPlanetGround == 1 && d.y < -1e-4 && uCamPos.y > uFloorY) {
+    float t = (uFloorY - uCamPos.y) / d.y; vec3 P = uCamPos + d * t;
+    vec2 q = (P.xz - uFoot.xy) / uFoot.zw;
+    float contact = 1.0 - smoothstep(0.6, 1.4, length(q));
+    float r = max(uFoot.z, uFoot.w);
+    float castSh = (1.0 - smoothstep(0.35 * r, 1.1 * r, segDist(P.xz, uFoot.xy, uFoot.xy + uCast))) * 0.8;
+    float sh = max(contact * 0.75, castSh);
+    vec3 alb = s2l(texture(uGroundTex, P.xz / 4.0).rgb);
+    vec3 g = alb * (uSunE * (1.0 - sh) + uSkyUp * (1.0 - 0.45 * contact)) * uExposure;
+    col = mix(g, col, smoothstep(0.25 * uFogDist, uFogDist, t));
+  }
   vec3 sr = uGradeOn == 1 ? shaped(col)
     : linearToSrgb(clamp((col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14), 0.0, 1.0));
   if (uBackdrop.x > 0.0) sr = vec3(mix(uBackdrop.x, uBackdrop.y, clamp(vNdc.x * 0.5 + 0.5, 0.0, 1.0)) * (0.7 + 0.6 * dot(sr, vec3(0.2126, 0.7152, 0.0722))));

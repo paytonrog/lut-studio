@@ -14,6 +14,7 @@ import { themeDialog } from './theme.js';
 import { track, trackErrors } from './analytics.js';
 import { modPage } from './modpage.js';
 import { closeSide } from './texedit.js';
+import { groundTile } from './planet.js';
 
 const $ = id => document.getElementById(id);
 const api = async (url, opts) => {
@@ -154,6 +155,7 @@ async function loadGameEnvs() {
 // computed at run time), tinted toward the planet's fog
 S.planets = [];
 const gradeCache = new Map();   // planet id -> promise of {tex, n}
+const groundCache = new Map();  // planet id -> promise of its ground tile (planet.js)
 async function loadPlanets() {
   try { S.planets = (await (await fetch('planets/planets.json')).json()).planets; } catch { S.planets = []; }
   if (!S.planets.length) return;
@@ -162,29 +164,58 @@ async function loadPlanets() {
   $('env').append(g);
 }
 const lum709 = c => 0.2127 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+const mixN = (a, b, t) => a + (b - a) * t;
+// the Weather menu (shown with a planet's light): its weathers, the day default first chosen; a weather sets the
+// armor's wetness and snow as the game's weather does (the Mission wear sliders follow)
+function fillWeather(p) {
+  const sel = $('weather');
+  sel.hidden = !p?.weathers?.length;
+  if (sel.hidden) return null;
+  if (sel.dataset.planet !== p.id) {
+    sel.dataset.planet = p.id;
+    sel.innerHTML = p.weathers.map((w, i) => `<option value="${i}">${w.label}${w.share ? ' (' + Math.round(w.share * 100) + '%)' : ''}</option>`).join('');
+    sel.value = String(Math.max(0, p.weathers.findIndex(w => w.default)));
+  }
+  return p.weathers[+sel.value] ?? null;
+}
+function weatherWear(w) {
+  for (const [key, v] of [['wet', w?.wet ?? 0], ['snow', w?.snow ?? 0]]) {
+    R.world[key] = v;
+    const i = document.querySelector(`#worldSliders input[data-key="${key}"]`); if (i) i.value = v;
+  }
+}
 // the ground's mean albedo (linear): its layers, snow (where it has some) counting as much as all of them
 function planetGround(p) {
   const L = p.ground.map(l => l.albedo), m = [0, 1, 2].map(k => L.reduce((s, a) => s + a[k], 0) / Math.max(L.length, 1));
   return p.snow ? m.map((v, k) => 0.5 * v + 0.5 * p.snow[k]) : m;
 }
-function planetEnv(p) {
-  const amb = 0.55 * (p.ambient ?? 1), sunI = 3, elev = 0.7;
-  const horizon = p.fog.map((c, k) => c * amb * p.ambientTint[k]);
-  const zenith = p.fog.map((c, k) => (0.6 * c + 0.4 * [0.35, 0.5, 0.8][k]) * amb * 0.8 * p.ambientTint[k]);
+// w: one of the planet's weathers (null: its day default): its sun, sky light, fog; thick fog greys the sky toward the
+// fog's color and brings the horizon in (fogDist: where the ground has faded into it, m)
+function planetEnv(p, w = null) {
+  w ??= p.weathers?.find(x => x.default) ?? null;
+  const sun = w ? w.sun : p.sun, fog = w ? w.fog : p.fog, ambT = w ? w.ambient : p.ambientTint.map(t => t * (p.ambient ?? 1));
+  const amb = 0.55, sunI = 3, elev = 0.7, thick = Math.min(0.85, (w?.fogDensity ?? 0.5) / 3);
+  const horizon = fog.map((c, k) => c * amb * ambT[k]);
+  const zenith = fog.map((c, k) => (mixN(0.6 * c + 0.4 * [0.35, 0.5, 0.8][k], c, thick)) * amb * 0.8 * ambT[k]);
   const gnd = planetGround(p);
   // a level surface's light, as the shader lights it (shaders.js: the sun's diffuse over pi, the sky's hemisphere)
-  const E = sunI * Math.sin(elev) * lum709(p.sun) / Math.PI + lum709(zenith.map((z, k) => 0.6 * z + 0.4 * horizon[k]));
-  const e = { ...ENVS['Studio'], sun: p.sun, sunIntensity: sunI, sunElev: elev, zenith, horizon,
-    ground: gnd.map(v => v * E), exposure: p.exposureTarget / Math.max(lum709(gnd) * E, 1e-4), planet: p, grade: {} };
+  const E = sunI * Math.sin(elev) * lum709(sun) / Math.PI + lum709(zenith.map((z, k) => 0.6 * z + 0.4 * horizon[k]));
+  const e = { ...ENVS['Studio'], sun, sunIntensity: sunI, sunElev: elev, zenith, horizon,
+    ground: gnd.map(v => v * E), exposure: p.exposureTarget / Math.max(lum709(gnd) * E, 1e-4), planet: p, weather: w, grade: {},
+    fogDist: Math.min(120, Math.max(8, 40 / Math.max(w?.fogDensity ?? 0.5, 0.3))) };
   if (!gradeCache.has(p.id)) gradeCache.set(p.id, R.loadGrade('planets/' + p.id + '.png'));
   gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => status('Planet light: ' + err.message, true));
+  if (!groundCache.has(p.id)) groundCache.set(p.id, groundTile(p));
+  groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => { });
   return e;
 }
 
 function setEnv() {
   const v = $('env').value, ge = v.startsWith('game:') ? S.gameEnvs.find(e => 'game:' + e.name === v) : null;
   const pl = v.startsWith('planet:') ? S.planets.find(p => 'planet:' + p.id === v) : null;
-  const e = pl ? planetEnv(pl) : ge ? { ...ENVS['Studio'], sunIntensity: 0, ...GAME_ENV_LOOK[ge.name], game: ge } : { ...ENVS[v] };
+  const w = fillWeather(pl);
+  const e = pl ? planetEnv(pl, w) : ge ? { ...ENVS['Studio'], sunIntensity: 0, ...GAME_ENV_LOOK[ge.name], game: ge } : { ...ENVS[v] };
+  if (pl && R.env?.weather !== w) weatherWear(w);
   const az = e.sunAz ?? +$('sunAz').value;
   if (e.sunAz !== undefined) $('sunAz').value = e.sunAz;
   e.sunAz = az * Math.PI / 180;
@@ -1252,6 +1283,7 @@ function wire() {
   cv.addEventListener('dblclick', () => R.frame());
   $('frame').onclick = () => R.frame();
   $('env').onchange = () => { R.sunElevUser = null; setEnv(); showSunElev(); };
+  $('weather').onchange = () => setEnv();
   $('sunAz').oninput = () => { if (R.env.game) setEnv(); else R.env.sunAz = +$('sunAz').value * Math.PI / 180; };
   $('exposure').oninput = setEnv;
   // Mission wear: the sliders fold away (remembered in this browser; folded at first in a short window)
@@ -1714,7 +1746,7 @@ const WORLD_UI = [
   ['blood', 'Blood', 'Shows from ~0.5 (the game\'s threshold), full at ~0.63'],
   ['gunk', 'Bug gunk', 'Shows from ~0.5, like blood'],
   ['wet', 'Wetness', 'Darker and glossier; cloth loses its sheen'],
-  ['snow', 'Snow', 'Snow mode (replaces mud); snow colors are placeholders until the per-planet values are known'],
+  ['snow', 'Snow', 'Snow mode (replaces mud); under a planet light, the color of that planet snow (else a neutral white)'],
   ['frost', 'Frost', 'Pale blue-white frost on the grunge pattern'],
   ['burn', 'Burn', 'Animated burn glow on non-metal edges (replaces the LUT glow)'],
 ];
@@ -1723,7 +1755,7 @@ function buildWorldSliders() {
   for (const [key, name, tip] of WORLD_UI) {
     const lab = document.createElement('label');
     lab.title = tip;
-    lab.innerHTML = `${name} <input type="range" min="0" max="1" step="0.01" value="0">`;
+    lab.innerHTML = `${name} <input type="range" min="0" max="1" step="0.01" value="0" data-key="${key}">`;
     lab.querySelector('input').oninput = e => { R.world[key] = +e.target.value; };
     box.appendChild(lab);
   }

@@ -164,7 +164,7 @@ whenever it's worn.
   a planet biome does by day: its sun's color, the game's auto exposure aimed at the planet's ground, and the
   planet's own color grading and the game's screen output (from the game's environment settings and shaders); in the
   Showcase the squad stands on a patch of the planet's ground (its terrain textures, in their graded colors, with its
-  snow), so you can judge a camo against it. The sky is LUT Studio's (the game's is computed as it runs), tinted
+  snow), so you can judge a camo against it (in the editor too, under the armor, with soft shadows). Next to it, **Weather** picks one of the planet's weathers (clear, misty, overcast, rainstorm, snowstorm…; the share of missions it is estimated at): its sun, sky light and fog, and it sets Mission wear's **Wetness** and **Snow** as the weather does; armor snow takes the planet's snow color. The sky is LUT Studio's (the game's is computed as it runs), tinted
   toward the planet's fog. The other presets are LUT Studio's own light setups (snow, jungle, night…), lit the same way. **Adjust ▾** next to it holds the rest:
   **Exposure**; the **Sun** (in a game environment: a key light at the capture's brightest spot) with **On**, its
   **Direction** around the armor and **Height** (each lighting preset sets its own height until you move it);

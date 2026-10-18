@@ -46,6 +46,7 @@
       <!-- Lighting: the preset on the bar, the rest of its settings in one panel -->
       <span class="barGroup">
         <label title="The lighting: the game's own (its captures and light rigs) or LUT Studio's presets">Light <select id="env"></select></label>
+        <select id="weather" hidden title="The planet's weather: its sun, sky and fog, and how wet or snowy the armor gets (the game's weather settings; % = share of missions, estimated)"></select>
         <details class="pop" id="lightPop"><summary title="Exposure, the sun, shadows and the side lights">Adjust ▾</summary>
           <div class="popBody">
             <label class="popRow" title="Brighter or darker, in stops">Exposure <input type="range" id="exposure" min="-3" max="3" step="0.1" value="0"></label>

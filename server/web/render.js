@@ -518,6 +518,36 @@ export class Renderer {
     return { p, u };
   }
 
+  // planet lighting's ground under the model (BG_FRAG): its tile (e.groundTile, planet.js, uploaded once per planet),
+  // at the lowest point of what is shown, the shadows from the model's footprint and height
+  groundUniforms(u, e, sd, sunCol) {
+    const gl = this.gl, on = !!(e.groundTile && this.pieces.length && !this.post);
+    gl.uniform1i(u.uPlanetGround, on ? 1 : 0);
+    if (!this.groundTex || this.groundTexFor !== e.groundTile) {
+      if (!this.groundTex) this.groundTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, this.groundTex);
+      const t = e.groundTile;
+      if (t) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, t.w, t.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(t.px.buffer));
+      else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([90, 90, 90, 255]));
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      this.groundTexFor = e.groundTile;
+    }
+    this.bindTex(15, gl.TEXTURE_2D, this.groundTex, u.uGroundTex);
+    if (!on) return;
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const p of this.pieces) { const [a, b] = placedBounds(p); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], a[k]); hi[k] = Math.max(hi[k], b[k]); } }
+    const h = hi[1] - lo[1], horiz = Math.hypot(sd[0], sd[2]), tanE = sd[1] / Math.max(horiz, 1e-3);
+    const len = sd[1] > 0.02 ? Math.min(h / tanE, 6) : 0;
+    const sunE = sd[1] > 0 ? sunCol.map(c => c * sd[1] / Math.PI) : [0, 0, 0];
+    gl.uniform1f(u.uFloorY, lo[1]); gl.uniform1f(u.uFogDist, e.fogDist ?? 40);
+    gl.uniform4fv(u.uFoot, [(lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2, Math.max((hi[0] - lo[0]) / 2, 0.15), Math.max((hi[2] - lo[2]) / 2, 0.15)]);
+    gl.uniform2fv(u.uCast, horiz > 1e-3 ? [-sd[0] / horiz * len, -sd[2] / horiz * len] : [0, 0]);
+    gl.uniform3fv(u.uSunE, sunE);
+    gl.uniform3fv(u.uSkyUp, e.zenith.map((z, k) => 0.6 * z + 0.4 * e.horizon[k]));
+  }
+
   // the frame drawn shaped into a target, then graded onto the canvas (size: an export at w x h, left in this.gradeT)
   gradeDraw(time, size) {
     const gl = this.gl, W = size ? size[0] : this.canvas.width, H = size ? size[1] : this.canvas.height;
@@ -1033,6 +1063,7 @@ export class Renderer {
       this.envUniforms(u, e);
       gl.uniform1f(u.uBgLod, e.bgBlur ?? 0);
       gl.uniform2fv(u.uBackdrop, e.backdropGrad ?? [0, 0]);
+      this.groundUniforms(u, e, sd, sunCol);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.depthMask(true);
     }
@@ -1090,7 +1121,7 @@ export class Renderer {
     gl.uniform4fv(u.uHww, raw?.hww ?? [-100, 0, -100, 0]);   // no wet / wash lines
     gl.uniform1i(u.uObjTest, raw ? 1 : 0);
     gl.uniform1f(u.uMatWet, 0);
-    gl.uniform3fv(u.uSnowBase, raw?.snowBase ?? [0.82, 0.85, 0.9]); gl.uniform3fv(u.uSnowFuzz, raw?.snowFuzz ?? [0.9, 0.92, 0.95]); gl.uniform1f(u.uSnowSpec, raw?.snowSpec ?? 0.5);  // c_snow placeholders
+    gl.uniform3fv(u.uSnowBase, raw?.snowBase ?? this.env?.planet?.snow ?? [0.82, 0.85, 0.9]); gl.uniform3fv(u.uSnowFuzz, raw?.snowFuzz ?? [0.9, 0.92, 0.95]); gl.uniform1f(u.uSnowSpec, raw?.snowSpec ?? 0.5);  // c_snow (a planet's: its snow_base_color; else placeholders)
     gl.uniform3fv(u.uSnowSss, raw?.snowSss ?? [0.55, 0.7, 0.85]); gl.uniform3fv(u.uSnowSssP, raw?.snowSssP ?? [0.5, 0.5, 0.5]);
     gl.uniform2f(u.uRnd, 0, 0);
     this.bindTex(5, gl.TEXTURE_2D_ARRAY, this.detail?.tex ?? this.blank.tex, u.uDetail);

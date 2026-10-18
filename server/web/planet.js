@@ -52,6 +52,7 @@ export async function groundTile(p) {
     for (let j = 0; j < t.length; j += 3) for (let k = 0; k < 3; k++) m[k] += t[j + k];
     return m.map((v, k) => layers[i].albedo[k] / Math.max(v / (N * N), 1e-4));
   });
+  const meanL = layers.reduce((t, l) => t + 0.2126 * l.albedo[0] + 0.7152 * l.albedo[1] + 0.0722 * l.albedo[2], 0) / Math.max(layers.length, 1);
   for (let j = 0; j < N * N; j++) {
     const c = [0, 0, 0]; let ws = 0;
     layers.forEach((l, i) => {
@@ -60,7 +61,11 @@ export async function groundTile(p) {
       ws += w;
     });
     for (let k = 0; k < 3; k++) c[k] /= Math.max(ws, 1e-6);
-    if (snow) { const s = Math.min(1, Math.max(0, (snow[j] - 0.42) * 6)); for (let k = 0; k < 3; k++) c[k] = c[k] * (1 - s) + p.snow[k] * s; }
+    if (snow) {   // (its edge broken up by the ground's own detail: snow lies in the hollows first)
+      const l = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / Math.max(meanL, 1e-4) - 1;
+      const s = Math.min(1, Math.max(0, (snow[j] - 0.45 - 0.35 * l) * 4));
+      for (let k = 0; k < 3; k++) c[k] = c[k] * (1 - s) + p.snow[k] * s;
+    }
     out[j * 4] = enc(c[0]); out[j * 4 + 1] = enc(c[1]); out[j * 4 + 2] = enc(c[2]); out[j * 4 + 3] = 255;
   }
   return { w: N, h: N, px: out };

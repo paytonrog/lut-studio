@@ -51,7 +51,7 @@ uniform float uBg, uGlowAmt, uGlowSize, uReflect, uShadow, uHaze, uAura, uEmbers
 // planet lighting (uPlanet = 1): the planet's sky behind, its ground (uGroundTex: sRGB albedo, a 4 m tile) lit as the
 // renderer lights a level surface (uSunE: the sun's diffuse, uSkyUp: the sky's), exposed and graded as the scene is
 uniform float uPlanet, uExposure; uniform sampler2D uGroundTex; uniform highp sampler3D uGrade;
-uniform vec3 uSunE, uSkyUp, uSkyZ, uSkyH;
+uniform vec3 uSunE, uSkyUp, uSkyZ, uSkyH; uniform float uFogDist;
 vec3 gradeOut(vec3 c) {
   vec3 s = clamp((log2(max(c, vec3(1e-6)) / 0.18) + 12.0) / 18.5, 0.0, 1.0);
   return texture(uGrade, s * (32.0 / 33.0) + 0.5 / 33.0).rgb;
@@ -92,7 +92,7 @@ void main() {
       }
       vec3 alb = s2l(texture(uGroundTex, P.xz / 4.0).rgb);
       vec3 g = gradeOut(alb * (uSunE * (1.0 - 0.9 * clamp(occ * 1.6, 0.0, 1.0)) + uSkyUp) * uExposure);
-      col = mix(g, col, smoothstep(12.0, 40.0, t));
+      col = mix(g, col, smoothstep(0.3 * uFogDist, uFogDist, t));
     }
     vec4 sc = texture(uScene, vUv);   // (drawn shaped: graded here)
     if (sc.a > 0.0) col = texture(uGrade, sc.rgb / sc.a * (32.0 / 33.0) + 0.5 / 33.0).rgb * sc.a + col * (1.0 - sc.a);
@@ -388,7 +388,7 @@ export class Showcase {
     const sunE = pe.sun.map(c => c * pe.sunIntensity * (this.R.sunOn === false ? 0 : 1) * Math.max(Math.sin(pe.sunElev), 0) / Math.PI);
     return {
       u: { uPlanet: 1, uExposure: pe.exposure, uSunE: sunE, uSkyUp: pe.zenith.map((z, k) => 0.6 * z + 0.4 * pe.horizon[k]),
-        uSkyZ: pe.zenith, uSkyH: pe.horizon },
+        uSkyZ: pe.zenith, uSkyH: pe.horizon, uFogDist: pe.fogDist ?? 40 },
       ground: this.groundTex ?? this.blankGround, grade: pe.grade.tex,
     };
   }
