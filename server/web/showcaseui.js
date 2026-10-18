@@ -59,15 +59,19 @@ function panel(app, themeOf) {
   const sc = show.scene, look = sc.showcase.look;
   const opt = (list, cur) => list.map(v => `<option ${v === cur ? 'selected' : ''}>${esc(v)}</option>`).join('');
   const none = (cur, label) => `<option value="" ${cur ? '' : 'selected'}>${label}</option>`;   // (an empty slot)
+  // a slot's place on the floor: X (left / right) and Y (toward / away from the camera), m
+  const moveRow = (si, it) => `<div class="row"><span style="width:1.2em">X</span><input type="range" data-move="${si}" data-ax="0" min="-8" max="8" step="0.05" value="${it.at[0]}" style="flex:1" title="Left / right">
+      <span style="width:1.2em">Y</span><input type="range" data-move="${si}" data-ax="1" min="-4" max="10" step="0.05" value="${it.at[1]}" style="flex:1" title="Toward (−) / away from (+) the camera"></div>`;
   const poses = sc.poses(), groupOf = { Armory: 'Armory poses (hold the weapon)', Moves: 'Moves', Emotes: 'Emotes (weapon put away)' };
   const poseOpts = cur => Object.entries(groupOf).map(([g, t]) => `<optgroup label="${t}">${opt(poses.filter(p => p.group === g).map(p => p.name), cur)}</optgroup>`).join('');
   const rows = sc.slots.map((it, si) => it.group === 'Armor'
     ? `<div class="row"><b class="grow">${esc(it.label ?? 'Helldiver')}</b></div>
       <div class="row"><select data-slot="${si}" data-f="name" title="Armor (its own helmet); none: no Helldiver here" style="flex:1;min-width:0">${none(it.name, '(none)')}${opt(sc.choices(si), it.name)}</select>
         <select data-slot="${si}" data-f="cape" title="Cape" style="flex:1;min-width:0">${none(it.cape, '(no cape)')}${opt(sc.capes(), it.cape)}</select></div>
+      <div class="row"><select data-slot="${si}" data-f="backpack" title="The backpack they wear" style="flex:1;min-width:0">${none(it.backpack, '(no backpack)')}${opt(sc.backpacks(), it.backpack)}</select></div>
       <div class="row"><select data-slot="${si}" data-f="weapon" title="The weapon they hold (when the pose holds one)" style="flex:1;min-width:0"><option value="" ${it.weapon ? '' : 'selected'}>(no weapon)</option>${opt(sc.weapons(), it.weapon)}</select>
-        <select data-slot="${si}" data-f="pose" title="Pose (the Armory's hold the weapon; an emote puts it away)" style="flex:1;min-width:0">${poseOpts(it.pose)}</select></div>`
-    : `<div class="row"><span style="width:6.5em">${esc(it.label ?? it.group)}</span><select data-slot="${si}" data-f="name" title="${esc(it.group)}" style="flex:1;min-width:0">${none(it.name, '(none)')}${opt(sc.choices(si), it.name)}</select></div>`).join('');
+        <select data-slot="${si}" data-f="pose" title="Pose (the Armory's hold the weapon; an emote puts it away)" style="flex:1;min-width:0">${poseOpts(it.pose)}</select></div>${moveRow(si, it)}`
+    : `<div class="row"><span style="width:6.5em">${esc(it.label ?? it.group)}</span><select data-slot="${si}" data-f="name" title="${esc(it.group)}" style="flex:1;min-width:0">${none(it.name, '(none)')}${opt(sc.choices(si), it.name)}</select></div>${moveRow(si, it)}`).join('');
   $('scSide').innerHTML = `<section><h2>Showcase</h2>
       <p class="hint">Live: orbit, pan and zoom in the viewport (the frame there is the image's). Nothing in the mod changes.</p>
       <div class="row"><label class="grow">Show <select id="scShow" style="max-width:220px">
@@ -111,6 +115,10 @@ function panel(app, themeOf) {
     try { await sc.setTheme(show.theme); msg(''); } catch (e) { msg(e.message); }
     if (show) { busy(false); if ($('scAuto').checked) $('scColor').value = sc.showcase.accent; }
   };
+  document.querySelectorAll('#scSide input[data-move]').forEach(inp => (inp.oninput = () => {
+    const si = +inp.dataset.move, at = [...sc.slots[si].at]; at[+inp.dataset.ax] = +inp.value;
+    sc.move(si, at);
+  }));
   // a slot's item, cape, weapon or pose: swapped in place (the others wait)
   document.querySelectorAll('#scSide select[data-slot]').forEach(sel => (sel.onchange = async () => {
     busy(true); msg('Loading…');

@@ -21,17 +21,13 @@ import { decalColors, previewDecals, unpreviewDecals } from './decaltheme.js';
 // idle), at t seconds into it or tf of its length. layer: back (behind the squad: hazed), squad, front.
 export const SCENE = [
   // the squad: the leader in front, two flanking a step behind; the camera low
-  { label: 'Leader', group: 'Armor', name: 'TR-117 Alpha Commander', cape: 'Eye of the Clandestine', weapon: 'AR-23 Liberator', at: [0, -0.55], yaw: 0, pose: 'I-102 Draconaught pose', tf: 0.5, layer: 'squad' },
-  { label: 'Left', group: 'Armor', name: 'CE-35 Trench Engineer', cape: 'Bastion of Integrity', weapon: 'SG-225 Breaker', at: [-1.3, 0.55], yaw: -0.95, pose: 'GS-17 Frontier Marshal pose', tf: 0.5, layer: 'squad' },
-  { label: 'Right', group: 'Armor', name: 'SC-34 Infiltrator', cape: 'Badge of Order', weapon: 'AC-8 Autocannon', at: [1.05, 0.6], yaw: -0.45, pose: 'PH-9 Predator pose', tf: 0.15, layer: 'squad' },
+  { label: 'Leader', group: 'Armor', name: 'TR-117 Alpha Commander', cape: 'Eye of the Clandestine', weapon: 'AR-23 Liberator', backpack: '', at: [0, -0.55], yaw: 0, pose: 'I-102 Draconaught pose', tf: 0.5, layer: 'squad' },
+  { label: 'Left', group: 'Armor', name: 'CE-35 Trench Engineer', cape: 'Bastion of Integrity', weapon: 'SG-225 Breaker', backpack: '', at: [-1.3, 0.55], yaw: -0.95, pose: 'GS-17 Frontier Marshal pose', tf: 0.5, layer: 'squad' },
+  { label: 'Right', group: 'Armor', name: 'SC-34 Infiltrator', cape: 'Badge of Order', weapon: 'AC-8 Autocannon', backpack: '', at: [1.05, 0.6], yaw: -0.45, pose: 'PH-9 Predator pose', tf: 0.15, layer: 'squad' },
   // the big gear behind, cut by the frame
   { label: 'Back left', group: 'Vehicles', name: 'Patriot Exosuit: Standard Exosuit Pattern', at: [-3.35, 2.6], yaw: -0.6, layer: 'back' },
   { label: 'Back right', group: 'Vehicles', name: 'Gunner FRV: Standard Vehicle Pattern', at: [4.1, 3.0], yaw: 1.0, layer: 'back' },
   { label: 'Stratagem', group: 'Stratagems', name: 'Stratagem: SOS Beacon', at: [-2.25, 4.6], yaw: 0.3, layer: 'back' },
-  // the small gear at the squad's feet (none at first: pick one in the Showcase; name '' = the slot empty)
-  { label: 'Backpack', group: 'Backpacks', name: '', at: [1.65, -1.05], yaw: 0.7, layer: 'front' },
-  { label: 'Sidearm', group: 'Weapons', name: '', at: [-0.8, -0.95], yaw: -1.9, layer: 'front' },
-  { label: 'Throwable', group: 'Equipment', name: '', at: [0.45, -1.05], yaw: 0, layer: 'front' },
 ];
 // the camera (fov: vertical, of the 16:9 frame)
 export const CAM = { pitch: -0.05, fov: 0.5, target: [0, 0.78, 0.35], dist: 7.0 };
@@ -133,6 +129,8 @@ export async function buildScene(app, opts = {}) {
     const d = items.find(e => e.slot === si && e.kind === 'diver'), w = items.find(e => e.slot === si && e.kind === 'weapon');
     if (!d) return;
     d.posed = null;
+    const bp = items.find(e => e.slot === si && e.kind === 'backpack');
+    if (bp) attachTo(R, d, 'backpack', bp.pieces);   // (worn on the back, as the game links it)
     for (const p of d.pieces) if (p.skin && !p.info?.vehicle) p.pose = d.pose;   // (the pose without a left hand on a weapon)
     if (!w) return;
     w.hidden = !holdsWeapon(poses, slots[si].pose);
@@ -141,7 +139,7 @@ export async function buildScene(app, opts = {}) {
   };
   // a slot loaded (again): an item, or a Helldiver (armor, cape) and the weapon they hold; parts: 'all', 'weapon'
   const loadSlot = async (si, parts = 'all') => {
-    const it = slots[si], old = items.filter(e => e.slot === si && (parts === 'all' || e.kind === 'weapon'));
+    const it = slots[si], old = items.filter(e => e.slot === si && (parts === 'all' || e.kind === parts));
     const oldPieces = old.flatMap(e => e.pieces);
     for (const e of old) items.splice(items.indexOf(e), 1);
     let freed = false;
@@ -156,7 +154,12 @@ export async function buildScene(app, opts = {}) {
         items.push({ n: ids++, slot: si, kind: it.group === 'Armor' ? 'diver' : 'item', layer: it.layer, pieces: ps, pose: pz, rot, shift });
       }
     }
-    if (it.group === 'Armor' && it.name && it.weapon) {
+    if (it.group === 'Armor' && it.name && it.backpack && (parts === 'all' || parts === 'backpack')) {
+      const kit = kitIn('Backpacks', it.backpack);
+      if (!kit) notes.push(`not found: ${it.backpack}`);
+      else items.push({ n: ids++, slot: si, kind: 'backpack', layer: it.layer, pieces: await take([kit.value]) });
+    }
+    if (it.group === 'Armor' && it.name && it.weapon && (parts === 'all' || parts === 'weapon')) {
       const kit = kitIn('Weapons', it.weapon);
       if (!kit) notes.push(`not found: ${it.weapon}`);
       else items.push({ n: ids++, slot: si, kind: 'weapon', layer: it.layer, pieces: await take([kit.value]) });
@@ -215,7 +218,10 @@ export async function buildScene(app, opts = {}) {
         sc.frozen = true;
         try {
           if (patch.name !== undefined && patch.name !== before.name || patch.cape !== undefined && patch.cape !== before.cape) await loadSlot(si);
-          else if (patch.weapon !== undefined && patch.weapon !== before.weapon) await loadSlot(si, 'weapon');
+          else {
+            if (patch.weapon !== undefined && patch.weapon !== before.weapon) await loadSlot(si, 'weapon');
+            if (patch.backpack !== undefined && patch.backpack !== before.backpack) await loadSlot(si, 'backpack');
+          }
           if (patch.pose !== undefined && patch.pose !== before.pose) {
             const d = items.find(e => e.slot === si && e.kind === 'diver');
             if (d) { d.pose = await poseOf(it); grip(si); }
@@ -227,6 +233,15 @@ export async function buildScene(app, opts = {}) {
       });
       return busy;
     },
+    // a slot moved on the floor: at [x, depth] (m; the scene's), its item placed again (its weapon and backpack with it)
+    move(si, at) {
+      const it = slots[si], dx = at[0] - it.at[0], dz = at[1] - it.at[1];
+      if (it.edges) { it.edges.x += dx; it.edges.z += dz; }
+      it.at = [...at];
+      for (const e of items.filter(e => e.slot === si && (e.kind === 'diver' || e.kind === 'item'))) Object.assign(e, place(it, e.pieces, e.pose));
+      if (it.group === 'Armor') grip(si);
+    },
+    backpacks() { return uniq2(kits.filter(k => k.group === 'Backpacks' && k.name).map(k => k.name)); },
     // the items a slot can take (names; a vehicle: its standard look), and the poses
     choices(si) {
       const it = slots[si], named = k => k.name && !/^[0-9a-f]{6,8}$/.test(k.name);
@@ -290,46 +305,23 @@ function autoExposure(R, items, base) {
 // it two-handed (its hand sockets within 40 cm, or the left hand within 30 cm of this weapon's grip), the left arm bent
 // (two-bone IK: shoulder, elbow) so attach_hand_l meets the weapon's IK_left, the hand turned as IK_left; the
 // Helldiver's pieces take those bones (pose.world). In the avatar's space, then the Helldiver's turn and place.
-export function holdWeapon(R, h, n, it, ps) {
+export function holdWeapon(R, h, n, it, ps) { return attachTo(R, h, 'attach_hand_r', ps); }
+
+// an item on a node of the posed avatar (a weapon on attach_hand_r, a backpack on backpack): the item's root there, as
+// the game links it (the item's own bones at their bind pose); the hands stay as the pose has them
+export function attachTo(R, h, node, ps) {
   const S = R.avatarSkel;
   if (!h || !S) return null;
-  const at = nm => S.names.indexOf(nm);   // (n, it: the weapon's id and layer; unused but for the key)
   h.posed ??= poseSkeleton(S, h.pose?.clip ?? null, h.pose?.time ?? 0);
-  const posed = h.posed;
   const wp = ps.find(p => p.skin), wsk = wp?.skin.skel, wb = wsk ? poseSkeleton(wsk, null, 0) : null;
   const wnode = nm => { const i = wsk ? wsk.names.indexOf(nm) : -1; return i < 0 ? null : wb[i]; };
   const root = wnode('root') ?? wnode('StingrayEntityRoot') ?? M4.ident();
-  const Mw = M4.mul(posed[at('attach_hand_r')], M4.invert(root));
+  const at = S.names.indexOf(node);
+  if (at < 0) return null;
+  const Mw = M4.mul(h.posed[at], M4.invert(root));
   const rot = mul3(h.rot, m3(Mw)), shift = v3.add(app3(h.rot, pos(Mw)), h.shift);
   for (const p of ps) { p.rot = rot; p.shift = shift; p.pose = null; }
-  const item = null;
-  const ikl = wnode('IK_left');
-  if (!ikl) return item;
-  const goal = M4.mul(Mw, ikl), iS = at('l_shoulder'), iE = at('l_elbow'), iH = at('l_hand'), iA = at('attach_hand_l');
-  const miss = v3.len(v3.sub(pos(posed[iA]), pos(goal))), hands = v3.len(v3.sub(pos(posed[iA]), pos(posed[at('attach_hand_r')])));
-  if ((miss > 0.3 && hands > 0.4) || miss < 0.01) return item;
-  const kids = new Map(); S.parent.forEach((q, i) => { if (q >= 0) (kids.get(q) ?? kids.set(q, []).get(q)).push(i); });
-  const under = i => { const o = [i]; for (let k = 0; k < o.length; k++) o.push(...(kids.get(o[k]) ?? [])); return o; };
-  const Wd = posed.slice();
-  // the hand where it ends: attach_hand_l on IK_left (its turn too), so l_hand = IK_left * inverse(attach_hand_l's local)
-  const localA = M4.mul(M4.invert(Wd[iH]), Wd[iA]), handGoal = M4.mul(goal, M4.invert(localA)), T = pos(handGoal);
-  const Sp = pos(Wd[iS]), E = pos(Wd[iE]), Hp = pos(Wd[iH]), a = v3.len(v3.sub(E, Sp)), b = v3.len(v3.sub(Hp, E));
-  const toT = v3.sub(T, Sp), d = Math.max(Math.abs(a - b) + 1e-4, Math.min(a + b - 1e-4, v3.len(toT))), u = v3.mul(toT, 1 / v3.len(toT));
-  let pole = v3.sub(v3.sub(E, Sp), v3.mul(u, v3.dot(v3.sub(E, Sp), u)));
-  if (v3.len(pole) < 1e-5) pole = [0, -1, 0];
-  pole = v3.mul(pole, 1 / v3.len(pole));
-  const ca = (a * a + d * d - b * b) / (2 * a * d), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
-  const E2 = v3.add(Sp, v3.mul(v3.add(v3.mul(u, ca), v3.mul(pole, sa)), a));
-  const R1 = turnTo(v3.sub(E, Sp), v3.sub(E2, Sp), Sp);
-  for (const i of under(iS)) Wd[i] = M4.mul(R1, Wd[i]);
-  const R2 = turnTo(v3.sub(pos(Wd[iH]), E2), v3.sub(T, E2), E2);
-  for (const i of under(iE)) Wd[i] = M4.mul(R2, Wd[i]);
-  const R3 = M4.mul(handGoal, M4.invert(Wd[iH]));   // (the hand turned as the grip, about the wrist; its fingers with it)
-  for (const i of under(iH)) Wd[i] = M4.mul(R3, Wd[i]);
-  const world = new Map(); S.names.forEach((nm, i) => { if (nm && !world.has(nm)) world.set(nm, Wd[i]); });
-  const key = 'held' + h.n + ':' + n + ':' + (h.pose ? h.pose.clip.animation + '@' + h.pose.time.toFixed(4) : 'bind');   // (per weapon: its grip)
-  for (const p of h.pieces) if (p.skin && !p.info?.vehicle) p.pose = { ...(h.pose ?? { clip: null, time: 0 }), key, world };
-  return item;
+  return null;
 }
 
 // each item's LUTs in the theme (its roles: yours, else built-in, else suggested for the item), under keys of their

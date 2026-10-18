@@ -1230,8 +1230,7 @@ function fillHeldMenu() {
   const guns = (S.kitList ?? []).filter(e => e.type === 'Weapon');
   sel.add(new Option('No weapon', ''));
   for (const e of guns) sel.add(new Option(e.label, e.value));
-  let want = null; try { want = localStorage.getItem('lutstudio.held'); } catch { }
-  sel.value = want !== null && [...sel.options].some(o => o.value === want) ? want : (guns.find(e => /Liberator\b/.test(e.label)) ?? guns[0])?.value ?? '';
+  sel.value = '';   // (none at first)
 }
 // the held weapon as the pose and the menu say (force: load it again, e.g. another weapon)
 async function updateHeld(force = false) {
@@ -1477,7 +1476,7 @@ function wire() {
   for (const n of Object.keys(CAMERAS)) $('camera').add(new Option(n, n));
   $('camera').onchange = () => setCamera($('camera').value);
   $('pose').onchange = async () => { await setPose($('pose').value); updateHeld(); };
-  $('heldWeapon').onchange = () => { try { localStorage.setItem('lutstudio.held', $('heldWeapon').value); } catch { } updateHeld(true); };
+  $('heldWeapon').onchange = () => updateHeld(true);
   for (const [id, part] of [['wearArmor', 'armor'], ['wearHelmet', 'helmet'], ['wearCape', 'cape']])
     $(id).onchange = () => { S.look[part] = $(id).value; saveLook(); loadCharacter(); };
   $('posePlay').onclick = () => {
@@ -1915,6 +1914,9 @@ async function boot() {
   S.presets = await api('/api/presets').catch(() => []);
   await init();
   await loadPoses();
+  // the default pose: the Armory's first idle (no weapon in hand until one is picked)
+  const idle = [...$('pose').options].find(o => o.text === 'Armory idle 1');
+  if (idle && S.mode === 'char') { $('pose').value = idle.value; await setPose(idle.value); updateHeld(); }
   setCamera('Front ¾');
   let report = null;       // a mod was just imported (start page): say what came in
   try { report = sessionStorage.getItem('lutstudio.importReport'); sessionStorage.removeItem('lutstudio.importReport'); } catch { }

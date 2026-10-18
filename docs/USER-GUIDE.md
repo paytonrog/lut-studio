@@ -171,8 +171,7 @@ whenever it's worn.
   **Shadows**; and LUT Studio's two side lights, **Blue light** and **Yellow light** (cool on the left, warm on the
   right), off at first: tick them on and set each one's direction (0° = from the camera, 90° = right, 180° =
   behind, 270° = left) and height. LUT Studio remembers your side lights. **Reset** puts the whole menu back as it starts.
-- **Pose**: with a pose that holds a weapon (the Armory's, the moves), a menu beside it picks the weapon in the Helldiver's hands (or none); click the weapon to edit its LUTs like any piece's. Picking a planet's light turns the sun on and the side lights off; the Armory menu's turns the side lights on and the sun off.
-- **Pose**: with a pose that holds a weapon (the Armory's, the moves), a menu beside it picks the weapon in the Helldiver's hands (or none); click the weapon to edit its LUTs like any piece's. Picking a planet's light turns the sun on and the side lights off; the Armory menu's turns the side lights on and the sun off.
+- **Pose**: the Armory's first idle at first. With a pose that holds a weapon (the Armory's, the moves), a menu beside it picks the weapon in the Helldiver's right hand (none at first; the left hand stays where the pose puts it); click the weapon to edit its LUTs like any piece's. Picking a planet's light turns the sun on and the side lights off; the Armory menu's turns the side lights on and the sun off.
 - **Camera** presets, **Frame** and **Turntable**; **View**: the final look, or debug views that show
   each mask on its own (zones, wear, metalness, roughness, dirt, wetness…); **Before | after** splits the screen
   (the game's look on the left: its colors, patterns, masks, decals and cape designs; your edits on the right).
@@ -298,8 +297,8 @@ whenever it's worn.
 ## Showcase
 
 **Showcase** (on the view bar, or the Theme panel's button) turns the viewport into key art, live: three Helldivers in
-warbond poses holding their weapons, two vehicles and a stratagem behind them (a backpack, a sidearm and a throwable at
-their feet when you pick them), in the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
+warbond poses holding their weapons (backpacks on when you pick them), two vehicles and a stratagem behind them, in
+the Armory menu's light with a glow behind the squad, a glossy floor that reflects them, haze, bloom and
 a title. The items load one by one (a few seconds each the first time); then orbit, pan and zoom as ever (the frame in
 the viewport is the image's, 16:9). The editor's lists and bars step aside and the right sidebar holds the options:
 
@@ -307,9 +306,10 @@ the viewport is the image's, 16:9). The editor's lists and bars step aside and t
   opened from there), or any theme preset.
 - **Title** (the big line) and **Line** (the small one over it): either can be empty.
 - **Light**: the glow's color, from the scene (the theme's, or the squad's own colors) or your own.
-- **Scene**: each Helldiver's armor, cape, weapon and pose (an Armory pose holds the weapon, an emote puts it away),
-  the two vehicles, the stratagem, the backpack, the sidearm and the throwable. A change swaps that item in place;
-  **(none)** empties any slot (the floor items start empty).
+- **Scene**: each Helldiver's armor, cape, backpack (none at first; worn as the game wears it), weapon and pose (an
+  Armory pose holds the weapon, an emote puts it away), the two vehicles and the stratagem. A change swaps that item
+  in place; **(none)** empties any slot. Each has **X** and **Y** sliders to move it on the floor (left / right,
+  toward / away from the camera).
 - **Look**: sliders for the background, the glow and its size, the rim light, exposure, reflections, floor shadows,
   haze, the aura around the squad, bloom, embers, grain, the vignette, the punch (how much the tone lifts the
   midtones) and the text size (remembered in this browser); **Reset look**, **Reset camera**.
