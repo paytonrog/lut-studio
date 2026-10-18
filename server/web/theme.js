@@ -282,7 +282,7 @@ Object.assign(PRESETS, {
   'Oiled Gunmetal': T('#14181a', '#0e1210', '#3aff9a', '#101414', { pf: [[6, 3, 0.6], [10, 0, 0.12]], px: IRID(0.45, 0.8, 1.6), glow: '#3aff9a', gv: 0.1, hw: '#2a2e30' }),
   'Monochromatic': T('#f2f2f2', '#0c0c0c', '#0c0c0c', '#f2f2f2', { pf: FIN.gloss, sf: FIN.gloss }),
   // (more Destiny 2 shaders, from how they're described: colors and finishes, not their exact textures)
-  'Metro Shift': T('#25304c', '#2f2f2f', '#d0d0d0', '#25304c', { pf: FIN.satin, sf: FIN.matte, tf: FIN.satin, hw: '#767676', hwf: FIN.brushed }),   // (its icon's four: navy, charcoal, pale grey, mid grey metal)
+  'Metro Shift': T('#18191d', '#1f3462', '#c8ccd2', '#16181e', { pf: FIN.gloss, sf: FIN.satin, tf: FIN.metal, hw: '#c8ccd2', hwf: FIN.mirror, fuzz: [0.1, 0.13, 0.22] }),   // (as in game: glossy near-black plates and suit, polished silver edges and metal, navy accents)
   'Vanguard Discipline': T('#8c8f92', '#3a3d42', '#c9c3b4', '#55585c', { pf: FIN.matte, sf: FIN.satin, tf: FIN.satin, hw: '#6a6e74', hwf: FIN.brushed }),
   'Carrhae Black': T('#121112', '#1c1a19', '#4a2e1c', '#161516', { pf: FIN.satin, sf: FIN.matte, tf: FIN.satin, hw: '#5a3820', hwf: [[6, 3, -1], [10, 0, 0.45], [1, 0, 0], [1, 1, 0.9], [22, 0, 2]] }),   // (walnut wood on the metal)
   'Ensilvered Snare': T('#b4b8bc', '#5a4230', '#2c2620', '#4a3a2a', { pf: FIN.brushed, px: [[4, 0, 3], [4, 1, 2], [4, 2, 6], [4, 3, 0], [1, 3, 0.1], [6, 0, 0.32], [6, 1, 0.22], [6, 2, 0.14], [5, 0, 0.6], [5, 1, 0.6], [5, 2, 0.6], [1, 0, 0], [1, 1, 0.8], [22, 0, 3]], sf: FIN.matte, tf: FIN.matte, hw: '#c4c8cc', hwf: FIN.metal }),   // (knightly, worn)
