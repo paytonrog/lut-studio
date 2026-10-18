@@ -256,10 +256,17 @@ whenever it's worn.
 - **Theme** (a sidebar tab: on the left at first; its panel takes the sidebar while open, the **Parts** tab goes back): pick a **Preset** (86 ready-made themes: classic camos, flat colors, faction colors, showpieces like Oil Slick, Chrome
   Legion and Neon Circuit, some very silly ones (Turd: all brown, rusted and grimed as far as it goes; Pink Void: one glowing pink shade, a pink hole where a Helldiver was), looks after Destiny 2's shaders (Bitterpearl, Gilded Frost, Metro Shift, Calus's Selected, Jacarina…), and one field camouflage per planet biome (**Planet biomes**: Plains, Ionic Crimson, Volcanic Jungle, Desert Dunes, Icy Glaciers, Haunted Swamp, Magma Desert… 29 in all, as the SEAF blend in per planet; each in the game's own colors of its planets' ground, plants and rock (their albedo, so they blend under the planet's light): the plates in the field color and the camo, in the pattern of its cover, on the cloth, as the game's own camo armors have it), each with a showcase look beside it (**Planet biomes: showcase**: the biome turned up for show, bright, glossy and glowing; where a theme already is that look it is used, as Volcanic for Magma Desert): each a look per role, with its metal, shine, glow, iridescence and camo) or style one item yourself, then give every armor, helmet, cape, backpack, weapon, vehicle and the rest of your gear the same look per role in one go. Each
   role's look is a whole zone of the item on screen (all its settings, not only the color): by default its biggest
-  zone of that role, or pick another one, or **(not changed)** to leave that role alone. Tick what it goes to
+  zone of that role, or pick another one, or **(not changed)** to leave that role alone. The color box in front of a
+  role recolors its look (its finish, wear and camo stay; **↺** goes back to the look's own color), so a preset or
+  your own zones can be put in any colors. **Apply to** the **item on screen** (the armor, helmet and cape, or
+  the item, shown; **Recolor this item…** at the top of the **Parts** tab opens the panel this way: a color per role
+  and the whole item is recolored in one go), or **every item of these kinds**: tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,
   **Eagle & craft**, **SEAF** (the soldier, medic and their weapons in every camo look, their backpacks and shells), **Super Destroyer** (the ship, its support cannons, the Eagle ordnance on display, the emblems, the cryo pods), **Ship interior** (terminals, screens, lamps, floors, walls…) or **Ship crew**; **only items already in this mod** to stay within it). In the last four, a LUT the game shares with something outside the group stays as it is (a cryo pod's frozen Helldiver wears B-01 armor; generic metals) and
-  **Apply theme**: every zone of those roles on those items gets the look, in the current variant. Items not in the
+  Under the boxes the panel says what Apply will do before it's done: how many items and LUTs, how many of them get
+  added to the mod, whether zones you changed by hand are kept or overwritten, and whether decal sheets get recolored.
+  **Apply theme**: every zone of those roles on those items gets the look, in the current variant. **Undo theme**
+  then puts back every file the last theme changed (zones, the LUTs it added, decal sheets), as they were before it. Items not in the
   mod yet are added to it (every variant, with the game's colors), so a theme can make a whole overhaul. Zones with
   the **keep** or **unused** role are left alone. **Preview on screen** shows the theme on the item on screen without saving anything. **Also theme decals** recolors the decals too (emblems, markings, stencils): their decal sheets, in the
   theme's colors (light parts in the trim look's color and dark parts in the secondary's, or all in the trim color);
@@ -273,8 +280,9 @@ whenever it's worn.
   them. Applying again (after changing the item on screen) updates every
   themed zone; a zone you changed by hand since is kept, unless **also overwrite zones I changed by hand** is ticked.
   For another color scheme, make a variant, restyle the item, apply again. **◂ Previous / Next ▸** steps through the
-  themed items. Roles that are only suggested (not confirmed in **Roles**) can put a look on the wrong zone: the
-  panel says how many LUTs on screen are unconfirmed.
+  themed items. Every armor's and weapon's roles were reviewed item by item; on the others (helmets, capes,
+  backpacks, vehicles, the rest) roles are suggested from the item's colors and masks and can put a look on the wrong
+  zone: the panel says how many LUTs on screen have suggested roles only, and on what kind of item.
 - **Variants**: **+ Variant** copies the current color scheme. Players pick one variant in the mod manager.
 - **Mod page** tab: everything the mod managers (HD2 Mod Manager, HD2 Arsenal) show of your mod, beside the model:
   - the mod's **name**, **description** and **icon**;

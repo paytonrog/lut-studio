@@ -227,6 +227,32 @@ async function rolesPanel(kind) {
     `suggested ${suggested}; view ${view}; picked ${picked}; ${confirmed}; mine ${mine}; next ${next}; ${progress}; restored ${restored}; ${errors.slice(0, 2).join(' | ')}`);
 }
 
+// Recolor this item: the Theme panel on the item on screen only, the primary role in a color of its own, applied (the
+// item's zones in it), then Undo theme: every zone back as it was
+async function recolorUndo(kind) {
+  errors.length = 0;
+  const sum = `(() => { let n = 0; for (const l of window.lutstudio.S.luts.values()) if (l.edited) n += l.edited.reduce((a, v) => a + v, 0); return n; })()`;
+  const reds = `(() => { let n = 0; for (const l of window.lutstudio.S.luts.values()) if (l.edited && l.kind === 'material')
+    for (let z = 0; z < l.h; z++) { const b = z * l.w * 4; if (Math.abs(l.edited[b] - 1) < 0.01 && l.edited[b + 1] < 0.01 && l.edited[b + 2] < 0.01) n++; } return n; })()`;
+  const before = await evaluate(sum);
+  await evaluate(`(document.getElementById('recolorBtn').click(), 1)`);
+  const open = await waitFor(`document.getElementById('thTitle')?.textContent === 'Recolor this item' && !!document.querySelector('input[data-tint=primary]:not([disabled])')`, 60000);
+  const summary = await evaluate(`document.getElementById('thCount')?.textContent ?? ''`);
+  await evaluate(`(() => { const t = document.querySelector('input[data-tint=primary]'); t.value = '#ff0000'; t.dispatchEvent(new Event('input')); t.dispatchEvent(new Event('change'));
+    document.getElementById('thApply').click(); return 1; })()`);
+  const done = await waitFor(`/^Themed [0-9]+ zone/.test(document.getElementById('thInfo').textContent) && document.getElementById('thInfo').textContent`, 120000);
+  const red = await evaluate(reds);
+  await evaluate(`(document.getElementById('thUndo').click(), 1)`);
+  const undone = await waitFor(`/^Undone/.test(document.getElementById('thInfo').textContent) && document.getElementById('thInfo').textContent`, 60000);
+  await sleep(1000);
+  const after = await evaluate(sum), redAfter = await evaluate(reds);
+  check(`${kind}: Recolor this item: the primary in its own color on the item on screen, then Undo theme puts it back`,
+    !!open && /^Applies to the item on screen/.test(summary) && !!done && red > 0 && !!undone && redAfter === 0 && Math.abs(after - before) < 1e-3 && errors.length === 0,
+    `${summary}; ${done || 'not applied'}; ${red} red zone(s); ${undone || 'not undone'}; ${redAfter} after; sum ${before} -> ${after}; ${errors.slice(0, 2).join(' | ')}`);
+  await evaluate(`(document.getElementById('partsTab').click(), 1)`);
+  await sleep(500);
+}
+
 // the Theme panel on the open armor: a look per role from the zones on screen, applied to the mod's own items (this
 // variant), the model reloads with the themed LUTs, and the review steps to an item
 async function themePanel(kind) {
@@ -535,6 +561,7 @@ async function main() {
         await maskEditor(kind);
         await rolesPanel(kind);
         await themePanel(kind);
+        await recolorUndo(kind);
       }
       if (kind === 'weapon') {   // an attachment change: another optic, reloaded with no errors
         const before = parts;

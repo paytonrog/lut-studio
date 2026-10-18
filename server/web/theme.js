@@ -438,7 +438,9 @@ export function putLook(px, l, z, look, role) {
 // app: { R, api, variant, lut(hash), lutLabel(hash), showItem(value), current() -> item values on screen, saveAll(),
 // projectLuts() -> the LUTs in the project (Set),
 // refresh() (the project and the variant again), status(msg), track(event, props) }
-export async function themeDialog(app) {
+// opts.item: open on "Recolor this item" (applied to the item on screen only; the panel's other mode: every item of
+// the kinds ticked). A "lutstudio:recolor" event on document switches an open panel to it.
+export async function themeDialog(app, opts = {}) {
   if (!(await closeSide())) return;   // (the open panel first: its cleanup, its unsaved-changes question)
   const R = app.R;
   await app.saveAll();
@@ -464,12 +466,17 @@ export async function themeDialog(app) {
     onScreen = on; zones = zs;
   };
   await screenZones();
-  const unconfirmed = onScreen.filter(h => !data.mine[h] && !data.builtin[h]).length;
+  // LUTs whose roles are only suggested: not in roles.json, not yours, not of a reviewed group's item (armor, weapons);
+  // named by the kind of item they're on
+  const reviewed = new Set(data.reviewed ?? []), groupOf = new Map();
+  for (const it of data.items ?? []) for (const l of it.luts) if (!groupOf.has(l.lut)) groupOf.set(l.lut, it.group);
+  const guessed = onScreen.filter(h => !data.mine[h] && !data.builtin[h] && !reviewed.has(h));
+  const guessedOn = [...new Set(guessed.map(h => groupOf.get(h) ?? 'other'))].map(g => g.toLowerCase()).join(', ');
   // the source zone of each role: the biggest of that role on screen
   const pick = {}, camo = {};   // camo[role]: {layer, colors: 4 x rgb, tiling}
   for (const n of names) pick[n] = zones.filter(x => x.role === n).sort((a, b) => b.cov - a.cov)[0] ?? null;
   const shownGroups = new Set((data.items ?? []).filter(it => app.current().includes(it.value)).map(it => it.group));
-  const close = openSide(`<h3>Theme everything like this</h3>
+  const close = openSide(`<h3 id="thTitle">Theme everything like this</h3>
     <div class="row"><label>Preset <select id="thPreset" title="A ready-made theme: each role's look from it (over the item's own zones); or your own, from the zones below">
       <option value="">(my own: the zones below)</option>${presetOptions()}</select></label>
       <button id="thPreview" title="Show the theme on the item on screen, without changing anything">Preview on screen</button>
@@ -479,7 +486,7 @@ export async function themeDialog(app) {
       a role can also get a camo pattern over it.
       Every zone of that role on the items you choose gets it, in this variant (${esc(app.variant)}). Items not in
       the mod yet are added. Zones you changed by hand since the last theme are kept.</p>
-    ${unconfirmed ? `<p class="warn">${unconfirmed} LUT(s) on screen have guessed roles only (not reviewed yet): a look may land on the wrong zone there; check the result.</p>` : ''}
+    ${guessed.length ? `<p class="warn">The zone roles of ${guessed.length === 1 ? 'one LUT' : guessed.length + ' LUTs'} on screen (${esc(guessedOn)}) are suggested only, not reviewed yet: a look may land on the wrong zone there; check the result.</p>` : ''}
     <div id="thPalette"></div>
     <div class="row"><label class="check" title="Metal parts (barrels, bolts, buckles: the hardware role) take this color and keep their metal finish; off: they keep the game's metal"><input type="checkbox" id="thMetal"> paint metal parts</label>
       <input type="color" id="thMetalColor" value="#2a2a2a" title="the metal parts' color"></div>
@@ -487,11 +494,14 @@ export async function themeDialog(app) {
       <select id="thDecalMode" title="How decals take the theme's colors"><option value="two">light parts trim, dark parts secondary</option><option value="one">all in the trim color</option></select></div>
     <p class="hint" id="thDecalNote" hidden>A decal sheet is shared: every item drawing from a recolored sheet shows its decals in the theme's colors, items you didn't theme too. Each recolored sheet adds about 5 MB to the mod.</p>
     <h3>Apply to</h3>
-    <div class="row">${GROUPS.map(g => `<label class="check"><input type="checkbox" class="thGroup" value="${g}" ${shownGroups.has(g) || (!shownGroups.size && DEFAULT_GROUPS.includes(g)) ? 'checked' : ''}> ${g}</label>`).join('')}</div>
+    <div class="row"><label class="check" title="Only the armor, helmet and cape (or the item) on screen"><input type="radio" name="thTarget" value="item" ${opts.item ? 'checked' : ''}> the item on screen</label>
+      <label class="check" title="Every item of the kinds ticked below"><input type="radio" name="thTarget" value="groups" ${opts.item ? '' : 'checked'}> every item of these kinds:</label></div>
+    <div class="row" id="thGroups">${GROUPS.map(g => `<label class="check"><input type="checkbox" class="thGroup" value="${g}" ${shownGroups.has(g) || (!shownGroups.size && DEFAULT_GROUPS.includes(g)) ? 'checked' : ''}> ${g}</label>`).join('')}</div>
     <label class="check"><input type="checkbox" id="thOnly"> only items already in this mod</label>
     <label class="check"><input type="checkbox" id="thOverwrite"> also overwrite zones I changed by hand</label>
     <p class="hint" id="thCount"></p>
-    <div class="row"><button id="thApply" class="primary">Apply theme</button></div>
+    <div class="row"><button id="thApply" class="primary">Apply theme</button>
+      <button id="thUndo" hidden title="Put every file the last theme changed back as it was before it (zones, added LUTs, decal sheets)">Undo theme</button></div>
     <p class="hint" id="thInfo"></p>
     <div class="row" id="thReview" hidden><button id="thPrev">◂ Previous</button><button id="thNext">Next ▸</button><span class="hint" id="thAt"></span></div>`, () => {
     R.highlight = { lut: null, zone: -1, piece: -1 };
@@ -503,10 +513,14 @@ export async function themeDialog(app) {
   const color = x => { const l = app.lut(x.lut), a = l.edited ?? l.vanilla; return [0, 1, 2].map(ch => a[at(l, x.z, 0, ch)]); };
   const hex = c => '#' + c.map(v => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('');
   const palette = () => {
+    const base = lookRows({ tinted: false }).looks ?? {};
     $('thPalette').innerHTML = names.map(n => {
       const of = zones.filter(x => x.role === n);
-      const cur = pick[n];
-      return `<div class="item rlZone"><span class="swatch" style="background:${cur ? hex(color(cur)) : 'transparent'}"></span>
+      const cur = pick[n], has = !!base[n];
+      const now = tint[n] ?? (has ? hex(base[n].slice(0, 3)) : '#808080');
+      return `<div class="item rlZone"><input type="color" class="thTint" data-tint="${n}" value="${now}" ${has ? '' : 'disabled'}
+          title="${has ? `This role's color (${tint[n] ? 'your own: ↺ goes back to the look\'s' : 'the look\'s: pick another to recolor it'})` : 'No look for this role: pick its zone or a preset'}">
+        ${tint[n] ? `<button class="thUntint" data-untint="${n}" title="Back to the look's own color">↺</button>` : ''}
         <span class="swatch" title="${esc(ROLE_INFO[n]?.tip ?? '')}" style="background:${hex(ROLE_INFO[n]?.color ?? [0.5, 0.5, 0.5])};width:8px"></span>
         <span class="grow">${n}</span><select data-r="${n}"><option value="">(not changed)</option>
         ${of.map((x, i) => `<option value="${i}" ${x === cur ? 'selected' : ''}>${esc(zoneName(x))}</option>`).join('')}</select>
@@ -515,6 +529,11 @@ export async function themeDialog(app) {
         ${camo[n] && cur ? `<div class="row thCamo" data-cr="${n}">${camo[n].colors.map((c, i) => `<input type="color" data-ci="${i}" value="${hex(c)}" title="camo color ${i + 1}${i ? '' : ' (background)'}">`).join('')}
           <label class="hint">size <input type="range" data-ct min="0.3" max="3" step="0.05" value="${camo[n].tiling}" title="pattern size: left big blobs, right fine"></label></div>` : ''}`;
     }).join('');
+    document.querySelectorAll('#thPalette input[data-tint]').forEach(inp => {
+      inp.oninput = () => { tint[inp.dataset.tint] = inp.value; if (previewing) preview(); };
+      inp.onchange = () => palette();   // (its ↺ shown)
+    });
+    document.querySelectorAll('#thPalette button[data-untint]').forEach(b => (b.onclick = () => { delete tint[b.dataset.untint]; palette(); if (previewing) preview(); }));
     document.querySelectorAll('#thPalette select[data-camo]').forEach(sel => {
       const n = sel.dataset.camo;
       sel.onchange = () => {
@@ -541,20 +560,33 @@ export async function themeDialog(app) {
       sel.onmouseleave = () => { R.highlight = { lut: null, zone: -1, piece: -1 }; };
     });
   };
+  const itemMode = () => document.querySelector('input[name=thTarget]:checked')?.value === 'item';
   const groups = () => [...document.querySelectorAll('.thGroup:checked')].map(c => c.value);
-  const targets = () => (data.items ?? []).filter(it => groups().includes(it.group));
+  const targets = () => (data.items ?? []).filter(it => itemMode() ? app.current().includes(it.value) : groups().includes(it.group));
+  // what Apply will do, said before it's done: the items and LUTs, those added to the mod, hand edits, decals
   const count = () => {
-    const its = targets(), luts = new Set(its.flatMap(it => it.luts.map(x => x.lut)));
-    $('thCount').textContent = $('thOnly').checked ? `${groups().join(', ') || 'nothing'}: the items already in this mod`
-      : `${its.length} items, ${luts.size} LUTs`;
+    const item = itemMode();
+    $('thGroups').classList.toggle('off', item);
+    $('thTitle').textContent = item ? 'Recolor this item' : 'Theme everything like this';
+    $('thApply').textContent = item ? 'Recolor this item' : 'Apply theme';
+    const inMod = app.projectLuts();
+    const its = targets().filter(it => !$('thOnly').checked || it.luts.some(x => inMod.has(x.lut)));
+    const luts = new Set(its.flatMap(it => it.luts.map(x => x.lut))), added = [...luts].filter(h => !inMod.has(h)).length;
+    const what = item ? `the item on screen (${luts.size} LUT${luts.size === 1 ? '' : 's'})` : `${its.length} item${its.length === 1 ? '' : 's'} (${luts.size} LUTs)`;
+    $('thCount').textContent = !its.length ? 'Nothing to apply it to: tick a kind of item.' : `Applies to ${what} in the ${app.variant} variant` +
+      (added ? `; ${added} LUT${added === 1 ? ' is' : 's are'} not in the mod yet and get${added === 1 ? 's' : ''} added (to every variant)` : '') +
+      `; zones you changed by hand are ${$('thOverwrite').checked ? 'overwritten' : 'kept'}` +
+      ($('thDecals').checked ? '; their decal sheets are recolored (shared with other items)' : '') + '. Undo theme puts it all back.';
   };
-  document.querySelectorAll('.thGroup').forEach(c => (c.onchange = count));
+  document.querySelectorAll('.thGroup, input[name=thTarget], #thOverwrite').forEach(c => c.addEventListener('change', count));
   $('thOnly').onchange = count;
+  document.addEventListener('lutstudio:recolor', () => { document.querySelector('input[name=thTarget][value=item]').checked = true; count(); }, { signal: close.signal });
 
   const rowOf = x => { const l = app.lut(x.lut), a = l.edited ?? l.vanilla; return Array.from(a.slice(x.z * l.w * 4, (x.z + 1) * l.w * 4)); };
   // the looks per role: the preset's (over the role's zone on screen, else the primary's, else any material zone) or
   // the zones picked; metal parts when asked
-  const lookRows = () => {
+  const tint = {};   // role -> its own color (hex), over the look's
+  const lookRows = ({ tinted = true } = {}) => {
     const looks = {}, P = PRESETS[$('thPreset').value];
     if (P) {
       const any = pick.primary ?? pick.secondary ?? zones.find(z => app.lut(z.lut)?.w === W && z.role !== 'unused');
@@ -580,12 +612,15 @@ export async function themeDialog(app) {
         looks.hardware = row;
       }
     }
+    // a role recolored: the look's paint color is the one picked (its finish, wear and camo stay)
+    if (tinted) for (const [n, h] of Object.entries(tint)) if (looks[n]) { const c = unhexc(h); for (let k = 0; k < 3; k++) looks[n][k] = c[k]; }
     return { looks };
   };
   $('thPreset').onchange = () => {
     const P = PRESETS[$('thPreset').value];
     if (P?.hardware) { $('thMetal').checked = true; $('thMetalColor').value = P.hardware.c; }
     else if (P) $('thMetal').checked = false;
+    palette();   // (the roles' colors: the preset's)
     if (previewing) preview();
   };
   // ---- the theme on the item on screen, without saving: its LUTs in the looks (shown under keys of their own)
@@ -632,7 +667,7 @@ export async function themeDialog(app) {
     $('thPreview').textContent = 'End preview';
     info('Preview: the theme on the item on screen (nothing saved). Apply theme to keep it.');
   }
-  const decalsChanged = () => { $('thDecalNote').hidden = !$('thDecals').checked; if (previewing) preview(); };
+  const decalsChanged = () => { $('thDecalNote').hidden = !$('thDecals').checked; count(); if (previewing) preview(); };
   $('thDecals').onchange = decalsChanged;
   $('thDecalMode').onchange = decalsChanged;
   $('thPreview').onclick = () => (previewing ? (unpreview(), info('')) : preview());
@@ -668,27 +703,44 @@ export async function themeDialog(app) {
     if (error) return info(error);
     unpreview();
     if (!Object.keys(looks).length) return info('Pick a preset or at least one role\'s look.');
-    if (!groups().length) return info('Pick what to apply it to.');
+    if (!itemMode() && !groups().length) return info('Pick what to apply it to.');
     const its = targets();
+    if (!its.length) return info('Nothing on screen to recolor.');
     if (!$('thOnly').checked && its.length > 20 && !confirm(`Theme ${its.length} items? Those not in the mod yet are added to it (every variant).`)) return;
     $('thApply').disabled = true;
     info('Applying… (the first time reads every item\'s masks: a little while)');
     try {
       const r = await app.api('/api/theme', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Variant: app.variant, Looks: looks, Groups: groups(), OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked,
+        body: JSON.stringify({ Variant: app.variant, Looks: looks, Groups: groups(), Items: itemMode() ? its.map(it => it.value) : [], OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked,
           Decals: $('thDecals').checked ? $('thDecalMode').value : '' }) });
-      app.track('theme applied', { groups: groups(), roles: Object.keys(looks), preset: $('thPreset').value || null, camo: Object.keys(camo), paint_metal: $('thMetal').checked, decals: $('thDecals').checked ? $('thDecalMode').value : null, decal_sheets: r.decal_sheets, items: r.items, luts: r.luts, zones: r.zones, kept: r.kept, added: r.added, only_in_mod: $('thOnly').checked });
+      app.track('theme applied', { item_only: itemMode(), tinted: Object.keys(tint), groups: groups(), roles: Object.keys(looks), preset: $('thPreset').value || null, camo: Object.keys(camo), paint_metal: $('thMetal').checked, decals: $('thDecals').checked ? $('thDecalMode').value : null, decal_sheets: r.decal_sheets, items: r.items, luts: r.luts, zones: r.zones, kept: r.kept, added: r.added, only_in_mod: $('thOnly').checked });
       await app.refresh();
       if (r.decal_sheets) await R.refreshDecals();
       info(`Themed ${r.zones} zone(s) in ${r.changed} LUT(s) of ${r.items} item(s)` + (r.added ? `; ${r.added} LUT(s) added to the mod` : '') +
         (r.decal_sheets ? `; recolored ${r.decal_sheets} decal sheet(s)` + (r.decal_outside ? ` (also drawn on ${r.decal_outside} item(s) outside the groups themed)` : '') : '') +
         (r.pattern_outside ? `; the pattern trims are shared with ${r.pattern_outside} item(s) outside the groups themed (they change too)` : '') +
-        (r.kept ? `; kept ${r.kept} zone(s) you changed by hand (tick "also overwrite" to replace them)` : '') + '. Step through them below.');
+        (r.kept ? `; kept ${r.kept} zone(s) you changed by hand (tick "also overwrite" to replace them)` : '') + (itemMode() ? '.' : '. Step through them below.'));
       const inMod = app.projectLuts();
       review = targets().filter(it => !$('thOnly').checked || it.luts.some(x => inMod.has(x.lut))); ri = -1;
-      $('thReview').hidden = !review.length;
+      $('thReview').hidden = !review.length || itemMode();
+      $('thUndo').hidden = false;
+      count();
     } catch (e) { info(e.message); }
     $('thApply').disabled = false;
+  };
+  // ---- undo: the files the last theme changed put back (theme.go undoTheme)
+  $('thUndo').onclick = async () => {
+    $('thUndo').disabled = true;
+    try {
+      const r = await app.api('/api/theme/undo', { method: 'POST' });
+      await app.refresh();
+      await R.refreshDecals();
+      app.track('theme undone', { files: r.files });
+      info(`Undone: ${r.files} file(s) back as they were before the theme.`);
+      $('thUndo').hidden = true; $('thReview').hidden = true;
+      count();
+    } catch (e) { info(e.message); }
+    $('thUndo').disabled = false;
   };
   // ---- stepping through the themed items
   let review = [], ri = -1;

@@ -48,6 +48,11 @@ aside { background: var(--panel); overflow: auto; }
 #leftTabs .dropBefore, #rightTabs .dropBefore { box-shadow: inset 2px 0 0 var(--accent, #f2c94c); }
 #leftTabs.dropEnd, #rightTabs.dropEnd { box-shadow: inset -2px 0 0 var(--accent, #f2c94c); }
 body.sideOpen main { grid-template-columns: min(560px, 42vw) minmax(0, 1fr) 380px; }
+#partsActions { padding: 8px 10px 0; }
+#partsActions button { width: 100%; }
+#thGroups.off { opacity: 0.45; pointer-events: none; }
+.thTint { width: 26px; height: 22px; padding: 0; border: 1px solid var(--line); flex: none; }
+.thUntint { padding: 0 5px; min-width: 0; }
 body.sideOpenR main { grid-template-columns: 250px minmax(0, 1fr) min(560px, 42vw); }
 #right { border-left: 1px solid var(--line); }
 section { padding: 8px 10px; border-bottom: 1px solid var(--line); }

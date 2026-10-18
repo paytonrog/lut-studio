@@ -134,6 +134,14 @@ var exclusiveGroups = map[string][]string{"SEAF": nil, "Super Destroyer": {"Eagl
 
 const maxSharedMaterials = 12
 
+// itemValue: a kit's value as the item menu has it (/api/kits): armor, helmets and capes by kit, the rest by name
+func itemValue(idx *game.Index, k game.Kit) string {
+	if g := ThemeGroupOf(k); g != "Armor" && g != "Helmets" && g != "Capes" {
+		return idx.Key(k)
+	}
+	return "kit:" + k.ID
+}
+
 // roleItems: the items themes cover, in /api/kits order (named kits only)
 func (s *Server) roleItems(idx *game.Index) []roleItem {
 	order := map[string]int{"Armor": 0, "Helmets": 1, "Capes": 2, "Backpacks": 3, "Weapons": 4, "Vehicles": 5,
@@ -178,10 +186,7 @@ func (s *Server) roleItems(idx *game.Index) []roleItem {
 		if g == "" || unnamedKit(k.Name) {
 			continue
 		}
-		v := "kit:" + k.ID
-		if g != "Armor" && g != "Helmets" && g != "Capes" { // (listed by name, as the item menu does)
-			v = idx.Key(k)
-		}
+		v := itemValue(idx, k)
 		if done[v] {
 			continue
 		}
@@ -209,11 +214,30 @@ func (s *Server) roleItems(idx *game.Index) []roleItem {
 	return out
 }
 
-// GET /api/roles: {names, builtin, mine, items}
+// ReviewedGroups: the item groups whose suggested roles were reviewed item by item (the rules in theme.go tuned until
+// every item came out right): their suggestions count as confirmed, as roles.json's do
+var ReviewedGroups = []string{"Armor", "Weapons"}
+
+// GET /api/roles: {names, builtin, mine, items, reviewed: the LUTs of the reviewed groups' items}
 func (s *Server) getRoles(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{"names": Roles, "builtin": BuiltinRoles(), "mine": myRoles()}
 	if idx := s.index(); idx != nil {
-		out["items"] = s.roleItems(idx)
+		items := s.roleItems(idx)
+		out["items"] = items
+		reviewed := []string{}
+		seen := map[string]bool{}
+		for _, it := range items {
+			if !slices.Contains(ReviewedGroups, it.Group) {
+				continue
+			}
+			for _, l := range it.LUTs {
+				if !seen[l.LUT] {
+					seen[l.LUT] = true
+					reviewed = append(reviewed, l.LUT)
+				}
+			}
+		}
+		out["reviewed"] = reviewed
 	}
 	writeJSON(w, out)
 }

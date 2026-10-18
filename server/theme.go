@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"image"
@@ -631,14 +632,16 @@ func rowHash(px []float32) string {
 }
 
 // POST /api/theme {Variant, Looks: {role: row (23 x 4 values)}, Groups: ["Armor", "Helmets", "Capes", "Backpacks", "Weapons"],
-// OnlyInMod: only LUTs already in the project, Overwrite: also zones changed by hand}: the looks on every zone of
-// their role, on every material LUT of the items in Groups (added to the project, every variant, as the game has
-// them, when not in it yet), in that variant
+// OnlyInMod: only LUTs already in the project, Overwrite: also zones changed by hand, Items: only these items (their
+// /api/kits values; Groups then unused)}: the looks on every zone of their role, on every material LUT of the items
+// in Groups (added to the project, every variant, as the game has them, when not in it yet), in that variant. The
+// files it writes are kept as they were before: POST /api/theme/undo puts them back.
 func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Variant   string
 		Looks     map[string][]float32
 		Groups    []string
+		Items     []string
 		OnlyInMod bool
 		Overwrite bool
 		Decals    string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
@@ -677,11 +680,24 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	for _, g := range in.Groups {
 		want[g] = true
 	}
+	// the items themed: those named (Items), else every item of the groups
+	wantItem := func(it roleItem) bool {
+		if len(in.Items) > 0 {
+			return slices.Contains(in.Items, it.Value)
+		}
+		return want[it.Group]
+	}
+	wantKit := func(k game.Kit) bool {
+		if len(in.Items) > 0 {
+			return slices.Contains(in.Items, itemValue(idx, k))
+		}
+		return want[ThemeGroupOf(k)]
+	}
 	var luts []string
 	seen := map[string]bool{}
 	items := 0
 	for _, it := range s.roleItems(idx) {
-		if !want[it.Group] {
+		if !wantItem(it) {
 			continue
 		}
 		n := 0
@@ -706,7 +722,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	// suggestions decided per item (a LUT several items share: its first item's)
 	suggested := map[string][]string{}
 	for _, it := range s.roleItems(idx) {
-		if !want[it.Group] {
+		if !wantItem(it) {
 			continue
 		}
 		var hs []string
@@ -740,6 +756,10 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		st.Written[v.Folder] = map[string][]string{}
 	}
 	written := st.Written[v.Folder]
+	// the files as they were, for an undo (a theme that fails partway: what it wrote can be undone too)
+	jr := &fileJournal{}
+	s.lastTheme = jr
+	jr.keep(themePath(p))
 	// (what was written is recorded however this ends: a failure partway leaves its writes known as the theme's, not
 	// taken for hand edits by the next apply)
 	recorded := false
@@ -760,7 +780,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		roles, _, _ := s.rolesOf(p, &v, hs, van, mine, builtin, suggested)
 		// not in the project yet: added to every variant with the game's values (as + Item does)
-		n, err := s.addLUT(p, h, van, users)
+		n, err := s.addLUT(p, h, van, users, jr)
 		if err != nil {
 			fail(w, 500, err)
 			return
@@ -804,6 +824,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			changed = true
 		}
 		if changed {
+			jr.keep(p.DocPath(v, hs))
 			if err := project.WriteDoc(p.DocPath(v, hs), d); err != nil {
 				fail(w, 500, err)
 				return
@@ -839,7 +860,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			if err != nil || van.Width != width {
 				continue
 			}
-			n, err := s.addLUT(p, h, van, users)
+			n, err := s.addLUT(p, h, van, users, jr)
 			if err != nil {
 				fail(w, 500, err)
 				return false
@@ -873,6 +894,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 				changed = true
 			}
 			if changed {
+				jr.keep(p.DocPath(v, hs))
 				if err := project.WriteDoc(p.DocPath(v, hs), d); err != nil {
 					fail(w, 500, err)
 					return false
@@ -888,7 +910,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	if trim, ok := in.Looks["trim"]; ok && len(trim) >= 3 {
 		capeLUTs, patterns := map[string]bool{}, map[string]bool{}
 		for _, k := range idx.Kits {
-			if !want[ThemeGroupOf(k)] {
+			if !wantKit(k) {
 				continue
 			}
 			for _, pc := range k.Pieces {
@@ -902,7 +924,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		// (a pattern LUT is shared: the items outside the groups themed that wear one of these, counted for the message)
 		for _, k := range idx.Kits {
-			if want[ThemeGroupOf(k)] {
+			if wantKit(k) {
 				continue
 			}
 			for _, pc := range k.Pieces {
@@ -977,6 +999,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			os.MkdirAll(filepath.Dir(file), 0o755)
+			jr.keep(file)
 			if err := os.WriteFile(file, buf.Bytes(), 0o644); err != nil {
 				fail(w, 500, err)
 				return
@@ -986,7 +1009,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		// the items outside the themed groups whose decals come from a recolored sheet (they show the theme's too)
 		for _, k := range idx.Kits {
-			if want[ThemeGroupOf(k)] {
+			if wantKit(k) {
 				continue
 			}
 			hit := false
@@ -1016,8 +1039,8 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 }
 
 // addLUT: LUT h (the game's values: van) in every variant of p that doesn't have it yet; how many variants got it.
-// users: the index's Users (for the note)
-func (s *Server) addLUT(p *project.Project, h uint64, van *lut.Texture, users map[string][]string) (int, error) {
+// users: the index's Users (for the note); jr: the files written are kept in it (nil: not kept)
+func (s *Server) addLUT(p *project.Project, h uint64, van *lut.Texture, users map[string][]string, jr *fileJournal) (int, error) {
 	kind, err := lut.KindOf(van)
 	if err != nil {
 		return 0, err
@@ -1037,10 +1060,73 @@ func (s *Server) addLUT(p *project.Project, h uint64, van *lut.Texture, users ma
 			continue
 		}
 		t := &lut.Texture{Width: van.Width, Height: van.Height, Px: append([]float32(nil), van.Px...)}
+		jr.keep(path)
 		if err := project.WriteDoc(path, &lut.Document{LUT: hs, Kind: kind, Note: note, Tex: t}); err != nil {
 			return added, err
 		}
 		added++
 	}
 	return added, nil
+}
+
+// fileJournal: files as they were before a change (nil: it didn't exist), each kept the first time it's written
+type fileJournal struct {
+	order []string
+	was   map[string][]byte
+}
+
+func (j *fileJournal) keep(path string) {
+	if j == nil {
+		return
+	}
+	if j.was == nil {
+		j.was = map[string][]byte{}
+	}
+	if _, ok := j.was[path]; ok {
+		return
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		b = nil
+	}
+	j.was[path] = b
+	j.order = append(j.order, path)
+}
+
+// restore puts every file back as it was (one that didn't exist: removed); the first error, after trying them all
+func (j *fileJournal) restore() error {
+	var first error
+	for i := len(j.order) - 1; i >= 0; i-- {
+		path := j.order[i]
+		var err error
+		if b := j.was[path]; b == nil {
+			if err = os.Remove(path); errors.Is(err, os.ErrNotExist) {
+				err = nil
+			}
+		} else {
+			err = atomicfile.WriteFile(path, b, 0o644)
+		}
+		if err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
+}
+
+// POST /api/theme/undo: the last theme applied (since the program started) undone: its files back as they were
+// before it; 409 when there's none to undo
+func (s *Server) undoTheme(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	jr := s.lastTheme
+	if jr == nil || len(jr.order) == 0 {
+		fail(w, 409, fmt.Errorf("no theme to undo"))
+		return
+	}
+	s.lastTheme = nil
+	if err := jr.restore(); err != nil {
+		fail(w, 500, err)
+		return
+	}
+	writeJSON(w, map[string]any{"files": len(jr.order)})
 }

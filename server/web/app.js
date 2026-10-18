@@ -1535,9 +1535,8 @@ function wire() {
     const b = e.target.closest('button');
     if (b && b.id !== 'showcaseBtn' && showcaseOpen() && !b.classList.contains('on')) closeShowcase();
   }, true);
-  $('themeBtn').onclick = () => {
-    if ($('themeBtn').classList.contains('on')) return;   // (already open)
-    track('editor opened', { editor: 'theme' });
+  const openTheme = (o = {}) => {
+    track('editor opened', { editor: o.item ? 'recolor' : 'theme' });
     themeDialog({
       R, api, variant: S.variant, lut: h => S.luts.get(h), showItem, saveAll, status, track,
       lutLabel: h => { const d = describeLut(h, S.luts.get(h)?.kind); return `${d.badge}: ${d.parts}`; },
@@ -1548,7 +1547,13 @@ function wire() {
       refresh: async () => { S.state = await api('/api/state'); fillKits(); await loadVariant(S.variant); },
       projectLuts: () => new Set(S.state.variants.flatMap(v => (v.luts ?? []).map(l => l.lut))),
       openShowcase: o => openShowcase(showcaseApp(), o),
-    }).catch(e => status('Theme: ' + e.message, true));
+    }, o).catch(e => status('Theme: ' + e.message, true));
+  };
+  $('themeBtn').onclick = () => { if (!$('themeBtn').classList.contains('on')) openTheme(); };
+  // Recolor this item: the Theme panel on the item on screen only (an open one switched to it)
+  $('recolorBtn').onclick = () => {
+    if ($('themeBtn').classList.contains('on')) document.dispatchEvent(new Event('lutstudio:recolor'));
+    else openTheme({ item: true });
   };
   $('showcaseBtn').onclick = () => (track('editor opened', { editor: 'showcase' }), openShowcase(showcaseApp()));
   for (const n of Object.keys(CAMERAS)) $('camera').add(new Option(n, n));
