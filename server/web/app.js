@@ -1709,6 +1709,7 @@ function wire() {
     themeDialog({
       R, api, variant: S.variant, lut: h => S.luts.get(h), showItem, saveAll, status, track,
       lutLabel: h => { const d = describeLut(h, S.luts.get(h)?.kind); return `${d.badge}: ${d.parts}`; },
+      held: () => (HELD.pieces.length ? HELD.kit : null),   // (the weapon in the Helldiver's hand: its item key)
       current: () => {
         const a = armorEntry(), helmet = S.look.helmet === 'match' ? ownHelmetOf(a) : S.look.helmet;
         return S.mode === 'other' ? [S.kit] : [S.look.armor, helmet, S.look.cape].filter(Boolean);

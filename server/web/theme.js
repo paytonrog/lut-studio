@@ -543,6 +543,7 @@ export async function themeDialog(app, opts = {}) {
     <div class="row"><label class="check" title="Only the armor, helmet and cape (or the item) on screen"><input type="radio" name="thTarget" value="item" ${opts.item ? 'checked' : ''}> the item on screen</label>
       <label class="check" title="Every item of the kinds ticked below"><input type="radio" name="thTarget" value="groups" ${opts.item ? '' : 'checked'}> every item of these kinds:</label></div>
     <div class="row" id="thGroups">${GROUPS.map(g => `<label class="check"><input type="checkbox" class="thGroup" value="${g}" ${shownGroups.has(g) || (!shownGroups.size && DEFAULT_GROUPS.includes(g)) ? 'checked' : ''}> ${g}</label>`).join('')}</div>
+    <label class="check" id="thHeldRow" hidden title="The weapon the Helldiver holds is themed too (the same switch as Weapons)"><input type="checkbox" id="thHeld"> and the weapon in hand</label>
     <label class="check"><input type="checkbox" id="thOnly"> only items already in this mod</label>
     <label class="check"><input type="checkbox" id="thOverwrite"> also overwrite zones I changed by hand</label>
     <p class="hint" id="thCount"></p>
@@ -616,7 +617,11 @@ export async function themeDialog(app, opts = {}) {
   };
   const itemMode = () => document.querySelector('input[name=thTarget]:checked')?.value === 'item';
   const groups = () => [...document.querySelectorAll('.thGroup:checked')].map(c => c.value);
-  const targets = () => (data.items ?? []).filter(it => itemMode() ? app.current().includes(it.value) : groups().includes(it.group));
+  // the weapon in hand: themed when Weapons is on (the item on screen: "and the weapon in hand", the same switch)
+  const weaponsOn = () => groups().includes('Weapons');
+  const targets = () => (data.items ?? []).filter(it => itemMode()
+    ? app.current().includes(it.value) || (weaponsOn() && it.value === app.held?.())
+    : groups().includes(it.group));
   // what Apply will do, said before it's done: the items and LUTs, those added to the mod, hand edits, decals
   const count = () => {
     const item = itemMode();
@@ -633,6 +638,13 @@ export async function themeDialog(app, opts = {}) {
       ($('thDecals').checked ? '; their decal sheets are recolored (shared with other items)' : '') + '. Undo theme puts it all back.';
   };
   document.querySelectorAll('.thGroup, input[name=thTarget], #thOverwrite').forEach(c => c.addEventListener('change', count));
+  // "and the weapon in hand" (the item on screen) is the Weapons box: either one sets both; the preview follows
+  const weaponsBox = document.querySelector('.thGroup[value=Weapons]');
+  const syncHeld = () => { $('thHeld').checked = weaponsBox.checked; $('thHeldRow').hidden = !itemMode() || !app.held?.(); };
+  $('thHeld').onchange = () => { weaponsBox.checked = $('thHeld').checked; count(); if (previewing) preview(); };
+  weaponsBox.addEventListener('change', () => { syncHeld(); if (previewing) preview(); });
+  document.querySelectorAll('input[name=thTarget]').forEach(c => c.addEventListener('change', () => { syncHeld(); if (previewing) preview(); }));
+  syncHeld();
   $('thOnly').onchange = count;
   document.addEventListener('lutstudio:recolor', () => { document.querySelector('input[name=thTarget][value=item]').checked = true; count(); }, { signal: close.signal });
 
@@ -702,12 +714,17 @@ export async function themeDialog(app, opts = {}) {
     previewing = new Map(R.pieces.map(p => [p, { ...p.lutKeys }]));
     const roleOf = {};
     for (const x of zones) (roleOf[x.lut] ??= [])[x.z] = x.role;
+    // (the weapon in hand: only when Weapons is on; else it keeps its own looks)
+    const heldOnly = new Set(R.pieces.filter(p => p.info?.held).map(p => p.info.lut));
+    for (const p of R.pieces) if (!p.info?.held) heldOnly.delete(p.info.lut);
     for (const h of onScreen) {
+      if (heldOnly.has(h) && !weaponsOn()) continue;
       const l = app.lut(h), px = (l.edited ?? l.vanilla).slice();
       for (let z = 0; z < l.h; z++) { const n = roleOf[h]?.[z], look = looksAt(h)[n]; if (look && l.w === W) putLook(px, l, z, look, n); }
       R.setLut('pv:' + h, l.w, l.h, px);
     }
     for (const p of R.pieces) {
+      if (p.info?.held && !weaponsOn()) continue;
       if (onScreen.includes(p.info.lut)) p.lutKeys.edited = 'pv:' + p.info.lut;
       // patterns and capes' trim lines: the trim look's color (a cape's: the capes' trim)
       const trim = looksAt(p.info.lut).trim;

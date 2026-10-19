@@ -282,9 +282,12 @@ whenever it's worn.
   role recolors its look (its finish, wear and camo stay; **↺** goes back to the look's own color), so a preset or
   your own zones can be put in any colors. **Apply to** the **item on screen** (the armor, helmet and cape, or
   the item, shown; **Recolor this item…** at the top of the **Materials** tab opens the panel this way: a color per role
-  and the whole item is recolored in one go), or **every item of these kinds**: tick what it goes to
+  and the whole item is recolored in one go; with a weapon in the Helldiver's hand, **and the weapon in hand** themes it
+  too), or **every item of these kinds**: tick what it goes to
   (**Armor**, **Helmets**, **Capes**, **Backpacks**, **Weapons**, **Vehicles**, **Equipment**, **Stratagems**,
   **Eagle & craft**, **SEAF** (the soldier, medic and their weapons in every camo look, their backpacks and shells), **Super Destroyer** (the ship, its support cannons, the Eagle ordnance on display, the emblems, the cryo pods), **Ship interior** (terminals, screens, lamps, floors, walls…) or **Ship crew**; **only items already in this mod** to stay within it). In the last four, a LUT the game shares with something outside the group stays as it is (a cryo pod's frozen Helldiver wears B-01 armor; generic metals) and
+  The weapon in the Helldiver's hand follows **Weapons** (and **and the weapon in hand**, the same switch): on, the
+  preview and Apply theme it; off, it keeps its own looks.
   Under the boxes the panel says what Apply will do before it's done: how many items and LUTs, how many of them get
   added to the mod, whether zones you changed by hand are kept or overwritten, and whether decal sheets get recolored.
   **Apply theme**: every zone of those roles on those items gets the look, in the current variant. **Undo theme**
