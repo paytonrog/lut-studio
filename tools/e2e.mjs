@@ -261,6 +261,51 @@ async function changesAndFiles(kind) {
     v.listed && v.reset && v.dds && v.exr && v.saved && v.otherEmpty && v.kept && errors.length === 0, `${r}; ${errors.slice(0, 2).join(' | ')}`);
 }
 
+// a preset's looks of its own for an item group (capes, weapons, vehicles): Recolor this item with it, the item's
+// primary zone in that group's primary look (its secondary when the server swaps them for the item: bySize), not the
+// armor's; then Undo theme
+async function groupLooks(kind, preset) {
+  errors.length = 0;
+  const r = await evaluate(`(async () => { const d = document, S = window.lutstudio.S, sl = ms => new Promise(r => setTimeout(r, ms));
+    const m = await import('./theme.js'), P = m.PRESETS[${JSON.stringify(preset)}];
+    const roles = await (await fetch('/api/roles')).json(), groupOf = new Map(), out = {};
+    for (const it of roles.items) for (const l of it.luts) if (!groupOf.has(l.lut)) groupOf.set(l.lut, it.group);
+    const hs = [...S.luts.keys()].filter(h => S.luts.get(h).kind === 'material' && S.luts.get(h).edited && m.GROUP_LOOKS[groupOf.get(h)]);
+    if (!hs.length) return JSON.stringify({ skip: 'no material of a group with its own looks' });
+    const sug = await (await fetch('/api/roles/suggest?luts=' + hs.join(','))).json();
+    const sizes = await (await fetch('/api/theme/sizes?luts=' + hs.join(','))).json();
+    const h = hs.find(h => (roles.mine[h] ?? roles.builtin[h] ?? sug[h]?.roles ?? []).includes('primary'));
+    if (!h) return JSON.stringify({ skip: 'no primary zone' });
+    const rr = roles.mine[h] ?? roles.builtin[h] ?? sug[h].roles, z = rr.indexOf('primary'), own = P[m.GROUP_LOOKS[groupOf.get(h)]];
+    out.group = groupOf.get(h); out.swapped = !!sizes[h];
+    out.want = (sizes[h] ? own.secondary : own.primary).c; out.armor = P.primary.c;
+    d.getElementById('partsTab').click(); await sl(300);
+    d.getElementById('recolorBtn').click();
+    for (let i = 0; i < 60 && !d.getElementById('thApply'); i++) await sl(500);
+    await sl(1500);
+    const ps = d.getElementById('thPreset'); ps.value = ${JSON.stringify(preset)}; ps.dispatchEvent(new Event('change')); await sl(400);
+    d.getElementById('thApply').click();
+    for (let i = 0; i < 120 && !/^Themed|rror/.test(d.getElementById('thInfo').textContent); i++) await sl(500);
+    out.info = d.getElementById('thInfo').textContent.slice(0, 80);
+    const l = S.luts.get(h);
+    out.got = '#' + [0, 1, 2].map(k => Math.round(Math.max(0, Math.min(1, l.edited[z * l.w * 4 + k])) * 255).toString(16).padStart(2, '0')).join('');
+    d.getElementById('thUndo').click();
+    for (let i = 0; i < 60 && !/^Undone|could not/.test(d.getElementById('thInfo').textContent); i++) await sl(500);
+    d.getElementById('partsTab').click(); await sl(300);
+    return JSON.stringify(out); })()`);
+  const v = JSON.parse(r);
+  const near = (a, b) => !!a && !!b && [1, 3, 5].every(i => Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)) <= 3);
+  check(`${kind}: ${preset}'s own ${v.group ?? ''} looks on the ${kind} (Recolor this item), the per-item swap as the server decides it`,
+    v.skip === undefined && /^Themed/.test(v.info) && near(v.got, v.want) && errors.length === 0, `${r}; ${errors.slice(0, 2).join(' | ')}`);
+  if (kind === 'weapon') {   // an item whose secondary zones cover more of it than its primary: swapped (the AC-8 Autocannon)
+    const sw = await evaluate(`(async () => { const roles = await (await fetch('/api/roles')).json();
+      const it = roles.items.find(i => i.label === 'AC-8 Autocannon'); if (!it) return 'no AC-8';
+      const hs = [...new Set(it.luts.map(l => l.lut))], sz = await (await fetch('/api/theme/sizes?luts=' + hs.join(','))).json();
+      return hs.filter(h => sz[h]).length + ' of ' + hs.length; })()`);
+    check(`${kind}: the per-item swap: the AC-8 Autocannon's main look goes on its bigger (secondary) zones`, /^[1-9]\d* of /.test(sw), sw);
+  }
+}
+
 // several zones edited together: Ctrl+click two zones, a #rrggbb color typed goes to both (not the one between);
 // Shift+click a range; ⌖ takes a zone's color off the model; each zone row shows its role
 async function multiZone(kind) {
@@ -551,6 +596,9 @@ async function main() {
       }
       if (kind === 'seaf') await numberAndDamage(kind, false);
       if (kind === 'cape') await designEditor(kind);
+      if (kind === 'cape') await groupLooks(kind, 'Metro Shift');
+      if (kind === 'weapon') await groupLooks(kind, 'Cerulean Divide');
+      if (kind === 'vehicle') await groupLooks(kind, 'Crimson Valor');
       if (kind === 'pattern') await patternEditor(kind);
       if (kind === 'flag') {   // the flag's cloth: a cape-shader piece with its cape LUT in the project
         const cloth = await evaluate(`JSON.stringify({ lut: window.lutstudio.S.state.variants[0].luts.some(l => l.lut === '0xb9b8dfa7d968ce98'),
