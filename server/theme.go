@@ -11,6 +11,7 @@ import (
 	"image"
 	"image/png"
 	"lutstudio/atomicfile"
+	"maps"
 	"math"
 	"net/http"
 	"os"
@@ -541,7 +542,7 @@ func (s *Server) suggestRolesAPI(w http.ResponseWriter, r *http.Request) {
 	roles := withSet(ls, s.itemLUTs(p, v, s.setLUTs(hs)))
 	out := map[string]any{}
 	for _, L := range ls {
-		out[L.h] = map[string]any{"roles": roles[L.h], "coverage": L.cov}
+		out[L.h] = map[string]any{"roles": roles[L.h], "coverage": L.cov, "area": L.area}
 	}
 	writeJSON(w, out)
 }
@@ -644,9 +645,12 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		Items   []string
 		// GroupLooks: an item group's own looks (e.g. "Capes"), for the LUTs of that group's items, over Looks
 		GroupLooks map[string]map[string][]float32
-		OnlyInMod  bool
-		Overwrite  bool
-		Decals     string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
+		// BySize: on an item whose secondary zones cover more of it than its primary ones, the two looks swapped (the
+		// theme's main look on what's biggest)
+		BySize    bool
+		OnlyInMod bool
+		Overwrite bool
+		Decals    string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
 	}
 	if err := decode(r, &in); err != nil {
 		fail(w, 400, err)
@@ -754,6 +758,10 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	swapped := map[string]bool{}
+	if in.BySize {
+		swapped = s.sizeSwaps(p, &v, func(it roleItem) bool { return wantItem(it) }, func(h string) bool { return seen[h] }, mine, builtin, suggested)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if q, err := s.project(); err == nil { // (read again under the lock: a variant added meanwhile gets the LUTs added)
@@ -818,6 +826,16 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		looks := in.Looks
 		if gl, ok := in.GroupLooks[lutGroup[hs]]; ok {
 			looks = gl
+		}
+		if swapped[hs] {
+			sw := maps.Clone(looks)
+			sw["primary"], sw["secondary"] = looks["secondary"], looks["primary"]
+			for _, r := range []string{"primary", "secondary"} {
+				if sw[r] == nil {
+					delete(sw, r)
+				}
+			}
+			looks = sw
 		}
 		for z := 0; z < d.Tex.Height && z < len(roles); z++ {
 			look, ok := looks[roles[z]]
@@ -1093,6 +1111,82 @@ func (s *Server) addLUT(p *project.Project, h uint64, van *lut.Texture, users ma
 		added++
 	}
 	return added, nil
+}
+
+// sizeSwaps: per item (wanted), whether its secondary zones cover more of it than its primary ones (each LUT's zone
+// shares by its surface area, over the item's LUTs that count); for its LUTs (a LUT several items share: its first
+// item's): a bySize theme swaps the two looks there
+func (s *Server) sizeSwaps(p *project.Project, v *project.Variant, want func(roleItem) bool, counts func(string) bool, mine, builtin, suggested map[string][]string) map[string]bool {
+	out := map[string]bool{}
+	idx := s.index()
+	if idx == nil {
+		return out
+	}
+	for _, it := range s.roleItems(idx) {
+		if !want(it) {
+			continue
+		}
+		var hs []string
+		for _, l := range it.LUTs {
+			if _, done := out[l.LUT]; counts(l.LUT) && !done && !slices.Contains(hs, l.LUT) {
+				hs = append(hs, l.LUT)
+			}
+		}
+		if len(hs) == 0 {
+			continue
+		}
+		prim, sec := 0.0, 0.0
+		for _, L := range s.itemLUTs(p, v, hs) {
+			roles, _, _ := s.rolesOf(p, v, L.h, L.van, mine, builtin, suggested)
+			w := L.area
+			if w <= 0 {
+				w = 1
+			}
+			for z, c := range L.cov {
+				if z < len(roles) && roles[z] == "primary" {
+					prim += c * w
+				} else if z < len(roles) && roles[z] == "secondary" {
+					sec += c * w
+				}
+			}
+		}
+		for _, h := range hs {
+			out[h] = sec > prim
+		}
+	}
+	return out
+}
+
+// GET /api/theme/sizes?variant=&luts=h1,h2: for each of these LUTs, whether a bySize theme swaps its primary and
+// secondary looks (sizeSwaps: as Apply decides it, by the item the LUT is of)
+func (s *Server) themeSizes(w http.ResponseWriter, r *http.Request) {
+	p, _ := s.project()
+	var v *project.Variant
+	if p != nil {
+		if pv, err := p.Variant(r.URL.Query().Get("variant")); err == nil {
+			v = &pv
+		}
+	}
+	hs := strings.Split(r.URL.Query().Get("luts"), ",")
+	idx := s.index()
+	items := map[string]bool{} // (the items these LUTs are of: their first)
+	if idx != nil {
+		seen := map[string]bool{}
+		for _, it := range s.roleItems(idx) {
+			for _, l := range it.LUTs {
+				if slices.Contains(hs, l.LUT) && !seen[l.LUT] {
+					seen[l.LUT] = true
+					items[it.Value] = true
+				}
+			}
+		}
+	}
+	sw := s.sizeSwaps(p, v, func(it roleItem) bool { return items[it.Value] }, func(string) bool { return true }, myRoles(), BuiltinRoles(), map[string][]string{})
+	out := map[string]bool{}
+	for _, h := range hs {
+		out[h] = sw[h]
+	}
+	writeJSON(w, out)
 }
 
 // fileJournal: files as they were before a change (nil: it didn't exist), each kept the first time it's written

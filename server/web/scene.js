@@ -13,6 +13,7 @@
 import { poseSkeleton, M4 } from './render.js';
 import { Showcase, LOOK, tone8 } from './showcase.js';
 import { decalColors, previewDecals, unpreviewDecals } from './decaltheme.js';
+import { swapLooks } from './theme.js';
 
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
 // [x, z], its lowest point to the ground (lift: above it); yaw turns it about the vertical, pitch about the camera's
@@ -370,10 +371,13 @@ async function themeItems(app, items, theme, tag) {
     const looks = theme.looksFor?.(zones, rowOf) ?? {};
     // (a cape's or weapon's LUTs: the theme's looks for its group, when it has its own)
     groupOf ??= new Map((roles.items ?? []).flatMap(i => i.luts.map(l => [l.lut, i.group])));
+    let sizes = {};   // (a bySize theme: which LUTs swap their primary and secondary looks, as Apply decides)
+    if (theme.bySize) try { sizes = await api('/api/theme/sizes?variant=' + encodeURIComponent(S.variant) + '&luts=' + luts.join(',')); } catch { }
     const byGroup = new Map(), looksAt = h => {   // (an item group's own looks: a theme's capes / weapons looks)
       const g = groupOf.get(h) ?? '';
       if (!byGroup.has(g)) byGroup.set(g, g ? theme.looksFor?.(zones, rowOf, g) ?? looks : looks);
-      return byGroup.get(g);
+      // (a bySize theme: the main look on what's biggest on the item this LUT is of)
+      return theme.bySize && sizes[h] ? swapLooks(byGroup.get(g)) : byGroup.get(g);
     };
     if (it.kind === 'diver' && !decals) decals = decalColors(looks);   // (the decals' colors: the first Helldiver's looks)
     for (const h of luts) {

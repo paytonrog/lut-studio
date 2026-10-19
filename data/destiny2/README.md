@@ -1,6 +1,6 @@
 # Destiny 2 shaders (reference data)
 
-`shaders.json.gz`: every Destiny 2 shader's armor and weapon dyes, as Bungie's public API publishes them, taken once
+`shaders.json.gz`: every Destiny 2 shader's armor, weapon, ship and sparrow dyes, as Bungie's public API publishes them, taken once
 (see `manifest_version` in the file) for LUT Studio's Destiny 2 looks (Metro Shift, Bitterpearl, Gilded Frost...). It
 is reference data for making presets by hand or with a script; the app doesn't read it. Destiny 2 and its content
 are Bungie's.
@@ -21,7 +21,13 @@ on 40 Destiny 2 weapons: weapon 1 45% / 24%, weapon 2 16% / 11%, weapon 3 3% / 2
 45%, secondary 27%, hardware 22%, trim 5%): weapon 1 on primary and secondary, weapon 2's primary on the metal parts,
 the accent on the trim. Each dye's detail normal map becomes the nearest Helldivers 2 detail tile
 (`detail_map.json`: by bump spread, fineness, direction and regularity of the two textures), its worn color goes to the
-wear colors, and a dye's emissive color (when it is a color of its own) to the glow role. The 20 Destiny 2 presets in `server/web/theme.js` marked
+wear colors, and a dye's emissive color (when it is a color of its own) to the glow role. Vehicles take the sparrow
+dyes (measured on 30 sparrows: upper 59% / 11%, lower 24% / 1%, engine 5% / 1%; Helldivers 2's vehicles: primary 66%,
+trim 13%, secondary 12%, hardware 4%): the upper on primary, the lower on secondary, the accent on trim, the engine's
+metal on the metal parts. An even iridescence id (its colors change with the view) also gets Helldivers 2's own
+iridescence film, at the step fitted to its lookup row (`iridescence.json` film). The presets are marked bySize: on an
+item whose secondary zones cover more of it than its primary ones (some weapons and exosuits; no armor), the shader's
+primary and secondary looks swap (`/api/theme/sizes`, the server deciding it per item as Apply does). The 20 Destiny 2 presets in `server/web/theme.js` marked
 "Bungie's dye values" were made with it.
 
 ## Where it comes from
@@ -40,14 +46,15 @@ Shaders without gear data in Bungie's files are listed under `missing`.
 ```
 { about, source, manifest_version, channels, count, missing: [names],
   shaders: [ { hash, name, description, icon, tier, flavor,
-               dyes: { armor_plate | armor_cloth | armor_suit | weapon_1 | weapon_2 | weapon_3:
+               dyes: { armor_plate | armor_cloth | armor_suit | weapon_1..3 | ship_upper | ship_decals | ship_lower | sparrow_upper | sparrow_engine | sparrow_lower:
                        { cloth, slot_type_index, textures: { diffuse, normal, primary_diffuse, secondary_diffuse },
                          material_properties: { ... } } } } ] }
 ```
 
 The channel names follow the community's tools (lowlines' destiny-tgx-loader, TiredHobgoblin's
 Destiny-Collada-Generator): the channel's index 0 is the armor's plates, 1 its cloth (`cloth: true`), 2 its suit;
-4-6 the weapon's three. (Ships, sparrows and ghosts are left out.)
+4-6 the weapon's three, 7-9 the ship's (upper, decals, lower), 10-12 the sparrow's (upper, engine, lower). (Ghosts are
+left out.)
 
 Each dye has a primary and a secondary version of most values (`primary_*`, `secondary_*`: the two dye areas of the
 plates, cloth or suit), all four-component:

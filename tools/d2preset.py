@@ -34,7 +34,8 @@ def srgb(c):
 # The measured D2 gear (four armors' dyed areas, their gbit textures from Bungie's CDN): the gear's own diffuse
 # 0.164 (linear) under the dye, its gloss 0.39, its wear mask 0.59; the detail tiles' 0.17 (their gloss 0.5)
 GEAR_DIFFUSE, GEAR_GLOSS, GEAR_WEAR, DETAIL, DETAIL_GLOSS = 0.164, 0.39, 0.59, 0.17, 0.5
-IRID_ROWS = json.load(open(os.path.join(os.path.dirname(DATA), 'iridescence.json')))['rows']
+_IRID = json.load(open(os.path.join(os.path.dirname(DATA), 'iridescence.json')))
+IRID_ROWS, IRID_FILM = _IRID['rows'], _IRID['film']
 
 
 def remap(v, r):
@@ -68,6 +69,7 @@ def region(mp, k):
     D = [c * (1 - metal) for c in diffuse]
     F = [0.04 + (c - 0.04) * metal for c in diffuse]
     rid = int(p('material_advanced_params')[0])
+    film = None
     if 0 <= rid < len(IRID_ROWS):
         st = 1 - (0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2])   # (the raw (linear) dye's luminance)
         row = IRID_ROWS[rid]
@@ -77,6 +79,10 @@ def region(mp, k):
             m2 = lerp(metal, 1, st)
             D = [lerp(c, r, st) * (1 - m2) for c, r in zip(diffuse, row)]
             F = [0.0, 0.0, 0.0]
+            # (its colors change with the view: HD2's own thin film, at the step fitted to the row, where it fits)
+            k_, err = IRID_FILM[rid]
+            if err < 1.5:
+                film = (round((k_ / 7) ** 0.5, 3), round(st, 2))
     # HD2: diffuse (1 - m) P, reflection 0.04 (1 - m) + m P: the m and P nearest both
     best = None
     for i in range(101):
@@ -89,7 +95,7 @@ def region(mp, k):
     _, m, P = best
     # the worn areas' color, shaded the same way (no iridescence): HD2's wear colors (shown only when wear is on)
     worn_d = [min(1, c * min(1, 4 * GEAR_DIFFUSE)) for c in p('worn_albedo_tint')[:3]]
-    return {'hex': srgb(P), 'metal': round(m, 2), 'rough': round(min(1, max(0.03, rough)), 2), 'worn': worn_d}
+    return {'hex': srgb(P), 'metal': round(m, 2), 'rough': round(min(1, max(0.03, rough)), 2), 'worn': worn_d, 'film': film}
 
 
 DETAIL_MAP = json.load(open(os.path.join(os.path.dirname(DATA), 'detail_map.json')))['map']
@@ -108,6 +114,9 @@ def finish(mp, k):
         nb = mp[f'{k}_worn_material_parameters'][1] + (mp[f'{k}_material_params'][1] - mp[f'{k}_worn_material_parameters'][1]) * wear
         f += [[1, 0, dm['layer']], [1, 1, round(min(1.5, max(0.15, dm['bump'] * max(nb, 0.3))), 2)],
               [22, 0, round(min(8, max(1, mp['detail_normal_transform'][0])), 2)]]
+    if r.get('film'):   # (HD2's iridescence: the thin film's step, its mask all over, its strength D2's)
+        th, st = r['film']
+        f += [[13, 2, th], [13, 3, 0], [14, 0, 0], [14, 1, 0], [14, 2, 0], [14, 3, 1], [15, 0, 0], [15, 1, 0], [15, 2, 0], [15, 3, st]]
     # the worn colors (HD2's wear and heavy wear: worn paint, then its most worn spots darker)
     wh = srgb(r['worn'])
     w = [round(int(wh[i:i + 2], 16) / 255, 3) for i in (1, 3, 5)]   # (as the LUT keeps colors: sRGB)
@@ -183,6 +192,22 @@ def args(s, mapping=None):
         if wlight:
             wo['light'] = wlight
         out[4]['weapon'] = [wl[0][0], wl[1][0], wl[2][0], wl[3][0], wo]
+    # vehicles: the sparrow dyes (upper, engine, lower: measured on 30 sparrows, upper 59% / 11%, lower 24% / 1%, engine
+    # 5% / 1%; HD2's vehicles: primary 66%, trim 13%, secondary 12%, hardware 4%): the upper the primary, the lower the
+    # secondary, the accent (the more saturated of the upper's secondary and the engine) the trim, the engine's metal
+    # the metal parts
+    if all(f'sparrow_{n}' in d for n in ('upper', 'engine', 'lower')):
+        vr = lambda n, side: (d[f'sparrow_{n}'], side)
+        hue = lambda x: (lambda h: max(int(h[j:j + 2], 16) for j in (1, 3, 5)) - min(int(h[j:j + 2], 16) for j in (1, 3, 5)))(region(*x)['hex'])
+        acc = max([vr('upper', 'secondary'), vr('engine', 'primary')], key=hue)
+        regs = [vr('upper', 'primary'), vr('lower', 'primary'), acc, vr('lower', 'secondary')]
+        vl = [(region(*x)['hex'], finish(*x)[0]) for x in regs]
+        vo = {'pf': vl[0][1], 'sf': vl[1][1], 'tf': vl[2][1]}
+        eng = max([vr('engine', 'primary'), vr('engine', 'secondary')], key=lambda x: region(*x)['metal'])
+        if region(*eng)['metal'] >= 0.5:
+            vo.update(hw=region(*eng)['hex'], hwf=finish(*eng)[0])
+        out[4]['vehicle'] = [vl[0][0], vl[1][0], vl[2][0], vl[3][0], vo]
+    out[4]['bySize'] = True   # (each item: the main look on what's biggest on it)
     return out
 
 

@@ -1,4 +1,4 @@
-"""Destiny 2 shaders reference (data/destiny2/shaders.json.gz): every shader's armor and weapon dyes, from Bungie's
+"""Destiny 2 shaders reference (data/destiny2/shaders.json.gz): every shader's armor, weapon, ship and sparrow dyes, from Bungie's
 public API (no key needed). Downloads into a work folder of its own (about 220 MB: the item definitions, the gear
 asset database, one gear file per shader, fetched one at a time), then writes the reference file. A one-time
 reference for making Destiny 2 looks; the app doesn't read it. See data/destiny2/README.md.
@@ -18,8 +18,9 @@ import zipfile
 
 BNET = 'https://www.bungie.net'
 # dye channels by their index (the community's names: lowlines' destiny-tgx-loader, Destiny-Collada-Generator);
-# ships, sparrows and ghosts (7-15) left out
-NAMES = {0: 'armor_plate', 1: 'armor_cloth', 2: 'armor_suit', 4: 'weapon_1', 5: 'weapon_2', 6: 'weapon_3'}
+# ghosts (13-15) left out
+NAMES = {0: 'armor_plate', 1: 'armor_cloth', 2: 'armor_suit', 4: 'weapon_1', 5: 'weapon_2', 6: 'weapon_3',
+         7: 'ship_upper', 8: 'ship_decals', 9: 'ship_lower', 10: 'sparrow_upper', 11: 'sparrow_engine', 12: 'sparrow_lower'}
 
 
 def get(url, tries=3):
@@ -106,7 +107,7 @@ def main():
                  "data, not used by the app at run time. Destiny 2 and its content are Bungie's.",
         'source': BNET + '/Platform/Destiny2/Manifest/ (DestinyInventoryItemDefinition, mobileGearAssetDataBases, mobileGearCDN.Gear)',
         'manifest_version': man['version'],
-        'channels': 'armor_plate (channel index 0), armor_cloth (1), armor_suit (2), weapon_1..3 (4..6): community names',
+        'channels': 'armor_plate (channel index 0), armor_cloth (1), armor_suit (2), weapon_1..3 (4..6), ship_upper / decals / lower (7..9), sparrow_upper / engine / lower (10..12): community names',
         'count': len(shaders), 'missing': missing, 'shaders': shaders,
     }
     b = json.dumps(doc, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
