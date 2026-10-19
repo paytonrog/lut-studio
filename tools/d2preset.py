@@ -87,7 +87,12 @@ def region(mp, k):
         if best is None or err < best[0]:
             best = (err, m, P)
     _, m, P = best
-    return {'hex': srgb(P), 'metal': round(m, 2), 'rough': round(min(1, max(0.03, rough)), 2)}
+    # the worn areas' color, shaded the same way (no iridescence): HD2's wear colors (shown only when wear is on)
+    worn_d = [min(1, c * min(1, 4 * GEAR_DIFFUSE)) for c in p('worn_albedo_tint')[:3]]
+    return {'hex': srgb(P), 'metal': round(m, 2), 'rough': round(min(1, max(0.03, rough)), 2), 'worn': worn_d}
+
+
+DETAIL_MAP = json.load(open(os.path.join(os.path.dirname(DATA), 'detail_map.json')))['map']
 
 
 def finish(mp, k):
@@ -95,6 +100,18 @@ def finish(mp, k):
     f = [[6, 3, r['metal'] if r['metal'] >= 0.05 else -1], [10, 0, r['rough']]]
     if r['rough'] < 0.3:
         f.append([8, 3, round(0.9 - r['rough'], 2)])   # (a glossy coat: its highlight)
+    # the surface: the D2 dye's detail normal map as the nearest HD2 detail tile (data/destiny2/detail_map.json), its
+    # bump by D2's normal blend, its repeats by D2's detail scale
+    dm = DETAIL_MAP.get((mp.get('_tex') or {}).get('normal') or '')
+    if dm:
+        wear = remap(GEAR_WEAR, mp[f'{k}_wear_remap'])
+        nb = mp[f'{k}_worn_material_parameters'][1] + (mp[f'{k}_material_params'][1] - mp[f'{k}_worn_material_parameters'][1]) * wear
+        f += [[1, 0, dm['layer']], [1, 1, round(min(1.5, max(0.15, dm['bump'] * max(nb, 0.3))), 2)],
+              [22, 0, round(min(8, max(1, mp['detail_normal_transform'][0])), 2)]]
+    # the worn colors (HD2's wear and heavy wear: worn paint, then its most worn spots darker)
+    wh = srgb(r['worn'])
+    w = [round(int(wh[i:i + 2], 16) / 255, 3) for i in (1, 3, 5)]   # (as the LUT keeps colors: sRGB)
+    f += [[6, i, w[i]] for i in range(3)] + [[5, i, round(w[i] * 0.6, 3)] for i in range(3)]
     return f, r['metal']
 
 
@@ -120,7 +137,7 @@ REGIONS = {'A': ('armor_plate', 'primary'), 'B': ('armor_plate', 'secondary'), '
 # the trim the accent (the more saturated of D and F). Capes: D2's cloth (E primary and cloth, F secondary, the same
 # trim). The metal parts: B when it is metal (unless it is a paint)
 def args(s, mapping=None):
-    d = {k: v['material_properties'] for k, v in s['dyes'].items()}
+    d = {k: {**v['material_properties'], '_tex': v.get('textures') or {}} for k, v in s['dyes'].items()}
     reg = lambda c: (d[REGIONS[c][0]], REGIONS[c][1])
     def sat(c):
         h = region(*reg(c))['hex']
@@ -147,7 +164,38 @@ def args(s, mapping=None):
     if hmetal >= 0.5:   # (the plate's metal on the metal parts too)
         out[4].update(hw=region(plate, 'secondary')['hex'], hwf=hf)
     out[4]['cape'] = look('EF' + accent + 'E')
+    light = glow(plate, 'primary')
+    if light:
+        out[4]['light'] = light
+    # weapons: their own dyes (weapon 1 / 2 / 3, each primary and secondary), by how much of a weapon each covers
+    # (measured: D2 weapon 1 45% / 24%, weapon 2 16% / 11%, weapon 3 3% / 2%; HD2's weapons: primary 45%, secondary
+    # 27%, hardware 22%, trim 5%): weapon 1 the primary and secondary, weapon 2's primary the metal parts, the trim the
+    # accent (the most saturated of weapon 2's secondary and weapon 3's)
+    if all(f'weapon_{i}' in d for i in (1, 2, 3)):
+        wr = lambda i, side: (d[f'weapon_{i}'], side)
+        acc = max([wr(2, 'secondary'), wr(3, 'primary'), wr(3, 'secondary')],
+                  key=lambda x: (lambda h: max(int(h[j:j + 2], 16) for j in (1, 3, 5)) - min(int(h[j:j + 2], 16) for j in (1, 3, 5)))(region(*x)['hex']))
+        regs = [wr(1, 'primary'), wr(1, 'secondary'), acc, wr(1, 'secondary')]
+        wl = [(region(*x)['hex'], finish(*x)[0]) for x in regs]
+        hw = wr(2, 'primary')
+        wo = {'pf': wl[0][1], 'sf': wl[1][1], 'tf': wl[2][1], 'hw': region(*hw)['hex'], 'hwf': finish(*hw)[0]}
+        wlight = glow(d['weapon_1'], 'primary')
+        if wlight:
+            wo['light'] = wlight
+        out[4]['weapon'] = [wl[0][0], wl[1][0], wl[2][0], wl[3][0], wo]
     return out
+
+
+# the glow (HD2's glow role: lights, screens, visors) in the dye's emissive color when it is a color of its own (D2
+# lights the gear's emissive parts with it; its intensity's encoding isn't known: a moderate glow); else none
+def glow(mp, k):
+    c = mp[f'{k}_emissive_tint_color_and_intensity_bias'][:3]
+    if max(c) <= 0.05:
+        return None
+    n = [v / max(c) for v in c]
+    h = srgb(n)
+    v = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    return h if max(v) - min(v) >= 0.35 else None
 
 if __name__ == '__main__':
     # --extra: the presets as tools/themescene.mjs --extra wants them ([{name, args}], JSON) instead of theme.js lines

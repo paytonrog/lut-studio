@@ -16,7 +16,12 @@ each covers (measured: Destiny 2's plate 1 39%, suit 1 26%, plate 2 17%, suit 2 
 armor pieces' surface, by the dye slot in each vertex: the low 3 bits of its normal's w, 0-5 = plate, cloth, suit,
 each primary then secondary; Helldivers 2's cloth role, mostly the undersuit, about half of an armor): the plates on
 primary and secondary, the suit on the undersuit, the accent (suit 2 or cloth 2, the more saturated) on the trim, and
-the cloth regions on capes (a preset's own capes looks). The 20 Destiny 2 presets in `server/web/theme.js` marked
+the cloth regions on capes (a preset's own capes looks). Weapons take the shader's weapon dyes the same way (measured
+on 40 Destiny 2 weapons: weapon 1 45% / 24%, weapon 2 16% / 11%, weapon 3 3% / 2%; Helldivers 2's weapons: primary
+45%, secondary 27%, hardware 22%, trim 5%): weapon 1 on primary and secondary, weapon 2's primary on the metal parts,
+the accent on the trim. Each dye's detail normal map becomes the nearest Helldivers 2 detail tile
+(`detail_map.json`: by bump spread, fineness, direction and regularity of the two textures), its worn color goes to the
+wear colors, and a dye's emissive color (when it is a color of its own) to the glow role. The 20 Destiny 2 presets in `server/web/theme.js` marked
 "Bungie's dye values" were made with it.
 
 ## Where it comes from

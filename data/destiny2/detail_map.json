@@ -1,0 +1,233 @@
+{
+"about": "Destiny 2 detail textures (their normal maps, from Bungie's CDN) -> the nearest Helldivers 2 detail tile (layer 0-25) by surface features (bump spread, fineness, direction, regularity: tools/d2preset.py uses it); bump: the D2 surface's strength against the tile's. Made for the textures the Destiny 2 presets use.",
+"map": {
+"1274460375_hive_stone2_gear_detail_norm": {
+"layer": 12,
+"bump": 1.0
+},
+"1274460375_hive_stone_gear_detail_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"1663621645_basic_plasticl_norm": {
+"layer": 14,
+"bump": 0.79
+},
+"1746857886_seven_seraphs_carbon_fiber_norm": {
+"layer": 23,
+"bump": 1.21
+},
+"193699470_gear_detail_sash_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"2166389182_uni_detail_plastic_a_norm": {
+"layer": 16,
+"bump": 0.2
+},
+"2525791856_steel_painted_norm": {
+"layer": 7,
+"bump": 0.73
+},
+"2690020957_128_carbon_fiber_detail_normal_tiling_norm": {
+"layer": 12,
+"bump": 1.37
+},
+"2720509907_plastic_cracked_old_norm": {
+"layer": 24,
+"bump": 0.97
+},
+"3079566084_gear_detail_leather_norm": {
+"layer": 3,
+"bump": 1.01
+},
+"3099870915_gear_carbon_fiber_norm": {
+"layer": 14,
+"bump": 1.12
+},
+"3104558709_Rubber_01_norm": {
+"layer": 11,
+"bump": 0.49
+},
+"3104558709_battleworn_metal_01_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"3104558709_edz_common_0_armor_norm": {
+"layer": 22,
+"bump": 0.78
+},
+"3104558709_edz_common_1_armor_norm": {
+"layer": 17,
+"bump": 1.5
+},
+"327503503_digital_cloth_patch01_norm": {
+"layer": 18,
+"bump": 0.9
+},
+"327503503_fractal_glass_norm": {
+"layer": 18,
+"bump": 1.5
+},
+"327503503_gear_carbon_fiber_norm": {
+"layer": 14,
+"bump": 1.12
+},
+"327503503_gear_detail_annodized_steel_norm": {
+"layer": 1,
+"bump": 0.57
+},
+"327503503_gear_detail_armor_battleworn_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327503503_gear_detail_armor_galvanized_norm": {
+"layer": 22,
+"bump": 1.5
+},
+"327503503_gear_detail_ba_metal_norm": {
+"layer": 20,
+"bump": 0.75
+},
+"327503503_gear_detail_checker_norm": {
+"layer": 1,
+"bump": 0.65
+},
+"327503503_gear_detail_cotton_fabric_d2_norm": {
+"layer": 14,
+"bump": 1.18
+},
+"327503503_gear_detail_diamondplate_1_norm": {
+"layer": 16,
+"bump": 0.45
+},
+"327503503_gear_detail_fabric_knit_norm": {
+"layer": 10,
+"bump": 1.11
+},
+"327503503_gear_detail_fabric_knit_worn_norm": {
+"layer": 10,
+"bump": 0.76
+},
+"327503503_gear_detail_fabric_tweed_norm": {
+"layer": 10,
+"bump": 0.68
+},
+"327503503_gear_detail_glutt_s1_norm": {
+"layer": 14,
+"bump": 0.76
+},
+"327503503_gear_detail_grime_norm": {
+"layer": 11,
+"bump": 0.71
+},
+"327503503_gear_detail_hive_pattern_norm": {
+"layer": 22,
+"bump": 0.46
+},
+"327503503_gear_detail_leather2_norm": {
+"layer": 15,
+"bump": 1.5
+},
+"327503503_gear_detail_leather_norm": {
+"layer": 3,
+"bump": 1.01
+},
+"327503503_gear_detail_leather_raid_glutt_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327503503_gear_detail_leather_worn_norm": {
+"layer": 2,
+"bump": 1.5
+},
+"327503503_gear_detail_metal_hex_norm": {
+"layer": 2,
+"bump": 0.48
+},
+"327503503_gear_detail_metal_noise_clean_norm": {
+"layer": 19,
+"bump": 0.68
+},
+"327503503_gear_detail_metal_norm": {
+"layer": 2,
+"bump": 0.65
+},
+"327503503_gear_detail_metal_worn_norm": {
+"layer": 16,
+"bump": 0.89
+},
+"327503503_gear_detail_moire_pattern_color_norm": {
+"layer": 17,
+"bump": 0.79
+},
+"327503503_gear_detail_noise_norm": {
+"layer": 20,
+"bump": 1.5
+},
+"327503503_gear_detail_painted_metal_norm": {
+"layer": 24,
+"bump": 1.14
+},
+"327503503_gear_detail_speckle_norm": {
+"layer": 3,
+"bump": 0.5
+},
+"327503503_gear_detail_suit_circles_norm": {
+"layer": 16,
+"bump": 1.15
+},
+"327503503_gear_detail_vintage_wear_pattern_norm": {
+"layer": 19,
+"bump": 1.5
+},
+"327503503_gear_detail_wool_fabric_d2_norm": {
+"layer": 23,
+"bump": 1.24
+},
+"327503503_gear_plastic_scratched_norm": {
+"layer": 4,
+"bump": 0.37
+},
+"327503503_rubber_01_norm": {
+"layer": 7,
+"bump": 0.43
+},
+"3884251888_grunge_rust_a_normal": {
+"layer": 20,
+"bump": 1.13
+},
+"401755037_detail_fabric01_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"401755037_detail_metal_cubes_norm": {
+"layer": 18,
+"bump": 0.98
+},
+"401755037_detail_metal_speckle_norm": {
+"layer": 20,
+"bump": 1.5
+},
+"401755037_gear_detail_leather_norm": {
+"layer": 3,
+"bump": 1.01
+},
+"401755037_gear_detail_luxury_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"4042469637_gear_detail_sash_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"4195929417_gear_detail_leather_norm": {
+"layer": 3,
+"bump": 1.01
+},
+"435058087_iron_old_norm": {
+"layer": 0,
+"bump": 1.5
+}
+}
+}

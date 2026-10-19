@@ -368,9 +368,13 @@ async function themeItems(app, items, theme, tag) {
     }
     const rowOf = x => { const l = S.luts.get(x.h), a = baseOf(l); return Array.from(a.slice(x.z * l.w * 4, (x.z + 1) * l.w * 4)); };
     const looks = theme.looksFor?.(zones, rowOf) ?? {};
-    // (a cape's LUTs: the theme's capes looks, when it has its own)
+    // (a cape's or weapon's LUTs: the theme's looks for its group, when it has its own)
     groupOf ??= new Map((roles.items ?? []).flatMap(i => i.luts.map(l => [l.lut, i.group])));
-    const capeLooks = theme.looksFor?.(zones, rowOf, 'Capes') ?? looks, looksAt = h => (groupOf.get(h) === 'Capes' ? capeLooks : looks);
+    const byGroup = new Map(), looksAt = h => {   // (an item group's own looks: a theme's capes / weapons looks)
+      const g = groupOf.get(h) ?? '';
+      if (!byGroup.has(g)) byGroup.set(g, g ? theme.looksFor?.(zones, rowOf, g) ?? looks : looks);
+      return byGroup.get(g);
+    };
     if (it.kind === 'diver' && !decals) decals = decalColors(looks);   // (the decals' colors: the first Helldiver's looks)
     for (const h of luts) {
       if (done.has(h)) continue;
@@ -383,7 +387,7 @@ async function themeItems(app, items, theme, tag) {
     }
     for (const p of it.pieces) {
       if (luts.includes(p.info.lut)) p.lutKeys.edited = tag + p.info.lut;
-      const trim = looks.trim;
+      const trim = looksAt(p.info.lut).trim;   // (a cape's trim lines: the capes' trim)
       for (const [key, h, rows] of [['pattern', p.info.pattern, true], ['cape', p.info.cape, false]]) {
         const l = h && S.luts.get(h);
         if (!l || (!trim && !vanilla)) continue;
