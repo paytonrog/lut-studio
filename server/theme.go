@@ -11,7 +11,6 @@ import (
 	"image"
 	"image/png"
 	"lutstudio/atomicfile"
-	"maps"
 	"math"
 	"net/http"
 	"os"
@@ -687,81 +686,9 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, err)
 		return
 	}
-	// the LUTs: of every item in the groups (or those already in the project)
-	want := map[string]bool{}
-	for _, g := range in.Groups {
-		want[g] = true
-	}
-	// the items themed: those named (Items), else every item of the groups
-	wantItem := func(it roleItem) bool {
-		if len(in.Items) > 0 {
-			return slices.Contains(in.Items, it.Value)
-		}
-		return want[it.Group]
-	}
-	wantKit := func(k game.Kit) bool {
-		if len(in.Items) > 0 {
-			return slices.Contains(in.Items, itemValue(idx, k))
-		}
-		return want[ThemeGroupOf(k)]
-	}
-	var luts []string
-	seen := map[string]bool{}
-	lutGroup := map[string]string{} // (a LUT's group: its first item's)
-	items := 0
-	for _, it := range s.roleItems(idx) {
-		if !wantItem(it) {
-			continue
-		}
-		for _, l := range it.LUTs {
-			if _, ok := lutGroup[l.LUT]; !ok {
-				lutGroup[l.LUT] = it.Group
-			}
-		}
-		n := 0
-		for _, l := range it.LUTs {
-			if seen[l.LUT] {
-				continue
-			}
-			if in.OnlyInMod {
-				if _, err := os.Stat(p.DocPath(v, l.LUT)); err != nil {
-					continue
-				}
-			}
-			seen[l.LUT] = true
-			luts = append(luts, l.LUT)
-			n++
-		}
-		if n > 0 {
-			items++
-		}
-	}
-	mine, builtin, users := myRoles(), BuiltinRoles(), idx.Users()
-	// suggestions decided per item (a LUT several items share: its first item's)
-	suggested := map[string][]string{}
-	for _, it := range s.roleItems(idx) {
-		if !wantItem(it) {
-			continue
-		}
-		var hs []string
-		for _, l := range it.LUTs {
-			if seen[l.LUT] && suggested[l.LUT] == nil && mine[l.LUT] == nil && builtin[l.LUT] == nil {
-				hs = append(hs, l.LUT)
-			}
-		}
-		if len(hs) == 0 {
-			continue
-		}
-		for h, r := range withSet(s.itemLUTs(p, &v, hs), s.itemLUTs(p, &v, s.setLUTs(hs))) {
-			if suggested[h] == nil && slices.Contains(hs, h) { // (the set's armor only weighs in)
-				suggested[h] = r
-			}
-		}
-	}
-	swapped := map[string]bool{}
-	if in.BySize {
-		swapped = s.sizeSwaps(p, &v, func(it roleItem) bool { return wantItem(it) }, func(h string) bool { return seen[h] }, mine, builtin, suggested)
-	}
+	tg := s.themeTargets(idx, p, &v, in.Groups, in.Items, in.OnlyInMod, in.BySize)
+	luts, seen, lutGroup, items, wantKit := tg.luts, tg.seen, tg.lutGroup, tg.items, tg.wantKit
+	mine, builtin, users, suggested, swapped := tg.mine, tg.builtin, tg.users, tg.suggested, tg.swapped
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if q, err := s.project(); err == nil { // (read again under the lock: a variant added meanwhile gets the LUTs added)
@@ -818,52 +745,10 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
-		for len(wr) < d.Tex.Height {
-			wr = append(wr, "")
-		}
-		row := func(t *lut.Texture, z int) []float32 { return t.Px[z*t.Width*4 : (z+1)*t.Width*4] }
-		changed := false
-		looks := in.Looks
-		if gl, ok := in.GroupLooks[lutGroup[hs]]; ok {
-			looks = gl
-		}
-		if swapped[hs] {
-			sw := maps.Clone(looks)
-			sw["primary"], sw["secondary"] = looks["secondary"], looks["primary"]
-			for _, r := range []string{"primary", "secondary"} {
-				if sw[r] == nil {
-					delete(sw, r)
-				}
-			}
-			looks = sw
-		}
-		for z := 0; z < d.Tex.Height && z < len(roles); z++ {
-			look, ok := looks[roles[z]]
-			if !ok || roles[z] == "keep" || roles[z] == "unused" {
-				continue
-			}
-			cur := row(d.Tex, z)
-			game := z < van.Height && rowHash(cur) == rowHash(row(van, z))
-			if !in.Overwrite && !game && rowHash(cur) != wr[z] {
-				kept++ // changed by hand since
-				continue
-			}
-			if z < van.Height && math.Round(float64(van.At(0, z, 3))) == 1 && roles[z] != "cloth" {
-				// cloth in the game with a paint role (a cape's panels, padded armor): the look's colors only, the
-				// zone keeps its cloth finish
-				copyColors(cur, look)
-			} else {
-				for i, x := range look {
-					if !lut.MarkChannel(lut.MaterialWidth, i) {
-						cur[i] = lut.Round(x)
-					}
-				}
-			}
-			wr[z] = rowHash(cur)
-			zones++
-			byRole[roles[z]]++
-			changed = true
-		}
+		looks := lookFor(in.Looks, in.GroupLooks, lutGroup[hs], swapped[hs])
+		wr, changed, nz, nk := themeZones(d, van, roles, looks, wr, in.Overwrite, byRole)
+		zones += nz
+		kept += nk
 		if changed {
 			jr.keep(p.DocPath(v, hs))
 			if err := project.WriteDoc(p.DocPath(v, hs), d); err != nil {
@@ -915,27 +800,11 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
-			for len(wr) < d.Tex.Height {
-				wr = append(wr, "")
-			}
-			changed := false
-			for z := 0; z < d.Tex.Height; z++ {
-				if patterned != nil && (z >= van.Height || !patterned(van, z)) {
-					continue
-				}
-				cur := d.Tex.Px[z*d.Tex.Width*4 : (z+1)*d.Tex.Width*4]
-				game := z < van.Height && rowHash(cur) == rowHash(van.Px[z*van.Width*4:(z+1)*van.Width*4])
-				if !in.Overwrite && !game && rowHash(cur) != wr[z] {
-					kept++
-					continue
-				}
-				for ch := 0; ch < 3; ch++ {
-					cur[ch] = lut.Round(trim[ch])
-				}
-				wr[z] = rowHash(cur)
-				zones++
-				byRole["trim"]++
-				changed = true
+			wr, changed, nz, nk := trimZones(d, van, patterned, trim, wr, in.Overwrite)
+			zones += nz
+			kept += nk
+			if nz > 0 {
+				byRole["trim"] += nz
 			}
 			if changed {
 				jr.keep(p.DocPath(v, hs))
@@ -952,36 +821,12 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		return true
 	}
 	if trim, ok := in.Looks["trim"]; ok && len(trim) >= 3 {
-		capeLUTs, patterns := map[string]bool{}, map[string]bool{}
-		for _, k := range idx.Kits {
-			if !wantKit(k) {
-				continue
-			}
-			for _, pc := range k.Pieces {
-				if pc.CapeLUT != "" && k.Type == "Cape" {
-					capeLUTs[pc.CapeLUT] = true
-				}
-				if pc.PatternLUT != "" && seen[pc.MaterialLUT] {
-					patterns[pc.PatternLUT] = true
-				}
-			}
-		}
-		// (a pattern LUT is shared: the items outside the groups themed that wear one of these, counted for the message)
-		for _, k := range idx.Kits {
-			if wantKit(k) {
-				continue
-			}
-			for _, pc := range k.Pieces {
-				if patterns[pc.PatternLUT] {
-					patternOutside++
-					break
-				}
-			}
-		}
+		capeLUTs, patterns, outside := tg.trimTargets(idx)
+		patternOutside += outside
 		if !trimRows(capeLUTs, lut.CapeWidth, nil, "Capes") {
 			return
 		}
-		if !trimRows(patterns, lut.PatternWidth, func(t *lut.Texture, z int) bool { return t.At(0, z, 3) != -1 }, "") {
+		if !trimRows(patterns, lut.PatternWidth, patternedRow, "") {
 			return
 		}
 	}
@@ -1085,27 +930,22 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 // addLUT: LUT h (the game's values: van) in every variant of p that doesn't have it yet; how many variants got it.
 // users: the index's Users (for the note); jr: the files written are kept in it (nil: not kept)
 func (s *Server) addLUT(p *project.Project, h uint64, van *lut.Texture, users map[string][]string, jr *fileJournal) (int, error) {
-	kind, err := lut.KindOf(van)
-	if err != nil {
+	if _, err := lut.KindOf(van); err != nil {
 		return 0, err
 	}
 	hs := lut.HashString(h)
-	note := ""
-	if u := users[hs]; len(u) > 0 {
-		note = "Used by " + strings.Join(u, ", ")
-		if len(u) > 6 {
-			note = fmt.Sprintf("Used by %s and %d more", strings.Join(u[:6], ", "), len(u)-6)
-		}
-	}
 	added := 0
 	for _, v := range p.Variants {
 		path := p.DocPath(v, hs)
 		if _, err := os.Stat(path); err == nil {
 			continue
 		}
-		t := &lut.Texture{Width: van.Width, Height: van.Height, Px: append([]float32(nil), van.Px...)}
+		d, err := gameDoc(h, van, users)
+		if err != nil {
+			return added, err
+		}
 		jr.keep(path)
-		if err := project.WriteDoc(path, &lut.Document{LUT: hs, Kind: kind, Note: note, Tex: t}); err != nil {
+		if err := project.WriteDoc(path, d); err != nil {
 			return added, err
 		}
 		added++
