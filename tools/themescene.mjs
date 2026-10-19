@@ -11,6 +11,7 @@
 //     in scene.js's SCENE / CAM form. --line: the small line over the title, "" for none.)
 //   node tools/themescene.mjs x --poses   (the poses; * : the pose holds a weapon)
 //   --cutout: the items alone on a transparent background (no backdrop, floor, glow, aura, title)
+//   --extra=file.json: presets to try out, [{name, args: [primary, secondary, trim, cloth, options]}] (theme.js T)
 //   --look=vignette=0,grain=0.5: the showcase look's settings (showcase.js LOOK: bg, glow, rim, exposure, vignette...)
 // Writes <preset>.png per preset. Needs Chrome or Edge.
 import { spawn } from 'node:child_process';
@@ -90,7 +91,10 @@ console.log(await ev(`(async () => {
   if (Object.keys(look).length) window.themeScene.setLook(look);
   return 'scene: ' + window.themeScene.items.length + ' items' + (window.themeScene.notes.length ? ' (' + window.themeScene.notes.join('; ') + ')' : '');
 })()`));
-const presets = wanted.length ? wanted : JSON.parse(await ev(`import('./theme.js').then(m => JSON.stringify(Object.keys(m.PRESETS)))`));
+// --extra=file.json: more presets to render, [{name, args}] each made by theme.js T(...args) (try-outs not in the app)
+const extra = flag('extra') ? JSON.parse(readFileSync(flag('extra'), 'utf8')) : [];
+if (extra.length) await ev(`import('./theme.js').then(m => { for (const x of ${JSON.stringify(extra)}) m.PRESETS[x.name] = m.T(...x.args); return 1; })`);
+const presets = wanted.length || extra.length ? [...wanted, ...extra.map(x => x.name)] : JSON.parse(await ev(`import('./theme.js').then(m => JSON.stringify(Object.keys(m.PRESETS)))`));
 mkdirSync(outDir, { recursive: true });
 for (const name of presets) {
   const t0 = Date.now();

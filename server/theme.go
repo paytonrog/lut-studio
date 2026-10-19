@@ -638,13 +638,15 @@ func rowHash(px []float32) string {
 // files it writes are kept as they were before: POST /api/theme/undo puts them back.
 func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Variant   string
-		Looks     map[string][]float32
-		Groups    []string
-		Items     []string
-		OnlyInMod bool
-		Overwrite bool
-		Decals    string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
+		Variant string
+		Looks   map[string][]float32
+		Groups  []string
+		Items   []string
+		// GroupLooks: an item group's own looks (e.g. "Capes"), for the LUTs of that group's items, over Looks
+		GroupLooks map[string]map[string][]float32
+		OnlyInMod  bool
+		Overwrite  bool
+		Decals     string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
 	}
 	if err := decode(r, &in); err != nil {
 		fail(w, 400, err)
@@ -654,14 +656,20 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, fmt.Errorf("unknown decal mode %q", in.Decals))
 		return
 	}
-	for role, row := range in.Looks {
-		if err := checkRoles("0x0000000000000000", []string{role}); err != nil {
-			fail(w, 400, err)
-			return
-		}
-		if len(row) != lut.MaterialWidth*4 {
-			fail(w, 400, fmt.Errorf("the %s look has %d values, a zone has %d", role, len(row), lut.MaterialWidth*4))
-			return
+	all := []map[string][]float32{in.Looks}
+	for _, gl := range in.GroupLooks {
+		all = append(all, gl)
+	}
+	for _, looks := range all {
+		for role, row := range looks {
+			if err := checkRoles("0x0000000000000000", []string{role}); err != nil {
+				fail(w, 400, err)
+				return
+			}
+			if len(row) != lut.MaterialWidth*4 {
+				fail(w, 400, fmt.Errorf("the %s look has %d values, a zone has %d", role, len(row), lut.MaterialWidth*4))
+				return
+			}
 		}
 	}
 	idx := s.index()
@@ -695,10 +703,16 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	var luts []string
 	seen := map[string]bool{}
+	lutGroup := map[string]string{} // (a LUT's group: its first item's)
 	items := 0
 	for _, it := range s.roleItems(idx) {
 		if !wantItem(it) {
 			continue
+		}
+		for _, l := range it.LUTs {
+			if _, ok := lutGroup[l.LUT]; !ok {
+				lutGroup[l.LUT] = it.Group
+			}
 		}
 		n := 0
 		for _, l := range it.LUTs {
@@ -801,8 +815,12 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		row := func(t *lut.Texture, z int) []float32 { return t.Px[z*t.Width*4 : (z+1)*t.Width*4] }
 		changed := false
+		looks := in.Looks
+		if gl, ok := in.GroupLooks[lutGroup[hs]]; ok {
+			looks = gl
+		}
 		for z := 0; z < d.Tex.Height && z < len(roles); z++ {
-			look, ok := in.Looks[roles[z]]
+			look, ok := looks[roles[z]]
 			if !ok || roles[z] == "keep" || roles[z] == "unused" {
 				continue
 			}
@@ -844,8 +862,11 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	//   - capes: their design LUT's trim lines (gradients and emblems stay as the game made them);
 	//   - patterns: every patterned row of the items' pattern LUTs (FS-23 Battle Master's yellow stripes, camo:
 	//     one color per zone over its paint; a row with mask layer -1 has no pattern and is left alone)
-	trimRows := func(hashes map[string]bool, width int, patterned func(t *lut.Texture, z int) bool) bool {
+	trimRows := func(hashes map[string]bool, width int, patterned func(t *lut.Texture, z int) bool, group string) bool {
 		trim := in.Looks["trim"]
+		if gl, ok := in.GroupLooks[group]; ok && len(gl["trim"]) >= 3 {
+			trim = gl["trim"]
+		}
 		var order []string
 		for hs := range hashes {
 			order = append(order, hs)
@@ -939,10 +960,10 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		if !trimRows(capeLUTs, lut.CapeWidth, nil) {
+		if !trimRows(capeLUTs, lut.CapeWidth, nil, "Capes") {
 			return
 		}
-		if !trimRows(patterns, lut.PatternWidth, func(t *lut.Texture, z int) bool { return t.At(0, z, 3) != -1 }) {
+		if !trimRows(patterns, lut.PatternWidth, func(t *lut.Texture, z int) bool { return t.At(0, z, 3) != -1 }, "") {
 			return
 		}
 	}

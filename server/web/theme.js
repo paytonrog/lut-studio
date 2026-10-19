@@ -148,16 +148,17 @@ export const PRESETS = {
   },
 };
 // ---- more presets, from a few finishes: T(primary, secondary, trim, cloth, options)
-const FIN = {
+export const FIN = {
   matte: [[6, 3, -1], [10, 0, 0.78]], satin: [[6, 3, -1], [10, 0, 0.45]], gloss: [[6, 3, -1], [10, 0, 0.18], [8, 3, 0.65]],
   plastic: [[6, 3, -1], [10, 0, 0.25], [8, 3, 0.6]], rough: [[6, 3, -1], [10, 0, 0.95], [8, 3, 0.2]],
   metal: [[6, 3, 1], [10, 0, 0.25]], mirror: [[6, 3, 1], [10, 0, 0.03], [8, 3, 1]], brushed: [[6, 3, 1], [10, 0, 0.45]],
 };
-const IRID = (t, s, str) => [[13, 2, t], [13, 3, s], [14, 0, 0], [14, 1, 0], [14, 2, 0], [14, 3, 1], [15, 0, 0], [15, 1, 0], [15, 2, 0], [15, 3, str]];
-const CM = (layer, colors, tiling = 1.5) => ({ layer: String(layer), colors, tiling });
+export const IRID = (t, s, str) => [[13, 2, t], [13, 3, s], [14, 0, 0], [14, 1, 0], [14, 2, 0], [14, 3, 1], [15, 0, 0], [15, 1, 0], [15, 2, 0], [15, 3, str]];
+export const CM = (layer, colors, tiling = 1.5) => ({ layer: String(layer), colors, tiling });
 // o: pf / sf / tf (finishes), pc / sc / cc (camos), px / sx (extra fields), glow (trim and lights glow in this color),
-// gv (its strength), hw / hwf (metal parts' color and finish), fuzz (cloth sheen color)
-function T(p, s, t, cl, o = {}) {
+// gv (its strength), hw / hwf (metal parts' color and finish), fuzz (cloth sheen color), cape: [p, s, t, cl, o] the
+// capes' own looks (the preset's capes key; other items take the rest)
+export function T(p, s, t, cl, o = {}) {
   const glow = o.glow ? [[13, 0, o.gv ?? 0.12]] : [];
   const out = {
     primary: { c: p, set: [...CLEAN, ...(o.pf ?? FIN.satin), ...(o.px ?? [])], camo: o.pc },
@@ -167,8 +168,14 @@ function T(p, s, t, cl, o = {}) {
   };
   if (o.glow) out.glow = { c: o.glow, set: glow };
   if (o.hw) out.hardware = { c: o.hw, set: o.hwf ?? FIN.metal };
+  if (o.cape) out.capes = T(...o.cape);
   return out;
 }
+// a preset's looks for an item group (the Capes group: the preset's capes looks when it has them), without that key
+export const looksOf = (P, group = '') => {
+  const { capes, ...rest } = P ?? {};
+  return group === 'Capes' && capes ? { ...rest, ...capes } : rest;
+};
 Object.assign(PRESETS, {
   // showoff
   'Liquid Gold': T('#e0b04a', '#0c0b0a', '#141210', '#16130f', { pf: FIN.mirror, tf: FIN.gloss, hw: '#e0b04a', hwf: FIN.mirror, fuzz: [0.5, 0.4, 0.15] }),
@@ -263,9 +270,8 @@ Object.assign(PRESETS, {
 Object.assign(PRESETS, {
   'Superblack': T('#060606', '#0b0b0c', '#141416', '#070707', { pf: [[6, 3, -1], [10, 0, 0.12], [8, 3, 0.8]], sf: FIN.gloss, tf: FIN.gloss, hw: '#0a0a0a', hwf: [[6, 3, 1], [10, 0, 0.15]] }),
   'Bitterpearl': T('#eeece6', '#d8d6d0', '#c9ccd1', '#e4e2dc', { pf: [[6, 3, 0.15], [10, 0, 0.2], [8, 3, 0.7]], hw: '#d0d3d8', hwf: FIN.mirror }),
-  "Calus's Selected": T('#f2efe8', '#4a1a7a', '#d9a93c', '#3a1460', { pf: FIN.gloss, tf: FIN.metal, hw: '#d9a93c' }),
   'Goldleaf': T('#d8a83c', '#f0ede4', '#b88a2c', '#e8e2d4', { pf: FIN.mirror, hw: '#d8a83c' }),
-  'Bergusian Night': T('#3a1a6a', '#1a0a30', '#a070ff', '#24103e', { pc: CM(1, ['#3a1a6a', '#6a2aa8', '#1a0a30', '#9050d8'], 1.0), pf: FIN.gloss }),
+  'Bergusian Night': T('#524d60', '#8c9bc2', '#382a37', '#323232', { pf: [[6, 3, 0.45], [10, 0, 0.42]], sf: [[6, 3, 1.0], [10, 0, 0.7]], tf: [[6, 3, -1], [10, 0, 0.66]], hw: "#8c9bc2", hwf: [[6, 3, 1.0], [10, 0, 0.7]], cape: ["#46463e", "#3b3b35", "#382a37", "#46463e", {"pf": [[6, 3, -1], [10, 0, 0.97]], "sf": [[6, 3, -1], [10, 0, 0.97]], "tf": [[6, 3, -1], [10, 0, 0.66]], "hw": "#8c9bc2", "hwf": [[6, 3, 1.0], [10, 0, 0.7]], "fuzz": [0.41, 0.41, 0.38]}] }),   // (Bungie's dye values: data/destiny2)
   'Carbon Blood': T('#8a0a12', '#0c0c0d', '#1a1a1c', '#101011', { pf: FIN.gloss, sc: CM(0, ['#0c0c0d', '#1a1a1c', '#141416', '#060606'], 2.6) }),
   'Regal Daring': T('#f0ede6', '#c8a03a', '#b0141e', '#e6e2da', { pf: FIN.gloss, sf: FIN.metal, hw: '#c8a03a' }),
   'Ego Malign': T('#e8e2d0', '#14204a', '#0a0e1e', '#101a3a', { pf: FIN.satin, glow: '#f4ecd4', gv: 0.06 }),
@@ -273,8 +279,8 @@ Object.assign(PRESETS, {
   'Amethyst Veil': T('#121016', '#3a1660', '#7a3ac8', '#0e0c12', { pf: FIN.gloss, sf: FIN.gloss, tf: FIN.metal, hw: '#3a1660' }),
   'Erebos Glance': T('#16161a', '#2c2c30', '#ff7a14', '#121214', { pf: FIN.satin, tf: FIN.gloss }),
   'Abyssinian Gold': T('#5a4632', '#3a3430', '#a8863a', '#4a3e30', { pf: FIN.matte, sf: FIN.matte, tf: FIN.brushed, hw: '#8a7040', hwf: FIN.brushed }),
-  'Refurbished Black Armory': T('#0a0b0a', '#0c0a10', '#2a2c2a', '#0a0a0c', { pf: [[6, 3, 0.4], [10, 0, 0.15]], px: IRID(0.6, 0.5, 1.6), sf: [[6, 3, 0.3], [10, 0, 0.2]], sx: IRID(0.85, 0.4, 1.4), hw: '#1a1c1a' }),
-  'Gilded Frost': T('#8a7a4a', '#5a5e64', '#1a2a5a', '#3a4048', { pf: FIN.brushed, tf: FIN.gloss }),
+  'Refurbished Black Armory': T('#404a48', '#454951', '#3f4b53', '#4f4d51', { pf: [[6, 3, 0.52], [10, 0, 0.65]], sf: [[6, 3, 0.52], [10, 0, 0.42]], tf: [[6, 3, 0.54], [10, 0, 0.54]], fuzz: [0.47, 0.47, 0.47], hw: "#454951", hwf: [[6, 3, 0.52], [10, 0, 0.42]], cape: ["#424c53", "#3f4b53", "#3f4b53", "#424c53", {"pf": [[6, 3, 0.49], [10, 0, 1.0]], "sf": [[6, 3, 0.54], [10, 0, 0.54]], "tf": [[6, 3, 0.54], [10, 0, 0.54]], "hw": "#454951", "hwf": [[6, 3, 0.52], [10, 0, 0.42]], "fuzz": [0.4, 0.4, 0.4]}] }),   // (Bungie's dye values: data/destiny2)
+  'Gilded Frost': T('#948982', '#817140', '#4d4a49', '#242323', { pf: [[6, 3, 0.71], [10, 0, 0.4]], sf: [[6, 3, 1.0], [10, 0, 0.66]], tf: [[6, 3, -1], [10, 0, 0.59]], hw: "#817140", hwf: [[6, 3, 1.0], [10, 0, 0.66]], cape: ["#5f5956", "#3c3c3c", "#4d4a49", "#5f5956", {"pf": [[6, 3, -1], [10, 0, 0.77]], "sf": [[6, 3, -1], [10, 0, 0.64]], "tf": [[6, 3, -1], [10, 0, 0.59]], "hw": "#817140", "hwf": [[6, 3, 1.0], [10, 0, 0.66]], "fuzz": [0.45, 0.43, 0.41]}] }),   // (Bungie's dye values: data/destiny2)
   'Gambit Jadestone': T('#2a3a24', '#1a2418', '#4aff6a', '#1e2a1a', { pc: CM(1, ['#2a3a24', '#1e2a1a', '#3a4a2e', '#141c10'], 1.2), pf: FIN.matte, glow: '#4aff6a', gv: 0.12 }),
   'House of Meyrin': T('#8a1018', '#c8a03a', '#e8c050', '#4a0a0e', { pf: FIN.gloss, sf: FIN.metal, tf: FIN.mirror, hw: '#c8a03a' }),
   'Bloody Tooth': T('#0e0e10', '#b8bcc2', '#b0101a', '#141416', { pf: FIN.gloss, sf: FIN.mirror, hw: '#b8bcc2' }),
@@ -282,15 +288,28 @@ Object.assign(PRESETS, {
   'Oiled Gunmetal': T('#14181a', '#0e1210', '#3aff9a', '#101414', { pf: [[6, 3, 0.6], [10, 0, 0.12]], px: IRID(0.45, 0.8, 1.6), glow: '#3aff9a', gv: 0.1, hw: '#2a2e30' }),
   'Monochromatic': T('#f2f2f2', '#0c0c0c', '#0c0c0c', '#f2f2f2', { pf: FIN.gloss, sf: FIN.gloss }),
   // (more Destiny 2 shaders, from how they're described: colors and finishes, not their exact textures)
-  'Metro Shift': T('#18191d', '#1f3462', '#c8ccd2', '#16181e', { pf: FIN.gloss, sf: FIN.satin, tf: FIN.metal, hw: '#c8ccd2', hwf: FIN.mirror, fuzz: [0.1, 0.13, 0.22] }),   // (as in game: glossy near-black plates and suit, polished silver edges and metal, navy accents)
+  'Metro Shift': T('#272e37', '#cbcccc', '#152138', '#282828', { pf: [[6, 3, 0.43], [10, 0, 0.23], [8, 3, 0.67]], sf: [[6, 3, 1.0], [10, 0, 0.4]], tf: [[6, 3, -1], [10, 0, 1]], hw: "#cbcccc", hwf: [[6, 3, 1.0], [10, 0, 0.4]], cape: ["#152036", "#152138", "#152138", "#152036", {"pf": [[6, 3, -1], [10, 0, 1]], "sf": [[6, 3, -1], [10, 0, 1]], "tf": [[6, 3, -1], [10, 0, 1]], "hw": "#cbcccc", "hwf": [[6, 3, 1.0], [10, 0, 0.4]], "fuzz": [0.17, 0.24, 0.36]}] }),   // (Bungie's dye values: data/destiny2)
   'Vanguard Discipline': T('#8c8f92', '#3a3d42', '#c9c3b4', '#55585c', { pf: FIN.matte, sf: FIN.satin, tf: FIN.satin, hw: '#6a6e74', hwf: FIN.brushed }),
   'Carrhae Black': T('#121112', '#1c1a19', '#4a2e1c', '#161516', { pf: FIN.satin, sf: FIN.matte, tf: FIN.satin, hw: '#5a3820', hwf: [[6, 3, -1], [10, 0, 0.45], [1, 0, 0], [1, 1, 0.9], [22, 0, 2]] }),   // (walnut wood on the metal)
   'Ensilvered Snare': T('#b4b8bc', '#5a4230', '#2c2620', '#4a3a2a', { pf: FIN.brushed, px: [[4, 0, 3], [4, 1, 2], [4, 2, 6], [4, 3, 0], [1, 3, 0.1], [6, 0, 0.32], [6, 1, 0.22], [6, 2, 0.14], [5, 0, 0.6], [5, 1, 0.6], [5, 2, 0.6], [1, 0, 0], [1, 1, 0.8], [22, 0, 3]], sf: FIN.matte, tf: FIN.matte, hw: '#c4c8cc', hwf: FIN.metal }),   // (knightly, worn)
   'Horizons Beyond': T('#162a52', '#6a4628', '#c8a46a', '#4e3420', { pf: FIN.satin, sf: [[6, 3, -1], [10, 0, 0.6], [1, 0, 0], [1, 1, 0.8], [22, 0, 3]], tf: FIN.brushed, hw: '#8a6a40', hwf: FIN.brushed }),   // (leather)
   'Corrective//Protective': T('#8a6a3a', '#2a2622', '#e8f4ff', '#3a342c', { pf: FIN.brushed, sf: FIN.satin, glow: '#e8f4ff', gv: 0.08, hw: '#a8844a', hwf: FIN.metal }),   // (Vex bronze, milky radiolaria glow)
-  'Carminica': T('#7a0a10', '#3a0508', '#ff2020', '#4a0a0c', { pf: FIN.gloss, sf: FIN.satin, glow: '#ff2020', gv: 0.1, hw: '#5a0a0e', hwf: FIN.metal }),
-  "Calus's Selected": T('#eceae4', '#b8bcc2', '#d8b04a', '#4a1a6a', { pf: FIN.gloss, sf: FIN.mirror, tf: FIN.metal, glow: '#8a3ad8', gv: 0.05, hw: '#d8b04a', hwf: FIN.mirror }),   // (royal purple highlights)
-  'Jacarina': T('#f0f0f0', '#0e0e10', '#1a8cff', '#121214', { pf: FIN.gloss, sf: FIN.satin, glow: '#1a8cff', gv: 0.07, hw: '#2a2c30' }),   // (black and white, a vivid blue once worn)
+  'Carminica': T('#6a0b0b', '#333333', '#6a0808', '#35332e', { pf: [[6, 3, 0.65], [10, 0, 0.5]], sf: [[6, 3, 0.66], [10, 0, 0.21], [8, 3, 0.69]], tf: [[6, 3, 0.65], [10, 0, 0.51]], hw: "#333333", hwf: [[6, 3, 0.66], [10, 0, 0.21], [8, 3, 0.69]], cape: ["#2f2f2f", "#6a0808", "#6a0808", "#2f2f2f", {"pf": [[6, 3, -1], [10, 0, 1]], "sf": [[6, 3, 0.65], [10, 0, 0.51]], "tf": [[6, 3, 0.65], [10, 0, 0.51]], "hw": "#333333", "hwf": [[6, 3, 0.66], [10, 0, 0.21], [8, 3, 0.69]], "fuzz": [0.24, 0.24, 0.24]}] }),   // (Bungie's dye values: data/destiny2)
+  "Calus's Selected": T('#aaa7a2', '#c89f66', '#2a0648', '#96908d', { pf: [[6, 3, -1], [10, 0, 0.32]], sf: [[6, 3, 1.0], [10, 0, 0.57]], tf: [[6, 3, -1], [10, 0, 0.79]], hw: "#c89f66", hwf: [[6, 3, 1.0], [10, 0, 0.57]], cape: ["#adaaa0", "#2a0648", "#2a0648", "#adaaa0", {"pf": [[6, 3, -1], [10, 0, 0.66]], "sf": [[6, 3, -1], [10, 0, 0.79]], "tf": [[6, 3, -1], [10, 0, 0.79]], "hw": "#c89f66", "hwf": [[6, 3, 1.0], [10, 0, 0.57]]}] }),   // (Bungie's dye values: data/destiny2)
+  'Jacarina': T('#232323', '#989898', '#456a82', '#666666', { pf: [[6, 3, -1], [10, 0, 0.66]], sf: [[6, 3, -1], [10, 0, 0.66]], tf: [[6, 3, -1], [10, 0, 0.57]], cape: ["#696969", "#292a2a", "#456a82", "#696969", {"pf": [[6, 3, -1], [10, 0, 1]], "sf": [[6, 3, 0.41], [10, 0, 0.6]], "tf": [[6, 3, -1], [10, 0, 0.57]], "fuzz": [0.49, 0.49, 0.49]}] }),   // (Bungie's dye values: data/destiny2)
+  'Sunrise Warrior': T('#c12762', '#828282', '#242424', '#3e3a3a', { pf: [[6, 3, 0.9], [10, 0, 0.35]], sf: [[6, 3, 0.3], [10, 0, 0.54]], tf: [[6, 3, 0.3], [10, 0, 0.83]], cape: ["#a7395d", "#242424", "#242424", "#a7395d", {"pf": [[6, 3, -1], [10, 0, 0.83]], "sf": [[6, 3, 0.3], [10, 0, 0.83]], "tf": [[6, 3, 0.3], [10, 0, 0.83]]}] }),   // (Bungie's dye values: data/destiny2)
+  'Dawn and Dusk': T('#8e526c', '#566883', '#72688f', '#736381', { pf: [[6, 3, 1.0], [10, 0, 0.31]], sf: [[6, 3, 1.0], [10, 0, 0.23], [8, 3, 0.67]], tf: [[6, 3, 1.0], [10, 0, 0.66]], hw: "#566883", hwf: [[6, 3, 1.0], [10, 0, 0.23], [8, 3, 0.67]], cape: ["#7d3b5f", "#72688f", "#72688f", "#7d3b5f", {"pf": [[6, 3, 0.67], [10, 0, 0.57]], "sf": [[6, 3, 1.0], [10, 0, 0.66]], "tf": [[6, 3, 1.0], [10, 0, 0.66]], "hw": "#566883", "hwf": [[6, 3, 1.0], [10, 0, 0.23], [8, 3, 0.67]]}] }),   // (Bungie's dye values: data/destiny2)
+  'Golden Trace': T('#4d4445', '#cbb263', '#2e3233', '#353535', { pf: [[6, 3, 0.41], [10, 0, 0.23], [8, 3, 0.67]], sf: [[6, 3, 1.0], [10, 0, 0.36]], tf: [[6, 3, -1], [10, 0, 0.41]], hw: "#cbb263", hwf: [[6, 3, 1.0], [10, 0, 0.36]], cape: ["#4d4142", "#333233", "#2e3233", "#4d4142", {"pf": [[6, 3, 0.48], [10, 0, 0.79]], "sf": [[6, 3, -1], [10, 0, 0.66]], "tf": [[6, 3, -1], [10, 0, 0.41]], "hw": "#cbb263", "hwf": [[6, 3, 1.0], [10, 0, 0.36]]}] }),   // (Bungie's dye values: data/destiny2)
+  'Indigo Matrix': T('#4a616e', '#9241c0', '#0d8194', '#3c3c3c', { pf: [[6, 3, -1], [10, 0, 0.32]], sf: [[6, 3, 1.0], [10, 0, 0.57]], tf: [[6, 3, -1], [10, 0, 0.66]], hw: "#9241c0", hwf: [[6, 3, 1.0], [10, 0, 0.57]], cape: ["#2e7086", "#0d8194", "#0d8194", "#2e7086", {"pf": [[6, 3, 0.08], [10, 0, 0.61]], "sf": [[6, 3, -1], [10, 0, 0.66]], "tf": [[6, 3, -1], [10, 0, 0.66]], "hw": "#9241c0", "hwf": [[6, 3, 1.0], [10, 0, 0.57]]}] }),   // (Bungie's dye values: data/destiny2)
+  'Midnight Smith': T('#aa3f41', '#5d5e5e', '#521617', '#5e1d1e', { pf: [[6, 3, 1.0], [10, 0, 0.56]], sf: [[6, 3, 1.0], [10, 0, 0.42]], tf: [[6, 3, -1], [10, 0, 0.97]], hw: "#5d5e5e", hwf: [[6, 3, 1.0], [10, 0, 0.42]], cape: ["#3d4946", "#521617", "#521617", "#3d4946", {"pf": [[6, 3, 0.6], [10, 0, 0.97]], "sf": [[6, 3, -1], [10, 0, 0.97]], "tf": [[6, 3, -1], [10, 0, 0.97]], "hw": "#5d5e5e", "hwf": [[6, 3, 1.0], [10, 0, 0.42]], "fuzz": [0.28, 0.28, 0.28]}] }),   // (Bungie's dye values: data/destiny2)
+  'New Age Black Armory': T('#2d2d31', '#b85555', '#444c46', '#2d2f30', { pf: [[6, 3, -1], [10, 0, 0.4]], sf: [[6, 3, 1.0], [10, 0, 0.48]], tf: [[6, 3, 0.46], [10, 0, 0.97]], hw: "#b85555", hwf: [[6, 3, 1.0], [10, 0, 0.48]], cape: ["#4a4f48", "#444c46", "#444c46", "#4a4f48", {"pf": [[6, 3, 0.33], [10, 0, 0.97]], "sf": [[6, 3, 0.46], [10, 0, 0.97]], "tf": [[6, 3, 0.46], [10, 0, 0.97]], "hw": "#b85555", "hwf": [[6, 3, 1.0], [10, 0, 0.48]], "fuzz": [0.38, 0.38, 0.34]}] }),   // (Bungie's dye values: data/destiny2)
+  'Shadow Gilt': T('#606366', '#c0a976', '#292040', '#353535', { pf: [[6, 3, 0.32], [10, 0, 0.43]], sf: [[6, 3, 1.0], [10, 0, 0.48]], tf: [[6, 3, -1], [10, 0, 0.67]], hw: "#c0a976", hwf: [[6, 3, 1.0], [10, 0, 0.48]], cape: ["#454545", "#292040", "#292040", "#454545", {"pf": [[6, 3, -1], [10, 0, 1]], "sf": [[6, 3, -1], [10, 0, 0.67]], "tf": [[6, 3, -1], [10, 0, 0.67]], "hw": "#c0a976", "hwf": [[6, 3, 1.0], [10, 0, 0.48]], "fuzz": [0.28, 0.28, 0.28]}] }),   // (Bungie's dye values: data/destiny2)
+  'Gift of the Nine': T('#b6b6b6', '#424a51', '#ada8a5', '#aea6a2', { pf: [[6, 3, -1], [10, 0, 0.27], [8, 3, 0.63]], sf: [[6, 3, 0.55], [10, 0, 0.27], [8, 3, 0.63]], tf: [[6, 3, -1], [10, 0, 0.66]], hw: "#424a51", hwf: [[6, 3, 0.55], [10, 0, 0.27], [8, 3, 0.63]], cape: ["#bcb8b4", "#ada8a5", "#ada8a5", "#bcb8b4", {"pf": [[6, 3, -1], [10, 0, 0.58]], "sf": [[6, 3, -1], [10, 0, 0.66]], "tf": [[6, 3, -1], [10, 0, 0.66]], "hw": "#424a51", "hwf": [[6, 3, 0.55], [10, 0, 0.27], [8, 3, 0.63]]}] }),   // (Bungie's dye values: data/destiny2)
+  "Calus's Elite": T('#4d4c50', '#9d8e68', '#392d23', '#262626', { pf: [[6, 3, 0.64], [10, 0, 0.27], [8, 3, 0.63]], sf: [[6, 3, 1.0], [10, 0, 0.42]], tf: [[6, 3, -1], [10, 0, 0.5]], hw: "#9d8e68", hwf: [[6, 3, 1.0], [10, 0, 0.42]], cape: ["#433f31", "#302c2a", "#392d23", "#433f31", {"pf": [[6, 3, -1], [10, 0, 1]], "sf": [[6, 3, -1], [10, 0, 0.62]], "tf": [[6, 3, -1], [10, 0, 0.5]], "hw": "#9d8e68", "hwf": [[6, 3, 1.0], [10, 0, 0.42]], "fuzz": [0.44, 0.41, 0.33]}] }),   // (Bungie's dye values: data/destiny2)
+  "Calus's Treasured": T('#ffbf5b', '#4b494c', '#1a0e38', '#bea686', { pf: [[6, 3, 1.0], [10, 0, 0.38]], sf: [[6, 3, 0.79], [10, 0, 0.44]], tf: [[6, 3, -1], [10, 0, 0.79]], hw: "#4b494c", hwf: [[6, 3, 0.79], [10, 0, 0.44]], cape: ["#88772b", "#1a0e38", "#1a0e38", "#88772b", {"pf": [[6, 3, -1], [10, 0, 0.66]], "sf": [[6, 3, -1], [10, 0, 0.79]], "tf": [[6, 3, -1], [10, 0, 0.79]], "hw": "#4b494c", "hwf": [[6, 3, 0.79], [10, 0, 0.44]]}] }),   // (Bungie's dye values: data/destiny2)
+  "Calus's Shadow": T('#000000', '#bda888', '#c7ae61', '#414443', { pf: [[6, 3, 1.0], [10, 0, 0.57]], sf: [[6, 3, -1], [10, 0, 0.57]], tf: [[6, 3, 1.0], [10, 0, 0.62]], cape: ["#bd9e74", "#c7ae61", "#c7ae61", "#bd9e74", {"pf": [[6, 3, -1], [10, 0, 1]], "sf": [[6, 3, 1.0], [10, 0, 0.62]], "tf": [[6, 3, 1.0], [10, 0, 0.62]], "fuzz": [0.85, 0.71, 0.52]}] }),   // (Bungie's dye values: data/destiny2)
+  'Cerulean Divide': T('#343537', '#68b469', '#386e8f', '#3f3e3f', { pf: [[6, 3, 0.13], [10, 0, 0.58]], sf: [[6, 3, 1.0], [10, 0, 0.57]], tf: [[6, 3, 0.06], [10, 0, 0.32]], hw: "#68b469", hwf: [[6, 3, 1.0], [10, 0, 0.57]], cape: ["#343537", "#386e8f", "#386e8f", "#343537", {"pf": [[6, 3, 0.13], [10, 0, 0.48]], "sf": [[6, 3, 0.06], [10, 0, 0.32]], "tf": [[6, 3, 0.06], [10, 0, 0.32]], "hw": "#68b469", "hwf": [[6, 3, 1.0], [10, 0, 0.57]]}] }),   // (Bungie's dye values: data/destiny2)
+  'Crimson Valor': T('#d03a42', '#282828', '#470a0b', '#292323', { pf: [[6, 3, -1], [10, 0, 0.4]], sf: [[6, 3, -1], [10, 0, 0.4]], tf: [[6, 3, -1], [10, 0, 0.66]], cape: ["#4c3a3b", "#303030", "#470a0b", "#4c3a3b", {"pf": [[6, 3, 0.69], [10, 0, 0.66]], "sf": [[6, 3, -1], [10, 0, 1]], "tf": [[6, 3, -1], [10, 0, 0.66]]}] }),   // (Bungie's dye values: data/destiny2)
 });
 
 // planet biomes: field camouflage for each of the game's planet biomes (as the SEAF swap theirs per planet), its colors
@@ -411,11 +430,11 @@ export function presetTheme(name, metal = null) {
     else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, role ?? k);
   };
   walk(P, null);
-  return { name: name.replace(/^Biome: /, ''), colors, looksFor: (zs, rowOf) => {
+  return { name: name.replace(/^Biome: /, ''), colors, looksFor: (zs, rowOf, group = '') => {   // (group: an item's, its own looks)
     const biggest = n => zs.filter(x => x.role === n && x.w === W).sort((a, b) => b.cov - a.cov)[0];
     const any = biggest('primary') ?? biggest('secondary') ?? zs.find(x => x.w === W && x.role !== 'unused');
     const looks = {};
-    for (const [n, L] of Object.entries(P)) {
+    for (const [n, L] of Object.entries(looksOf(P, group))) {
       const x = n === 'hardware' ? biggest('hardware') : biggest(n) ?? any;
       if (x) looks[n] = presetRow(rowOf(x), n === 'hardware' && metal ? { ...L, c: metal } : L, n);
     }
@@ -588,12 +607,12 @@ export async function themeDialog(app, opts = {}) {
   const tint = {};   // role -> its own color (hex), over the look's
   const lookRows = ({ tinted = true } = {}) => {
     const looks = {}, P = PRESETS[$('thPreset').value];
+    let capeLooks = null;   // (a preset with looks of its own for capes: theirs)
     if (P) {
       const any = pick.primary ?? pick.secondary ?? zones.find(z => app.lut(z.lut)?.w === W && z.role !== 'unused');
-      for (const [n, L] of Object.entries(P)) {
-        const x = n === 'hardware' ? null : pick[n] ?? any;
-        if (x && app.lut(x.lut).w === W) looks[n] = presetRow(rowOf(x), L, n);
-      }
+      const rows = L => { const out = {}; for (const [n, x0] of Object.entries(L)) { const x = n === 'hardware' ? null : pick[n] ?? any; if (x && app.lut(x.lut).w === W) out[n] = presetRow(rowOf(x), x0, n); } return out; };
+      Object.assign(looks, rows(looksOf(P)));
+      if (P.capes) capeLooks = rows(looksOf(P, 'Capes'));
     } else for (const [n, x] of Object.entries(pick)) {
       if (!x) continue;
       looks[n] = rowOf(x);
@@ -602,7 +621,7 @@ export async function themeDialog(app, opts = {}) {
     if ($('thMetal').checked) {
       // metal parts: the hardware look (its zone on screen, else any metal zone) in the chosen color
       const x = pick.hardware ?? zones.find(z => z.role === 'hardware');
-      if (!x && P?.hardware) return { looks };   // (a preset's metal: from the first item shown with metal parts)
+      if (!x && P?.hardware) return { looks, capeLooks };   // (a preset's metal: from the first item shown with metal parts)
       if (!x) return { error: 'No metal part on screen to take the metal look from: show an item with metal parts.' };
       const row = rowOf(x);
       if (P?.hardware) looks.hardware = presetRow(row, { ...P.hardware, c: $('thMetalColor').value }, 'hardware');
@@ -613,8 +632,9 @@ export async function themeDialog(app, opts = {}) {
       }
     }
     // a role recolored: the look's paint color is the one picked (its finish, wear and camo stay)
-    if (tinted) for (const [n, h] of Object.entries(tint)) if (looks[n]) { const c = unhexc(h); for (let k = 0; k < 3; k++) looks[n][k] = c[k]; }
-    return { looks };
+    if (tinted) for (const L of [looks, capeLooks]) for (const [n, h] of Object.entries(tint)) if (L?.[n]) { const c = unhexc(h); for (let k = 0; k < 3; k++) L[n][k] = c[k]; }
+    if (capeLooks && looks.hardware && !capeLooks.hardware) capeLooks.hardware = looks.hardware;
+    return { looks, capeLooks };
   };
   $('thPreset').onchange = () => {
     const P = PRESETS[$('thPreset').value];
@@ -636,7 +656,8 @@ export async function themeDialog(app, opts = {}) {
   }
   function preview() {
     unpreview();
-    const { looks, error } = lookRows();
+    const { looks, capeLooks, error } = lookRows();
+    const looksAt = h => (capeLooks && groupOf.get(h) === 'Capes' ? capeLooks : looks);
     if (error) return info(error);
     if (!Object.keys(looks).length) return info('Pick a preset or at least one role\'s look.');
     previewing = new Map(R.pieces.map(p => [p, { ...p.lutKeys }]));
@@ -644,13 +665,13 @@ export async function themeDialog(app, opts = {}) {
     for (const x of zones) (roleOf[x.lut] ??= [])[x.z] = x.role;
     for (const h of onScreen) {
       const l = app.lut(h), px = (l.edited ?? l.vanilla).slice();
-      for (let z = 0; z < l.h; z++) { const n = roleOf[h]?.[z], look = looks[n]; if (look && l.w === W) putLook(px, l, z, look, n); }
+      for (let z = 0; z < l.h; z++) { const n = roleOf[h]?.[z], look = looksAt(h)[n]; if (look && l.w === W) putLook(px, l, z, look, n); }
       R.setLut('pv:' + h, l.w, l.h, px);
     }
-    const trim = looks.trim;
     for (const p of R.pieces) {
       if (onScreen.includes(p.info.lut)) p.lutKeys.edited = 'pv:' + p.info.lut;
-      // patterns and capes' trim lines: the trim look's color
+      // patterns and capes' trim lines: the trim look's color (a cape's: the capes' trim)
+      const trim = looksAt(p.info.lut).trim;
       for (const [key, h, rows] of [['pattern', p.info.pattern, true], ['cape', p.info.cape, false]]) {
         const l = h && app.lut(h);
         if (!trim || !l) continue;
@@ -699,7 +720,7 @@ export async function themeDialog(app, opts = {}) {
 
   $('thApply').onclick = async () => {
     await app.saveAll();   // (edits made while the panel is open: saved before the theme reloads the LUTs)
-    const { looks, error } = lookRows();
+    const { looks, capeLooks, error } = lookRows();
     if (error) return info(error);
     unpreview();
     if (!Object.keys(looks).length) return info('Pick a preset or at least one role\'s look.');
@@ -711,7 +732,7 @@ export async function themeDialog(app, opts = {}) {
     info('Applying… (the first time reads every item\'s masks: a little while)');
     try {
       const r = await app.api('/api/theme', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Variant: app.variant, Looks: looks, Groups: groups(), Items: itemMode() ? its.map(it => it.value) : [], OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked,
+        body: JSON.stringify({ Variant: app.variant, Looks: looks, GroupLooks: capeLooks ? { Capes: capeLooks } : {}, Groups: groups(), Items: itemMode() ? its.map(it => it.value) : [], OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked,
           Decals: $('thDecals').checked ? $('thDecalMode').value : '' }) });
       app.track('theme applied', { item_only: itemMode(), tinted: Object.keys(tint), groups: groups(), roles: Object.keys(looks), preset: $('thPreset').value || null, camo: Object.keys(camo), paint_metal: $('thMetal').checked, decals: $('thDecals').checked ? $('thDecalMode').value : null, decal_sheets: r.decal_sheets, items: r.items, luts: r.luts, zones: r.zones, kept: r.kept, added: r.added, only_in_mod: $('thOnly').checked });
       await app.refresh();

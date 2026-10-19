@@ -5,6 +5,20 @@
 is reference data for making presets by hand or with a script; the app doesn't read it. Destiny 2 and its content
 are Bungie's.
 
+`iridescence.json`: Destiny 2's iridescence lookup (the texture a dye's iridescence id picks a row of), as each row's
+mean linear color, from `Iridescence Lookup.png` in TiredHobgoblin's Destiny-Collada-Generator (`Resources/`).
+
+`tools/d2preset.py` turns a shader into a LUT Studio preset: each dye region shaded as the community's template shader
+(Destiny-Collada-Generator `Resources/template.shader`) does it, on Destiny 2 gear measured from Bungie's CDN (four
+armors' dyed areas: the gear's own diffuse 0.164 linear under the dye, its gloss 0.39, its wear mask 0.59), then fit
+to the nearest Helldivers 2 paint color and metalness. Its regions go to LUT Studio's roles by how much of an armor
+each covers (measured: Destiny 2's plate 1 39%, suit 1 26%, plate 2 17%, suit 2 7%, cloth 1 6.5%, cloth 2 5% of 60
+armor pieces' surface, by the dye slot in each vertex: the low 3 bits of its normal's w, 0-5 = plate, cloth, suit,
+each primary then secondary; Helldivers 2's cloth role, mostly the undersuit, about half of an armor): the plates on
+primary and secondary, the suit on the undersuit, the accent (suit 2 or cloth 2, the more saturated) on the trim, and
+the cloth regions on capes (a preset's own capes looks). The 20 Destiny 2 presets in `server/web/theme.js` marked
+"Bungie's dye values" were made with it.
+
 ## Where it comes from
 
 - `GET https://www.bungie.net/Platform/Destiny2/Manifest/` (no key needed for it)

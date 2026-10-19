@@ -353,6 +353,7 @@ export function attachTo(R, h, node, ps) {
 // brings none
 async function themeItems(app, items, theme, tag) {
   const { R, api } = app, S = window.lutstudio.S, roles = await api('/api/roles'), done = new Set(), worn = [];
+  let groupOf = null;
   const vanilla = theme.base === 'vanilla', baseOf = l => (vanilla ? l.vanilla : l.edited ?? l.vanilla);
   let decals = null;
   for (const it of items) for (const p of it.pieces) { p.sceneKeys ??= { ...p.lutKeys }; Object.assign(p.lutKeys, p.sceneKeys); }
@@ -367,12 +368,15 @@ async function themeItems(app, items, theme, tag) {
     }
     const rowOf = x => { const l = S.luts.get(x.h), a = baseOf(l); return Array.from(a.slice(x.z * l.w * 4, (x.z + 1) * l.w * 4)); };
     const looks = theme.looksFor?.(zones, rowOf) ?? {};
+    // (a cape's LUTs: the theme's capes looks, when it has its own)
+    groupOf ??= new Map((roles.items ?? []).flatMap(i => i.luts.map(l => [l.lut, i.group])));
+    const capeLooks = theme.looksFor?.(zones, rowOf, 'Capes') ?? looks, looksAt = h => (groupOf.get(h) === 'Capes' ? capeLooks : looks);
     if (it.kind === 'diver' && !decals) decals = decalColors(looks);   // (the decals' colors: the first Helldiver's looks)
     for (const h of luts) {
       if (done.has(h)) continue;
       done.add(h);
       const l = S.luts.get(h), px = baseOf(l).slice();
-      for (const x of zones) if (x.h === h && looks[x.role] && l.w === W23) putLook(px, l, x.z, looks[x.role], x.role);
+      for (const x of zones) if (x.h === h && looksAt(h)[x.role] && l.w === W23) putLook(px, l, x.z, looksAt(h)[x.role], x.role);
       R.setLut(tag + h, l.w, l.h, px);
       if (it.kind === 'diver') for (const x of zones) if (x.h === h && ['glow', 'trim', 'primary', 'secondary'].includes(x.role) && x.cov > 0.02)
         worn.push([x.role, '#' + [0, 1, 2].map(k => Math.round(Math.min(1, Math.max(0, px[x.z * l.w * 4 + k])) * 255).toString(16).padStart(2, '0')).join('')]);
