@@ -42,11 +42,16 @@ the picker's groups (by the armor's primary color), and theme.js adds them.
 
 Shaders without gear data in Bungie's files are listed under `missing`.
 
+Each shader's `season` (its number; `season_name` from Bungie's DestinySeasonDefinition, season 1 unnamed there: the
+Red War) comes from Destiny Item Manager's d2-additional-info (MIT; `output/seasons.json` by item, else
+`output/watermark-to-season.json` by the item's icon watermark); 19 shaders have none. The preset picker groups the
+Destiny 2 shaders by it (or by color).
+
 ## The data
 
 ```
 { about, source, manifest_version, channels, count, missing: [names],
-  shaders: [ { hash, name, description, icon, tier, flavor,
+  shaders: [ { hash, name, description, icon, tier, flavor, season, season_name,
                dyes: { armor_plate | armor_cloth | armor_suit | weapon_1..3 | ship_upper | ship_decals | ship_lower | sparrow_upper | sparrow_engine | sparrow_lower:
                        { cloth, slot_type_index, textures: { diffuse, normal, primary_diffuse, secondary_diffuse },
                          material_properties: { ... } } } } ] }

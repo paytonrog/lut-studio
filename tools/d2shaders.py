@@ -70,6 +70,14 @@ def main():
     open(db_path, 'wb').write(raw)
     db = sqlite3.connect(db_path)
     chan_name = {int(h): NAMES.get(c['index']) for h, c in chans.items()}
+    # each shader's season: Destiny Item Manager's d2-additional-info (MIT: an item's season, else its icon watermark's),
+    # the seasons' names from Bungie's DestinySeasonDefinition (season 1, unnamed there: the Red War)
+    D2AI = 'https://raw.githubusercontent.com/DestinyItemManager/d2-additional-info/master/output/'
+    item_season = json.loads(open(cached(os.path.join(work, 'd2ai_seasons.json'), D2AI + 'seasons.json'), 'rb').read())
+    mark_season = json.loads(open(cached(os.path.join(work, 'd2ai_watermark-to-season.json'), D2AI + 'watermark-to-season.json'), 'rb').read())
+    season_defs = json.loads(open(cached(os.path.join(work, 'seasons.json'), BNET + paths['DestinySeasonDefinition']), 'rb').read())
+    season_name = {v['seasonNumber']: v['displayProperties']['name'] or ('Red War' if v['seasonNumber'] == 1 else '')
+                   for v in season_defs.values() if v.get('seasonNumber') is not None}
 
     shaders, missing = [], []
     for h, it in sorted(items.items(), key=lambda kv: kv[1]['displayProperties']['name']):
@@ -98,8 +106,10 @@ def main():
         if not dyes:
             missing.append(dp['name'])
             continue
+        season = item_season.get(h) or mark_season.get(it.get('iconWatermark') or '') or mark_season.get(it.get('iconWatermarkShelved') or '')
         shaders.append({'hash': int(h), 'name': dp['name'], 'description': dp.get('description', ''), 'icon': dp.get('icon', ''),
-                        'tier': it.get('inventory', {}).get('tierTypeName', ''), 'flavor': it.get('flavorText', ''), 'dyes': dyes})
+                        'tier': it.get('inventory', {}).get('tierTypeName', ''), 'flavor': it.get('flavorText', ''),
+                        'season': season, 'season_name': season_name.get(season, '') if season else '', 'dyes': dyes})
 
     doc = {
         'about': "Destiny 2 shaders: each shader's armor and weapon dyes as Bungie's public API publishes them (the item "

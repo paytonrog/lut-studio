@@ -299,7 +299,8 @@ const OWN_CATEGORIES = [
 export const CATEGORY_OF = {};   // preset -> its category
 for (const [c, ns] of OWN_CATEGORIES) for (const n of ns) CATEGORY_OF[n] = c;
 // Destiny 2's shaders (d2presets.js, made by tools/d2preset.py from Bungie's dye values: data/destiny2)
-for (const [n, family, a] of D2_PRESETS) { PRESETS[n] = T(...a); CATEGORY_OF[n] = 'Destiny 2 · ' + family; }
+export const SEASON_OF = {};   // a Destiny 2 shader -> [its season (0: not known), the season's name]
+for (const [n, family, season, seasonName, a] of D2_PRESETS) { PRESETS[n] = T(...a); CATEGORY_OF[n] = 'Destiny 2 · ' + family; SEASON_OF[n] = [season, seasonName]; }
 
 // planet biomes: field camouflage for each of the game's planet biomes (as the SEAF swap theirs per planet), its colors
 // the game's own albedos of the biome's ground (its terrain layers and the plants scattered on them by how much they
@@ -391,11 +392,24 @@ Object.assign(PRESETS, {
 // own (shown without "Biome: ")
 const CATEGORY_ORDER = ['Showpieces', 'Camo', 'Faction and lore', 'Flat colors', 'Silly',
   ...['Reds', 'Oranges and golds', 'Yellows', 'Greens', 'Teals', 'Blues', 'Purples', 'Pinks', 'Whites', 'Grays', 'Blacks'].map(f => 'Destiny 2 · ' + f)];
-export function presetOptions(value = n => n) {
+// how the picker groups the Destiny 2 shaders: 'season' (by the season they came in) or 'color' (by their main
+// color); kept in this browser
+export function d2Grouping(set) {
+  try { if (set) localStorage.setItem('lutstudio.d2By', set); return localStorage.getItem('lutstudio.d2By') === 'color' ? 'color' : 'season'; } catch { return set ?? 'season'; }
+}
+const seasonLabel = ([n, name]) => (n ? `Destiny 2 · Season ${n}${name ? ': ' + name : ''}` : 'Destiny 2 · season not known');
+export function presetOptions(value = n => n, by = d2Grouping()) {
   const all = Object.keys(PRESETS), biome = n => n.startsWith('Biome: '), show = n => n.endsWith(' (showcase)');
   const opt = (n, label = n) => `<option value="${esc(value(n))}">${esc(label)}</option>`;
-  const groups = new Map(CATEGORY_ORDER.map(c => [c, []]));
-  for (const n of all.filter(n => !biome(n))) { const c = CATEGORY_OF[n] ?? 'More themes'; if (!groups.has(c)) groups.set(c, []); groups.get(c).push(n); }
+  const seasons = [...new Set(Object.values(SEASON_OF).map(s => s[0]))].sort((a, b) => (a || 99) - (b || 99))
+    .map(n => seasonLabel(Object.values(SEASON_OF).find(s => s[0] === n)));
+  const order = by === 'season' ? [...CATEGORY_ORDER.filter(c => !c.startsWith('Destiny 2')), ...seasons] : CATEGORY_ORDER;
+  const groups = new Map(order.map(c => [c, []]));
+  for (const n of all.filter(n => !biome(n))) {
+    const c = by === 'season' && SEASON_OF[n] ? seasonLabel(SEASON_OF[n]) : CATEGORY_OF[n] ?? 'More themes';
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(n);
+  }
   const sorted = ns => ns.sort((x, y) => x.localeCompare(y));
   return [...groups].filter(([, ns]) => ns.length).map(([c, ns]) => `<optgroup label="${esc(c)} (${ns.length})">${sorted(ns).map(n => opt(n)).join('')}</optgroup>`).join('') +
     `<optgroup label="Planet biomes">${all.filter(n => biome(n) && !show(n)).map(n => opt(n, n.slice(7))).join('')}</optgroup>
@@ -507,7 +521,8 @@ export async function themeDialog(app, opts = {}) {
   for (const n of names) pick[n] = zones.filter(x => x.role === n).sort((a, b) => b.cov - a.cov)[0] ?? null;
   const shownGroups = new Set((data.items ?? []).filter(it => app.current().includes(it.value)).map(it => it.group));
   const close = openSide(`<h3 id="thTitle">Theme everything like this</h3>
-    <div class="row"><input type="search" id="thSearch" placeholder="Search presets (name or group: red, camo, Destiny 2…)" title="Shows only the presets whose name or group has these words" style="flex:1;min-width:0"></div>
+    <div class="row"><input type="search" id="thSearch" placeholder="Search presets (name or group: red, camo, Destiny 2…)" title="Shows only the presets whose name or group has these words" style="flex:1;min-width:0">
+      <select id="thD2By" title="How the Destiny 2 shaders are grouped in the list"><option value="season">Destiny 2 by season</option><option value="color">Destiny 2 by color</option></select></div>
     <div class="row"><label>Preset <select id="thPreset" title="A ready-made theme: each role's look from it (over the item's own zones); or your own, from the zones below">
       <option value="">(my own: the zones below)</option>${presetOptions()}</select></label>
       <button id="thPreview" title="Show the theme on the item on screen, without changing anything">Preview on screen</button>
@@ -540,6 +555,13 @@ export async function themeDialog(app, opts = {}) {
   }, null, 'themeBtn');
   const info = t => { $('thInfo').textContent = t; };
   presetSearch($('thSearch'), $('thPreset'));
+  $('thD2By').value = d2Grouping();
+  $('thD2By').onchange = () => {   // (the list again in the other grouping: the preset picked and the search kept)
+    const v = $('thPreset').value;
+    $('thPreset').innerHTML = '<option value="">(my own: the zones below)</option>' + presetOptions(n => n, d2Grouping($('thD2By').value));
+    $('thPreset').value = v;
+    $('thSearch').oninput();
+  };
 
   const zoneName = x => `${app.lutLabel(x.lut)} · ${app.lut(x.lut).labels?.[x.z] || 'zone ' + x.z}`;
   const color = x => { const l = app.lut(x.lut), a = l.edited ?? l.vanilla; return [0, 1, 2].map(ch => a[at(l, x.z, 0, ch)]); };

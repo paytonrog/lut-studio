@@ -246,9 +246,9 @@ def module(path, taken=()):
             continue
         seen.add(n)
         a = args(s)
-        rows.append([n + (' (Destiny 2)' if n in taken else ''), family(a[0]), a])
+        rows.append([n + (' (Destiny 2)' if n in taken else ''), family(a[0]), s.get('season') or 0, s.get('season_name') or '', a])
     rows.sort(key=lambda r: r[0].lower())
-    head = ('// Destiny 2' + chr(39) + 's shaders as presets: [name, color family, T(...) arguments], made by tools/d2preset.py '
+    head = ('// Destiny 2' + chr(39) + 's shaders as presets: [name, color family, season, its name, T(...) arguments], made by tools/d2preset.py '
             '--module from' + chr(10) + '// Bungie' + chr(39) + 's dye values (data/destiny2); theme.js adds them to PRESETS. '
             'Generated: edit the tool, not this file.' + chr(10))
     with open(path, 'w', encoding='utf-8', newline=chr(10)) as f:
