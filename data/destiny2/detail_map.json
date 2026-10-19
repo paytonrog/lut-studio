@@ -1,6 +1,22 @@
 {
-"about": "Destiny 2 detail textures (their normal maps, from Bungie's CDN) -> the nearest Helldivers 2 detail tile (layer 0-25) by surface features (bump spread, fineness, direction, regularity: tools/d2preset.py uses it); bump: the D2 surface's strength against the tile's. Made for the textures the Destiny 2 presets use.",
+"about": "Destiny 2 detail textures (their normal maps, from Bungie's CDN) -> the nearest Helldivers 2 detail tile (layer 0-25) by surface features (bump spread, fineness, direction, regularity: tools/d2preset.py uses it); bump: the D2 surface's strength against the tile's. Every detail normal map the Destiny 2 shaders name.",
 "map": {
+"1102336795_fallen_suit_detail_overnorm": {
+"layer": 19,
+"bump": 1.5
+},
+"1153670120_sand_dunes_a_norm": {
+"layer": 12,
+"bump": 0.74
+},
+"1159473083_haven_metal_diamond_plate_a_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"1256902494_alpine_rust_a_norm": {
+"layer": 3,
+"bump": 1.08
+},
 "1274460375_hive_stone2_gear_detail_norm": {
 "layer": 12,
 "bump": 1.0
@@ -9,33 +25,201 @@
 "layer": 1,
 "bump": 1.5
 },
+"1294443986_block_plywood_norm": {
+"layer": 2,
+"bump": 1.04
+},
+"1452864865_hive_marble_cracks_a_norm": {
+"layer": 5,
+"bump": 0.6
+},
+"1535420337_fallen_banner_tattered_a_overnorm": {
+"layer": 10,
+"bump": 1.17
+},
+"1594387603_aluminum_brushed_norm": {
+"layer": 25,
+"bump": 1.5
+},
 "1663621645_basic_plasticl_norm": {
 "layer": 14,
 "bump": 0.79
+},
+"1663621645_crystalized_norm": {
+"layer": 5,
+"bump": 1.5
+},
+"1663621645_dimpled_norm": {
+"layer": 18,
+"bump": 0.97
+},
+"1663621645_fractal_1_norm": {
+"layer": 18,
+"bump": 1.5
+},
+"1663621645_fractal_2_norm": {
+"layer": 14,
+"bump": 1.2
+},
+"1663621645_hex_norm": {
+"layer": 14,
+"bump": 0.73
+},
+"1663621645_pebbled_1_norm": {
+"layer": 17,
+"bump": 1.5
+},
+"1663621645_pebbled_2_norm": {
+"layer": 3,
+"bump": 1.5
+},
+"1663621645_perlin_norm": {
+"layer": 14,
+"bump": 0.84
+},
+"1663621645_small_grain_2_norm": {
+"layer": 17,
+"bump": 1.17
 },
 "1746857886_seven_seraphs_carbon_fiber_norm": {
 "layer": 23,
 "bump": 1.21
 },
-"193699470_gear_detail_sash_norm": {
-"layer": 10,
+"1788662762_gear_detail_rubber_hex_norm_norm": {
+"layer": 1,
 "bump": 1.5
+},
+"1857904254_detail_paint_a_norm": {
+"layer": 2,
+"bump": 0.78
+},
+"1926577595_cabal_burlap_norm": {
+"layer": 16,
+"bump": 0.97
+},
+"1926577595_cabal_burlap_overnorm": {
+"layer": 14,
+"bump": 0.89
+},
+"1930371981_bronze_old_norm": {
+"layer": 1,
+"bump": 0.55
+},
+"193699470_gear_detail_dented_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"193699470_gear_detail_sash_norm": {
+"layer": 23,
+"bump": 0.49
+},
+"1969941190_hive_hex_detail_overnorm": {
+"layer": 1,
+"bump": 1.5
+},
+"1986407057_fallen_armor_detail_overnorm": {
+"layer": 5,
+"bump": 0.79
+},
+"2142028903_Planet_x_common_1_armor_norm": {
+"layer": 23,
+"bump": 1.41
 },
 "2166389182_uni_detail_plastic_a_norm": {
 "layer": 16,
 "bump": 0.2
 },
+"2184463957_pavilion_sand_rake_pattern_a_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"222093615_hive_detail_overnorm": {
+"layer": 22,
+"bump": 1.24
+},
+"2240511845_veil_pattern_triangle_a_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"2240511845_veil_stone_tiles_a_norm": {
+"layer": 3,
+"bump": 1.5
+},
+"22807286_veil_mummy_cloth_a_norm": {
+"layer": 12,
+"bump": 0.33
+},
+"22807286_veil_pattern_metal_b_norm": {
+"layer": 14,
+"bump": 1.16
+},
+"2388314244_leather_detail_norm": {
+"layer": 17,
+"bump": 1.5
+},
+"2394947465_ocean_water_foam_norm": {
+"layer": 14,
+"bump": 0.7
+},
 "2525791856_steel_painted_norm": {
 "layer": 7,
 "bump": 0.73
 },
+"2556586590_steel_scratched_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"2582884296_fallen_skull_gear_detail_leather_norm": {
+"layer": 3,
+"bump": 1.01
+},
 "2690020957_128_carbon_fiber_detail_normal_tiling_norm": {
-"layer": 12,
-"bump": 1.37
+"layer": 14,
+"bump": 0.88
 },
 "2720509907_plastic_cracked_old_norm": {
 "layer": 24,
 "bump": 0.97
+},
+"2782685965_flag_wave_norm": {
+"layer": 14,
+"bump": 1.2
+},
+"2790439783_flag_wave_norm": {
+"layer": 14,
+"bump": 1.21
+},
+"2797792744_worm_scales_c_norm": {
+"layer": 18,
+"bump": 0.95
+},
+"2818284245_veil_ray_pattern_a_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"2858772937_hive_black_liquid_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"3000245932_bone_overnorm": {
+"layer": 25,
+"bump": 1.5
+},
+"3022099938_wood_cherry_norm": {
+"layer": 12,
+"bump": 0.35
+},
+"3026416754_vex_metal_detail_norm": {
+"layer": 16,
+"bump": 0.56
+},
+"3034342877_bcity_sandy_dunes_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"3067032171_fallen_netting_a_normal": {
+"layer": 18,
+"bump": 1.36
 },
 "3079566084_gear_detail_leather_norm": {
 "layer": 3,
@@ -45,6 +229,18 @@
 "layer": 14,
 "bump": 1.12
 },
+"3104558709_Dark_cloth_norm": {
+"layer": 14,
+"bump": 1.04
+},
+"3104558709_Dark_oil_norm": {
+"layer": 14,
+"bump": 1.08
+},
+"3104558709_Kevlar_norm": {
+"layer": 14,
+"bump": 1.24
+},
 "3104558709_Rubber_01_norm": {
 "layer": 11,
 "bump": 0.49
@@ -53,17 +249,93 @@
 "layer": 1,
 "bump": 1.5
 },
+"3104558709_bronze_detail_overnorm": {
+"layer": 17,
+"bump": 1.5
+},
 "3104558709_edz_common_0_armor_norm": {
 "layer": 22,
 "bump": 0.78
+},
+"3104558709_edz_common_0_cloth_norm": {
+"layer": 14,
+"bump": 0.69
 },
 "3104558709_edz_common_1_armor_norm": {
 "layer": 17,
 "bump": 1.5
 },
-"327503503_digital_cloth_patch01_norm": {
+"3104558709_edz_common_1_camo_norm": {
+"layer": 23,
+"bump": 1.01
+},
+"3104558709_edz_dye_fabric_gauze_norm": {
+"layer": 14,
+"bump": 0.99
+},
+"3104558709_gear_detail_swirl_pattern_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"3104558709_gear_snake_scales_norm": {
+"layer": 16,
+"bump": 1.5
+},
+"3104558709_gear_suit_hex_cayde_norm": {
 "layer": 18,
-"bump": 0.9
+"bump": 1.41
+},
+"3104558709_plywood_01_norm": {
+"layer": 2,
+"bump": 0.64
+},
+"3104558709_shuttle_tile_detail_norm": {
+"layer": 23,
+"bump": 1.13
+},
+"3104558709_wood_detail_norm": {
+"layer": 4,
+"bump": 1.47
+},
+"3104558709_woven_clothl_01_norm": {
+"layer": 18,
+"bump": 1.41
+},
+"3105064514_lava_a_norm": {
+"layer": 17,
+"bump": 1.42
+},
+"3107841013_vfx_vex_shield_facet_normal": {
+"layer": 0,
+"bump": 1.5
+},
+"327503503_chainmail_rgb_1_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"327503503_diamond_stitched_leather_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327503503_digital_camo_5_3_norm": {
+"layer": 22,
+"bump": 0.8
+},
+"327503503_digital_cloth_patch01_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327503503_digital_cloth_shoe_mesh01_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327503503_discoball_camo_01_norm": {
+"layer": 14,
+"bump": 0.67
+},
+"327503503_flag_wave_norm": {
+"layer": 14,
+"bump": 1.21
 },
 "327503503_fractal_glass_norm": {
 "layer": 18,
@@ -73,33 +345,113 @@
 "layer": 14,
 "bump": 1.12
 },
+"327503503_gear_cloth_shoe_mesh02_norm": {
+"layer": 14,
+"bump": 1.03
+},
+"327503503_gear_cloth_shoe_mesh03_norm": {
+"layer": 11,
+"bump": 0.47
+},
+"327503503_gear_detail_ada_pattern_norm": {
+"layer": 14,
+"bump": 0.7
+},
 "327503503_gear_detail_annodized_steel_norm": {
 "layer": 1,
 "bump": 0.57
+},
+"327503503_gear_detail_armor_basalt_norm": {
+"layer": 2,
+"bump": 0.99
 },
 "327503503_gear_detail_armor_battleworn_norm": {
 "layer": 1,
 "bump": 1.5
 },
+"327503503_gear_detail_armor_filigree_norm": {
+"layer": 17,
+"bump": 1.25
+},
 "327503503_gear_detail_armor_galvanized_norm": {
-"layer": 22,
-"bump": 1.5
+"layer": 17,
+"bump": 1.29
+},
+"327503503_gear_detail_armor_geometric1_norm": {
+"layer": 16,
+"bump": 0.41
 },
 "327503503_gear_detail_ba_metal_norm": {
-"layer": 20,
-"bump": 0.75
+"layer": 3,
+"bump": 0.2
+},
+"327503503_gear_detail_bone_norm": {
+"layer": 24,
+"bump": 0.55
+},
+"327503503_gear_detail_chainmail_norm": {
+"layer": 10,
+"bump": 1.5
 },
 "327503503_gear_detail_checker_norm": {
-"layer": 1,
-"bump": 0.65
+"layer": 0,
+"bump": 0.7
 },
 "327503503_gear_detail_cotton_fabric_d2_norm": {
-"layer": 14,
-"bump": 1.18
+"layer": 23,
+"bump": 1.5
+},
+"327503503_gear_detail_cotton_fabric_patchy_norm": {
+"layer": 23,
+"bump": 1.5
+},
+"327503503_gear_detail_cracked_glow_diffuse_norm": {
+"layer": 17,
+"bump": 1.08
+},
+"327503503_gear_detail_crosshatch_01_norm": {
+"layer": 21,
+"bump": 1.19
+},
+"327503503_gear_detail_dawning_2_norm": {
+"layer": 2,
+"bump": 0.65
+},
+"327503503_gear_detail_dawning_norm": {
+"layer": 2,
+"bump": 0.65
+},
+"327503503_gear_detail_dented_2_norm": {
+"layer": 5,
+"bump": 0.7
+},
+"327503503_gear_detail_dented_3_norm": {
+"layer": 19,
+"bump": 1.5
 },
 "327503503_gear_detail_diamondplate_1_norm": {
-"layer": 16,
-"bump": 0.45
+"layer": 1,
+"bump": 1.12
+},
+"327503503_gear_detail_fabric_001_norm": {
+"layer": 2,
+"bump": 1.5
+},
+"327503503_gear_detail_fabric_002_norm": {
+"layer": 15,
+"bump": 1.5
+},
+"327503503_gear_detail_fabric_endexcl_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"327503503_gear_detail_fabric_geometric_norm": {
+"layer": 2,
+"bump": 0.63
+},
+"327503503_gear_detail_fabric_knit_dawning_norm": {
+"layer": 10,
+"bump": 0.76
 },
 "327503503_gear_detail_fabric_knit_norm": {
 "layer": 10,
@@ -113,6 +465,14 @@
 "layer": 10,
 "bump": 0.68
 },
+"327503503_gear_detail_fallen_pattern_norm": {
+"layer": 2,
+"bump": 0.33
+},
+"327503503_gear_detail_galvanized_norm": {
+"layer": 1,
+"bump": 1.5
+},
 "327503503_gear_detail_glutt_s1_norm": {
 "layer": 14,
 "bump": 0.76
@@ -125,9 +485,17 @@
 "layer": 22,
 "bump": 0.46
 },
+"327503503_gear_detail_honeycomb_norm": {
+"layer": 16,
+"bump": 0.98
+},
+"327503503_gear_detail_leaf_veins_norm": {
+"layer": 17,
+"bump": 1.23
+},
 "327503503_gear_detail_leather2_norm": {
-"layer": 15,
-"bump": 1.5
+"layer": 17,
+"bump": 1.24
 },
 "327503503_gear_detail_leather_norm": {
 "layer": 3,
@@ -141,9 +509,21 @@
 "layer": 2,
 "bump": 1.5
 },
-"327503503_gear_detail_metal_hex_norm": {
+"327503503_gear_detail_lightning_fist_norm": {
 "layer": 2,
-"bump": 0.48
+"bump": 0.65
+},
+"327503503_gear_detail_meta_2l_norm": {
+"layer": 2,
+"bump": 0.65
+},
+"327503503_gear_detail_metal_hex_norm": {
+"layer": 13,
+"bump": 0.23
+},
+"327503503_gear_detail_metal_maze_norm": {
+"layer": 2,
+"bump": 0.65
 },
 "327503503_gear_detail_metal_noise_clean_norm": {
 "layer": 19,
@@ -154,31 +534,131 @@
 "bump": 0.65
 },
 "327503503_gear_detail_metal_worn_norm": {
-"layer": 16,
-"bump": 0.89
+"layer": 25,
+"bump": 1.33
 },
 "327503503_gear_detail_moire_pattern_color_norm": {
 "layer": 17,
 "bump": 0.79
 },
+"327503503_gear_detail_moth_fur_norm": {
+"layer": 12,
+"bump": 0.8
+},
 "327503503_gear_detail_noise_norm": {
 "layer": 20,
 "bump": 1.5
 },
-"327503503_gear_detail_painted_metal_norm": {
-"layer": 24,
+"327503503_gear_detail_octopus_skin_2_diffuse_norm": {
+"layer": 3,
+"bump": 0.71
+},
+"327503503_gear_detail_octopus_skin_diffuse_norm": {
+"layer": 17,
+"bump": 1.05
+},
+"327503503_gear_detail_offense_rift_exotic_fabric_d2_norm": {
+"layer": 23,
 "bump": 1.14
+},
+"327503503_gear_detail_painted_metal_norm": {
+"layer": 6,
+"bump": 1.5
+},
+"327503503_gear_detail_pink_sparkles_norm": {
+"layer": 14,
+"bump": 0.89
+},
+"327503503_gear_detail_plastic_imperfection_norm": {
+"layer": 4,
+"bump": 0.2
+},
+"327503503_gear_detail_promo_bfc_norm": {
+"layer": 2,
+"bump": 0.65
+},
+"327503503_gear_detail_solar_cell_norm": {
+"layer": 12,
+"bump": 0.96
+},
+"327503503_gear_detail_solstice_sunflower_norm": {
+"layer": 3,
+"bump": 1.5
 },
 "327503503_gear_detail_speckle_norm": {
 "layer": 3,
 "bump": 0.5
 },
+"327503503_gear_detail_srl_pattern_diffuse_norm": {
+"layer": 1,
+"bump": 1.5
+},
 "327503503_gear_detail_suit_circles_norm": {
 "layer": 16,
 "bump": 1.15
 },
+"327503503_gear_detail_suit_geopattern_norm": {
+"layer": 21,
+"bump": 0.94
+},
+"327503503_gear_detail_suit_quilted_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"327503503_gear_detail_suit_squares_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"327503503_gear_detail_techweave_norm": {
+"layer": 14,
+"bump": 0.65
+},
+"327503503_gear_detail_tendril_norm": {
+"layer": 21,
+"bump": 0.96
+},
+"327503503_gear_detail_titan_tile_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"327503503_gear_detail_tower_overnorm": {
+"layer": 1,
+"bump": 0.34
+},
+"327503503_gear_detail_tree_bark_1_norm": {
+"layer": 13,
+"bump": 1.32
+},
+"327503503_gear_detail_veil_pattern_01_norm": {
+"layer": 21,
+"bump": 0.86
+},
+"327503503_gear_detail_veil_pattern_02_norm": {
+"layer": 3,
+"bump": 1.5
+},
+"327503503_gear_detail_vestian_v530_norm": {
+"layer": 13,
+"bump": 0.34
+},
+"327503503_gear_detail_vex_metal_plates_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327503503_gear_detail_vex_stone_channels_a_norm": {
+"layer": 18,
+"bump": 1.5
+},
 "327503503_gear_detail_vintage_wear_pattern_norm": {
 "layer": 19,
+"bump": 1.5
+},
+"327503503_gear_detail_wave_norm": {
+"layer": 14,
+"bump": 0.7
+},
+"327503503_gear_detail_weave_norm": {
+"layer": 25,
 "bump": 1.5
 },
 "327503503_gear_detail_wool_fabric_d2_norm": {
@@ -189,25 +669,537 @@
 "layer": 4,
 "bump": 0.37
 },
+"327503503_gear_shoe_dots_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327503503_goldenage_fabric_norm": {
+"layer": 14,
+"bump": 1.0
+},
+"327503503_hexagon_inverted_1_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327503503_iron_oxide_norm": {
+"layer": 3,
+"bump": 0.63
+},
 "327503503_rubber_01_norm": {
 "layer": 7,
 "bump": 0.43
 },
+"327503503_wave_skewed_1_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327898660_aero_divots_detail_norm": {
+"layer": 16,
+"bump": 1.5
+},
+"327898660_aztecpattern_norm": {
+"layer": 16,
+"bump": 1.5
+},
+"327898660_banana_innards_deatil_norm": {
+"layer": 18,
+"bump": 1.0
+},
+"327898660_car_paint_norm": {
+"layer": 9,
+"bump": 0.52
+},
+"327898660_cave_rock_detail_a_small_norm": {
+"layer": 25,
+"bump": 1.31
+},
+"327898660_cloth_houndstooth_norm": {
+"layer": 23,
+"bump": 1.07
+},
+"327898660_cloth_terry_towel_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"327898660_coins_detail_norm": {
+"layer": 14,
+"bump": 0.71
+},
+"327898660_cosmic_arcade_space_battle3_norm": {
+"layer": 16,
+"bump": 0.2
+},
+"327898660_crystal_rock_norm": {
+"layer": 14,
+"bump": 1.03
+},
+"327898660_d2_iron_banner_clean_chainmail_norm": {
+"layer": 14,
+"bump": 1.04
+},
+"327898660_dark_wizards_runes_detail_norm": {
+"layer": 17,
+"bump": 1.05
+},
+"327898660_designer_fashion_paint__norm": {
+"layer": 14,
+"bump": 0.85
+},
+"327898660_detail_mosaic_ahamkara_norm": {
+"layer": 14,
+"bump": 0.96
+},
+"327898660_detail_mosaic_traveler_cage_norm": {
+"layer": 23,
+"bump": 1.31
+},
+"327898660_dragon_scale_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_flame_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327898660_gambit_jade_snake_scales_norm": {
+"layer": 16,
+"bump": 1.5
+},
+"327898660_gear_black_feathers_norm": {
+"layer": 24,
+"bump": 1.04
+},
+"327898660_gear_detail_bandages_norm": {
+"layer": 12,
+"bump": 0.9
+},
+"327898660_gear_detail_beach_sand_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_gear_detail_bioluminescence_waves_norm": {
+"layer": 22,
+"bump": 0.66
+},
+"327898660_gear_detail_bird_feet_norm": {
+"layer": 18,
+"bump": 1.5
+},
+"327898660_gear_detail_cherry_blossoms_norm": {
+"layer": 9,
+"bump": 0.74
+},
+"327898660_gear_detail_cherry_petals_norm": {
+"layer": 22,
+"bump": 0.7
+},
+"327898660_gear_detail_chicken_feather_norm": {
+"layer": 13,
+"bump": 0.4
+},
+"327898660_gear_detail_circuit_board_norm": {
+"layer": 18,
+"bump": 1.5
+},
+"327898660_gear_detail_clockwork_chain_norm": {
+"layer": 14,
+"bump": 0.74
+},
+"327898660_gear_detail_coral_norm": {
+"layer": 13,
+"bump": 1.3
+},
+"327898660_gear_detail_drips_norm": {
+"layer": 25,
+"bump": 0.29
+},
+"327898660_gear_detail_exotic_hightech_lattice_norm": {
+"layer": 14,
+"bump": 0.69
+},
+"327898660_gear_detail_fractal_norm": {
+"layer": 14,
+"bump": 0.84
+},
+"327898660_gear_detail_frostcrystalst_norm": {
+"layer": 3,
+"bump": 0.77
+},
+"327898660_gear_detail_hex_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"327898660_gear_detail_hex_thick_persuit_norm": {
+"layer": 18,
+"bump": 1.34
+},
+"327898660_gear_detail_hexdot_persuit_norm": {
+"layer": 16,
+"bump": 1.5
+},
+"327898660_gear_detail_hexpie_2_persuit_norm": {
+"layer": 23,
+"bump": 0.74
+},
+"327898660_gear_detail_hexpie_persuit_norm": {
+"layer": 10,
+"bump": 1.5
+},
+"327898660_gear_detail_hive_lucent_webbing_norm": {
+"layer": 17,
+"bump": 1.46
+},
+"327898660_gear_detail_hive_lucent_worms_norm": {
+"layer": 14,
+"bump": 1.02
+},
+"327898660_gear_detail_ice_runes_round_norm": {
+"layer": 21,
+"bump": 0.85
+},
+"327898660_gear_detail_iceflow_norm": {
+"layer": 18,
+"bump": 1.04
+},
+"327898660_gear_detail_imperial_cloth_pattern_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_gear_detail_jeans_norm": {
+"layer": 12,
+"bump": 1.34
+},
+"327898660_gear_detail_jellyfish_tentacles_norm": {
+"layer": 17,
+"bump": 1.5
+},
+"327898660_gear_detail_lava_norm": {
+"layer": 14,
+"bump": 0.74
+},
+"327898660_gear_detail_lavaflow_norm": {
+"layer": 14,
+"bump": 0.88
+},
+"327898660_gear_detail_leather_designer_fashion_norm": {
+"layer": 14,
+"bump": 0.93
+},
+"327898660_gear_detail_less_shark_bite_norm": {
+"layer": 22,
+"bump": 1.03
+},
+"327898660_gear_detail_mokume_gane_norm": {
+"layer": 14,
+"bump": 0.83
+},
+"327898660_gear_detail_needle_felt_norm": {
+"layer": 13,
+"bump": 0.97
+},
+"327898660_gear_detail_polished_scale_norm": {
+"layer": 16,
+"bump": 0.87
+},
+"327898660_gear_detail_rally_metal_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327898660_gear_detail_ribbing_norm": {
+"layer": 12,
+"bump": 1.5
+},
+"327898660_gear_detail_rocky_norm": {
+"layer": 18,
+"bump": 0.85
+},
+"327898660_gear_detail_scuba_suit_norm": {
+"layer": 22,
+"bump": 1.29
+},
+"327898660_gear_detail_shark_bite_norm": {
+"layer": 17,
+"bump": 0.87
+},
+"327898660_gear_detail_shattered_glass_normal_noedit": {
+"layer": 14,
+"bump": 0.75
+},
+"327898660_gear_detail_silver_chain_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"327898660_gear_detail_splatter_norm": {
+"layer": 14,
+"bump": 0.81
+},
+"327898660_gear_detail_studded_norm": {
+"layer": 14,
+"bump": 1.11
+},
+"327898660_gear_detail_sweets_sprinkles_norm": {
+"layer": 18,
+"bump": 0.82
+},
+"327898660_gear_detail_triangle_board_norm": {
+"layer": 2,
+"bump": 1.5
+},
+"327898660_gear_detail_vex_gunmetal_norm": {
+"layer": 16,
+"bump": 0.49
+},
+"327898660_gear_detail_witness_tiles_norm": {
+"layer": 25,
+"bump": 0.8
+},
+"327898660_gear_hardlines_norm": {
+"layer": 12,
+"bump": 1.5
+},
+"327898660_gear_scorn_rust_norm": {
+"layer": 9,
+"bump": 1.17
+},
+"327898660_gear_torn_cloth_normal_noedit": {
+"layer": 16,
+"bump": 0.99
+},
+"327898660_good_wizards_starmap_detail_norm": {
+"layer": 4,
+"bump": 1.5
+},
+"327898660_gore-tex_fabric_norm": {
+"layer": 23,
+"bump": 0.88
+},
+"327898660_high_tech_3d_printed_norm": {
+"layer": 18,
+"bump": 1.48
+},
+"327898660_hive_marble_cracks_a_norm_norm": {
+"layer": 5,
+"bump": 0.6
+},
+"327898660_ice_detail_map_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"327898660_iron_banana_peel_norm": {
+"layer": 16,
+"bump": 1.08
+},
+"327898660_lava_a_small_norm": {
+"layer": 17,
+"bump": 1.43
+},
+"327898660_lightning_normals_norm": {
+"layer": 16,
+"bump": 0.75
+},
+"327898660_lipstick_bullets_detail_norm": {
+"layer": 5,
+"bump": 0.97
+},
+"327898660_lipstick_bullets_girl_detail_norm": {
+"layer": 18,
+"bump": 0.99
+},
+"327898660_manga_lines_detail_norm": {
+"layer": 2,
+"bump": 0.94
+},
+"327898660_metal_hammered_a_norm_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327898660_microbes_detail_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_moth_scales_detail_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"327898660_nylon_weave_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_ratking_prism_norm": {
+"layer": 14,
+"bump": 1.08
+},
+"327898660_revenant_scorn_plating_norm": {
+"layer": 14,
+"bump": 0.78
+},
+"327898660_rock_granite_pattern_1_norm": {
+"layer": 13,
+"bump": 0.68
+},
+"327898660_rock_marble_pattern_1_norm": {
+"layer": 19,
+"bump": 1.5
+},
+"327898660_rock_rough_pattern_2_norm": {
+"layer": 18,
+"bump": 1.29
+},
+"327898660_shader_exotic_monte_carlo_chainsaw_norm": {
+"layer": 23,
+"bump": 0.93
+},
+"327898660_sine_floral_pattern_norm": {
+"layer": 4,
+"bump": 1.5
+},
+"327898660_snake_skin_pattern_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"327898660_stripped_circle_pattern_norm": {
+"layer": 17,
+"bump": 1.32
+},
+"327898660_suit_detail_trihex_norm": {
+"layer": 16,
+"bump": 1.01
+},
+"327898660_sunflower_leather_detail_norm": {
+"layer": 13,
+"bump": 1.02
+},
+"327898660_swirly_height_normals": {
+"layer": 12,
+"bump": 0.74
+},
+"327898660_tiger_fur_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_toxic_creatures_skin_dark_norm": {
+"layer": 16,
+"bump": 1.23
+},
+"327898660_toxic_creatures_skin_light_norm": {
+"layer": 18,
+"bump": 0.55
+},
+"327898660_toxic_creatures_skin_mottled_norm": {
+"layer": 22,
+"bump": 1.17
+},
+"327898660_trangle_weave_pattern_01_norm": {
+"layer": 23,
+"bump": 0.94
+},
+"327898660_tree_bark_norm_detail_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_vex_metal_detail_tile_b_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"327898660_worm_scales_a_small_norm": {
+"layer": 18,
+"bump": 1.37
+},
+"327898660_worn_wood_norm": {
+"layer": 2,
+"bump": 0.72
+},
+"3476947417_bstalk_megaboss_skin_detail_overnorm": {
+"layer": 22,
+"bump": 0.87
+},
+"3564995956_detail_paint_a_norm": {
+"layer": 7,
+"bump": 1.04
+},
+"359931928_fallen_galvanized_metal_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"3677741697_d2_iron_banner_chainmail_norm": {
+"layer": 14,
+"bump": 1.04
+},
+"3720675327_bray_detail_metal_a_norm": {
+"layer": 0,
+"bump": 0.34
+},
+"3720675327_bray_detail_plastic_a_norm": {
+"layer": 6,
+"bump": 0.87
+},
+"3720675327_bray_metal_rusted_a_norm": {
+"layer": 22,
+"bump": 0.76
+},
+"3772001365_tilable_matt_a_normal": {
+"layer": 25,
+"bump": 1.5
+},
+"3809573587_eden_sand_detailed_base_norm": {
+"layer": 1,
+"bump": 1.5
+},
 "3884251888_grunge_rust_a_normal": {
 "layer": 20,
 "bump": 1.13
+},
+"3884251888_moss_splotchy_a_detailnormal": {
+"layer": 2,
+"bump": 1.5
+},
+"395165093_block_plywood_horizonal_norm": {
+"layer": 2,
+"bump": 1.04
+},
+"395165093_block_plywood_norm": {
+"layer": 2,
+"bump": 1.04
+},
+"3953855734_leather_grain_3_norm": {
+"layer": 20,
+"bump": 1.5
+},
+"3970633353_leather_grain_2_norm": {
+"layer": 3,
+"bump": 1.5
+},
+"3990353918_dare_detail_inset_a_norm": {
+"layer": 17,
+"bump": 1.5
+},
+"3992082449_generic_detail_a_normal": {
+"layer": 8,
+"bump": 1.36
+},
+"401755037_detail_cloth_weave_norm": {
+"layer": 2,
+"bump": 0.74
 },
 "401755037_detail_fabric01_norm": {
 "layer": 25,
 "bump": 1.5
 },
 "401755037_detail_metal_cubes_norm": {
-"layer": 18,
-"bump": 0.98
+"layer": 16,
+"bump": 1.5
+},
+"401755037_detail_metal_scratched_norm": {
+"layer": 15,
+"bump": 1.5
 },
 "401755037_detail_metal_speckle_norm": {
 "layer": 20,
 "bump": 1.5
+},
+"401755037_detail_old_cloth_norm": {
+"layer": 13,
+"bump": 1.37
 },
 "401755037_gear_detail_leather_norm": {
 "layer": 3,
@@ -217,9 +1209,41 @@
 "layer": 10,
 "bump": 1.5
 },
-"4042469637_gear_detail_sash_norm": {
-"layer": 10,
+"401755037_leather_detail_norm": {
+"layer": 3,
+"bump": 1.01
+},
+"4042469637_gear_detail_dented_norm": {
+"layer": 1,
 "bump": 1.5
+},
+"4042469637_gear_detail_sash_norm": {
+"layer": 23,
+"bump": 0.49
+},
+"4043187796_boulder_sandstone_sides_a_norm": {
+"layer": 14,
+"bump": 0.76
+},
+"4065250425_eden_bones_tile_03_norm": {
+"layer": 18,
+"bump": 1.5
+},
+"4069016266_shank_surface_detail_norm": {
+"layer": 16,
+"bump": 0.69
+},
+"4070978127_vex_metal_detail_tile_a_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"4098568636_europa_ice_detail_b_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"412839529_aluminum_scratched_a_normal": {
+"layer": 4,
+"bump": 0.2
 },
 "4195929417_gear_detail_leather_norm": {
 "layer": 3,
@@ -228,6 +1252,54 @@
 "435058087_iron_old_norm": {
 "layer": 0,
 "bump": 1.5
+},
+"451821789_gambit_fur_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"501246190_dareland_sand_dunes_a_norm": {
+"layer": 25,
+"bump": 1.5
+},
+"510729928_vfx_portal_broken_glass_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"572730193_vex_metal_detail_norm": {
+"layer": 16,
+"bump": 0.56
+},
+"626735763_carpet_worn_a_normal": {
+"layer": 10,
+"bump": 1.5
+},
+"680758281_noise_coarse_norm": {
+"layer": 1,
+"bump": 1.35
+},
+"774743856_cabal_gluttony_glyph_crystal_a_norm": {
+"layer": 1,
+"bump": 1.5
+},
+"774743856_cabal_gluttony_resin_surface_a_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"840852764_cabal_quarry_stone_broken_a_norm": {
+"layer": 18,
+"bump": 0.88
+},
+"937566533_venus_shore_waves_norm": {
+"layer": 0,
+"bump": 1.5
+},
+"96298703_aluminum_painted_norm": {
+"layer": 19,
+"bump": 0.41
+},
+"999218010_edz_leather_a_norm": {
+"layer": 15,
+"bump": 1.25
 }
 }
 }

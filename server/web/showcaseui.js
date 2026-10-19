@@ -6,7 +6,7 @@
 import { $, esc, closeSide } from './texedit.js';
 import { dock, tabsOn } from './tabs.js';
 import { buildScene, LOOK } from './scene.js';
-import { PRESETS, presetTheme, presetOptions } from './theme.js';
+import { PRESETS, presetTheme, presetOptions, presetSearch } from './theme.js';
 
 const SLIDERS = [['bg', 'Background', 0, 3], ['glow', 'Glow', 0, 3], ['glowSize', 'Glow size', 0.3, 2.5], ['rim', 'Rim light', 0, 4],
   ['exposure', 'Exposure', 0.3, 2.5], ['reflect', 'Reflections', 0, 3], ['shadow', 'Floor shadows', 0, 2], ['haze', 'Haze', 0, 3],
@@ -80,6 +80,7 @@ function panel(app, themeOf) {
     : `<div class="row"><span style="width:6.5em">${esc(it.label ?? it.group)}</span><select data-slot="${si}" data-f="name" title="${esc(it.group)}" style="flex:1;min-width:0">${none(it.name, '(none)')}${opt(sc.choices(si), it.name)}</select></div>${moveRow(si, it)}`).join('');
   $('scSide').innerHTML = `<section><h2>Showcase</h2>
       <p class="hint">Live: orbit, pan and zoom in the viewport (the frame there is the image's). Nothing in the mod changes.</p>
+      <div class="row"><input type="search" id="scSearch" placeholder="Search presets…" title="Shows only the presets whose name or group has these words" style="flex:1;min-width:0"></div>
       <div class="row"><label class="grow">Show <select id="scShow" style="max-width:220px">
         <option value="mod">As in this mod (${esc(app.projectName() || 'its edits')})</option>
         <option value="game">As the game has them</option>
@@ -99,6 +100,7 @@ function panel(app, themeOf) {
         <span class="hint" data-sv="${k}" style="width:3em;text-align:right">${(+look[k]).toFixed(2)}</span></div>`).join('')}
       <div class="row"><button id="scCam">Reset camera</button><button id="scReset">Reset look</button></div></section>`;
   $('scShow').value = show.which;
+  presetSearch($('scSearch'), $('scShow'));
   const decalBox = () => { const off = show.which === 'mod' || show.which === 'game'; $('scDecals').disabled = off; if (off) $('scDecals').checked = false; };
   $('scDecals').checked = !!show.theme.decals; decalBox();
   $('scDecals').onchange = async () => {

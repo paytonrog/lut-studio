@@ -222,7 +222,50 @@ def glow(mp, k):
     v = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
     return h if max(v) - min(v) >= 0.35 else None
 
+# a preset's color family, for the picker's groups: by its armor's primary color (gray-ish: by lightness)
+def family(hexc):
+    import colorsys
+    r, g, b = (int(hexc[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    h, l, s_ = colorsys.rgb_to_hls(r, g, b)
+    if max(r, g, b) - min(r, g, b) < 0.09:
+        return 'Whites' if l > 0.6 else 'Grays' if l > 0.22 else 'Blacks'
+    h *= 360
+    for top, name in [(15, 'Reds'), (45, 'Oranges and golds'), (70, 'Yellows'), (165, 'Greens'), (200, 'Teals'), (255, 'Blues'),
+                      (295, 'Purples'), (340, 'Pinks'), (361, 'Reds')]:
+        if h < top:
+            return name
+
+
+# every shader with armor dyes (named, the first of a name; a name of a LUT Studio theme of its own: "(Destiny 2)")
+# as the module server/web/d2presets.js
+def module(path, taken=()):
+    rows, seen = [], set()
+    for s in json.load(gzip.open(DATA))['shaders']:
+        n = s['name'].strip()
+        if not n or n in seen or not all(k in s['dyes'] for k in ('armor_plate', 'armor_suit', 'armor_cloth')):
+            continue
+        seen.add(n)
+        a = args(s)
+        rows.append([n + (' (Destiny 2)' if n in taken else ''), family(a[0]), a])
+    rows.sort(key=lambda r: r[0].lower())
+    head = ('// Destiny 2' + chr(39) + 's shaders as presets: [name, color family, T(...) arguments], made by tools/d2preset.py '
+            '--module from' + chr(10) + '// Bungie' + chr(39) + 's dye values (data/destiny2); theme.js adds them to PRESETS. '
+            'Generated: edit the tool, not this file.' + chr(10))
+    with open(path, 'w', encoding='utf-8', newline=chr(10)) as f:
+        f.write(head + 'export const D2_PRESETS = [' + chr(10))
+        for r in rows:
+            f.write(json.dumps(r, separators=(',', ':')) + ',' + chr(10))
+        f.write('];' + chr(10))
+    return len(rows)
+
+
 if __name__ == '__main__':
+    # --module=path [taken name|...]: every shader as server/web/d2presets.js (names taken by other themes get " (Destiny 2)")
+    mod = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('--module=')), None)
+    if mod:
+        taken = next((a.split('=', 1)[1].split('|') for a in sys.argv if a.startswith('--taken=')), [])
+        print(module(mod, set(taken)), 'presets ->', mod)
+        sys.exit(0)
     # --extra: the presets as tools/themescene.mjs --extra wants them ([{name, args}], JSON) instead of theme.js lines
     by = {s['name'].lower(): s for s in json.load(gzip.open(DATA))['shaders']}
     # --map=ACFE: the regions for primary, secondary, trim, cloth (see REGIONS)

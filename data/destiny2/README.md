@@ -27,8 +27,9 @@ trim 13%, secondary 12%, hardware 4%): the upper on primary, the lower on second
 metal on the metal parts. An even iridescence id (its colors change with the view) also gets Helldivers 2's own
 iridescence film, at the step fitted to its lookup row (`iridescence.json` film). The presets are marked bySize: on an
 item whose secondary zones cover more of it than its primary ones (some weapons and exosuits; no armor), the shader's
-primary and secondary looks swap (`/api/theme/sizes`, the server deciding it per item as Apply does). The 20 Destiny 2 presets in `server/web/theme.js` marked
-"Bungie's dye values" were made with it.
+primary and secondary looks swap (`/api/theme/sizes`, the server deciding it per item as Apply does). Every shader with armor dyes is a preset: `python -I tools/d2preset.py --module=server/web/d2presets.js
+--taken=Watermelon` writes them all (693; a name another theme has gets " (Destiny 2)") with their color family for
+the picker's groups (by the armor's primary color), and theme.js adds them.
 
 ## Where it comes from
 
