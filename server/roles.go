@@ -216,7 +216,7 @@ func (s *Server) roleItems(idx *game.Index) []roleItem {
 
 // ReviewedGroups: the item groups whose suggested roles were reviewed item by item (the rules in theme.go tuned until
 // every item came out right): their suggestions count as confirmed, as roles.json's do
-var ReviewedGroups = []string{"Armor", "Weapons"}
+var ReviewedGroups = []string{"Armor", "Helmets", "Capes", "Backpacks", "Weapons"}
 
 // GET /api/roles: {names, builtin, mine, items, reviewed: the LUTs of the reviewed groups' items}
 func (s *Server) getRoles(w http.ResponseWriter, r *http.Request) {

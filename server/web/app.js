@@ -54,7 +54,7 @@ const S = {
   schema: null, state: null, variant: null, kit: null, body: 'slim',
   luts: new Map(),       // hash -> {w, h, kind, vanilla, edited|null, labels, note, dirty}
   sel: { lut: null, zone: 0, more: new Set() },   // more: other zones of that LUT selected with it (Ctrl / Shift)
-  undo: [], redo: [], history: new Map(), histOf: null, lastSnap: 0, saving: null, clip: null, loadGen: 0, varGen: 0,
+  undo: [], redo: [], history: new Map(), histOf: null, lastSnap: 0, lastZone: new Map(), autoZone: null, saving: null, clip: null, loadGen: 0, varGen: 0,
 };
 let R;
 
@@ -348,7 +348,13 @@ async function loadVariantNow(folder) {
   }
   if (decals) await decals.catch(() => { });   // (the variant's own decal sheets in: a picture right after shows them)
   if (gen !== S.varGen) return;
-  if (!S.sel.lut || !S.luts.get(S.sel.lut)?.edited) S.sel.lut = v.luts?.[0]?.lut ?? null;
+  if (!S.sel.lut || !S.luts.get(S.sel.lut)?.edited) {
+    // (the armor's torso plates when it has them, else the first material as the list shows it)
+    const order = [...(v.luts ?? [])].sort((a, b) => lutOrder(a.lut) - lutOrder(b.lut)).map(i => i.lut);
+    const torso = order.find(h => (S.state.parts?.[h] ?? []).some(p => p.type === 'armor' && /torso/.test(p.slot)));
+    S.sel.lut = torso ?? order[0] ?? null;
+    if (S.sel.lut) S.sel.zone = openZone(S.sel.lut);
+  }
   if (S.sel.lut) S.sel.zone = Math.min(S.sel.zone, (S.luts.get(S.sel.lut)?.h ?? 1) - 1);
   renderLists();
   renderFields();
@@ -1019,18 +1025,40 @@ let rolesData = null;
 document.addEventListener('lutstudio:roles', () => { roleCache.clear(); rolesData = null; renderZones(); });
 function zoneRoles(hash) {
   const c = roleCache.get(hash);
-  if (Array.isArray(c)) return c;
+  if (c?.roles) return c.roles;
   if (c || !S.state) return null;
-  roleCache.set(hash, (async () => {
+  roleCache.set(hash, { loading: (async () => {
+    let roles = [], cov = [];
     try {
       rolesData ??= await api('/api/roles');
-      let r = rolesData.mine[hash] ?? rolesData.builtin[hash];
-      if (!r) r = (await api(`/api/roles/suggest?variant=${encodeURIComponent(S.variant)}&luts=${hash}`))[hash]?.roles;
-      roleCache.set(hash, r ?? []);
-    } catch { roleCache.set(hash, []); }
-    if (S.sel.lut === hash) renderZones();
-  })());
+      const sug = (await api(`/api/roles/suggest?variant=${encodeURIComponent(S.variant)}&luts=${hash}`))[hash];
+      roles = rolesData.mine[hash] ?? rolesData.builtin[hash] ?? sug?.roles ?? [];
+      cov = sug?.coverage ?? [];
+    } catch { }
+    roleCache.set(hash, { roles, cov });
+    if (S.sel.lut === hash) {
+      if (S.autoZone === hash) { S.autoZone = null; S.sel.zone = mainZone(hash); renderFields(); }
+      renderZones();
+    }
+  })() });
   return null;
+}
+// the zone a material opens on: its biggest primary zone (by its share of the model), else its biggest painted one,
+// else zone 0; null while its roles are read (S.autoZone: picked once they are in)
+function mainZone(hash) {
+  const c = roleCache.get(hash), l = S.luts.get(hash);
+  if (!c?.roles || !l || l.kind !== 'material') return c?.roles || l?.kind !== 'material' ? 0 : null;
+  const by = ok => c.roles.map((r, z) => [z, r, c.cov[z] ?? 0]).filter(([z, r]) => z < l.h && ok(r)).sort((a, b) => b[2] - a[2])[0]?.[0];
+  return by(r => r === 'primary') ?? by(r => r !== 'keep' && r !== 'unused') ?? 0;
+}
+// a material picked: the zone picked last in it, else its main zone (once its roles are read)
+function openZone(hash) {
+  const last = S.lastZone.get(hash);
+  if (last !== undefined) { S.autoZone = null; return Math.min(last, (S.luts.get(hash)?.h ?? 1) - 1); }
+  zoneRoles(hash);
+  const z = mainZone(hash);
+  S.autoZone = z === null ? hash : null;
+  return z ?? 0;
 }
 const roleTag = r => (!r || r === 'keep' ? '' : `<span class="roleTag" title="This zone's role: ${esc(ROLE_INFO[r]?.tip ?? r)} (what a theme or Recolor gives it)"
   style="--rc:rgb(${(ROLE_INFO[r]?.color ?? [0.5, 0.5, 0.5]).map(v => Math.round(v * 255)).join(',')})">${esc(r)}</span>`);
@@ -1051,8 +1079,12 @@ function refreshMarks() {
 }
 
 async function selectLut(hash) {
-  if (hash !== S.sel.lut) selectOnly();
-  S.sel.lut = hash;
+  if (hash !== S.sel.lut) {
+    selectOnly();
+    if (S.sel.lut) S.lastZone.set(S.sel.lut, S.sel.zone);
+    S.sel.lut = hash;
+    S.sel.zone = openZone(hash);
+  }
   S.sel.zone = Math.min(S.sel.zone, (S.luts.get(hash)?.h ?? 1) - 1);
   const onArmor = R.pieces.some(p => p.info.lut === hash || p.info.pattern === hash || p.info.cape === hash);
   if (!onArmor) {
@@ -1080,6 +1112,7 @@ function selectZone(z, e = null) {
     S.sel.more.clear();
     for (let i = a; i <= b; i++) if (i !== S.sel.zone) S.sel.more.add(i);
   } else { selectOnly(); S.sel.zone = z; }
+  S.autoZone = null; if (S.sel.lut) S.lastZone.set(S.sel.lut, S.sel.zone);
   renderZones();
   renderFields();
 }
@@ -1783,9 +1816,10 @@ function pickAt(e) {
   if ((e.ctrlKey || e.metaKey || e.shiftKey) && p.info.lut === S.sel.lut) return selectZone(hit.zone, e);   // (another zone to edit with it)
   preview(p.info.lut, p.info.kitRef ?? p.info.lut);
   if (p.info.cape) preview(p.info.cape, p.info.kitRef ?? p.info.cape);
-  if (p.info.lut !== S.sel.lut) selectOnly();
+  if (p.info.lut !== S.sel.lut) { selectOnly(); if (S.sel.lut) S.lastZone.set(S.sel.lut, S.sel.zone); }
   S.sel.lut = p.info.lut;
   S.sel.zone = hit.zone;
+  S.autoZone = null; S.lastZone.set(p.info.lut, hit.zone);
   renderLists();
   renderFields();
   R.highlight = { lut: 'e:' + p.info.lut, zone: hit.zone, piece: -1 };

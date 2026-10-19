@@ -140,6 +140,9 @@ whenever it's worn.
   picker, its three numbers, a **#rrggbb** box (type or paste a color; `#rgb` works too) and **⌖** (click a zone on
   the model and the color takes that zone's own color; Esc cancels); the colors you used last are under it, one
   click to use again (kept in this browser).
+- **The zone a material opens on**: a project opens on the armor's torso plates (else the first material listed),
+  and a material on its main zone (its biggest primary zone, by its share of the model); once you pick a zone in a
+  material, it opens on that one again.
 - **Several zones at once**: Ctrl+click (Cmd on a Mac) zones in the zone list, or on the model, to edit them
   together; Shift+click selects every zone up to the one clicked. The panel says how many you're editing: a change
   to a field, **↺ vanilla**, **Paste zone**, **Reset zone** and a look go to all of them (a look: the settings it
@@ -299,9 +302,9 @@ whenever it's worn.
   them. Applying again (after changing the item on screen) updates every
   themed zone; a zone you changed by hand since is kept, unless **also overwrite zones I changed by hand** is ticked.
   For another color scheme, make a variant, restyle the item, apply again. **◂ Previous / Next ▸** steps through the
-  themed items. Every armor's and weapon's roles were reviewed item by item; on the others (helmets, capes,
-  backpacks, vehicles, the rest) roles are suggested from the item's colors and masks and can put a look on the wrong
-  zone: the panel says how many LUTs on screen have suggested roles only, and on what kind of item.
+  themed items. The roles of every armor, helmet, cape, backpack and weapon were reviewed item by item; on the
+  others (vehicles, equipment, stratagems, the rest) roles are suggested from the item's colors and masks and can put
+  a look on the wrong zone: the panel says how many LUTs on screen have suggested roles only, and on what kind of item.
 - **Variants**: **+ Variant** copies the current color scheme. Players pick one variant in the mod manager.
 - **Mod page** tab: everything the mod managers (HD2 Mod Manager, HD2 Arsenal) show of your mod, beside the model:
   - the mod's **name**, **description** and **icon**;
