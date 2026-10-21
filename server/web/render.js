@@ -443,6 +443,12 @@ export function extractPieces(glb, opts = {}) {
 // the 1 x 1 black pattern_masks_array most parts bind (no pattern can show on them)
 const NO_PATTERN_MASK = '0xf37a4e756300ab32';
 
+// the armor shader's netting variant (game build 25988413: the Mimetic armors' scrim): layer 1 of the ID masks cuts
+// holes (red above 0.5, in every pass) and the part is two-sided (research/version-history/build-25988413-shaders.md
+// §6.2 in HD2-Modding-Lab)
+export const NETTING_BASE = '0x8e7efcdf45ac19cf';
+const holes = p => p.params?.fd_base_material === NETTING_BASE;
+
 export const DEBUG_VIEWS = [
   ['Final', 0], ['Albedo', 1], ['Zones', 2], ['Secondary mask', 3], ['Wear mask', 4], ['Heavy wear (wear²)', 5],
   ['Metalness', 6], ['Camo amount', 7], ['Roughness', 8], ['Specular', 9], ['Normal', 10],
@@ -1049,6 +1055,9 @@ export class Renderer {
         this.bindTex(15, gl.TEXTURE_2D_ARRAY, (p.scalar ?? this.white).tex, u.uScalar);
         this.bindTex(1, gl.TEXTURE_2D_ARRAY, (p.tear ?? this.white).tex, u.uTear);
         gl.uniform1f(u.uTearAmount, p.params.tear_amount?.[0] ?? 0);
+      } else {
+        this.bindTex(2, gl.TEXTURE_2D_ARRAY, (p.idMasks ?? this.blank).tex, u.uIdMasks);
+        gl.uniform1i(u.uHoles, holes(p) ? 1 : 0);
       }
       gl.uniform1i(u.uJointTex, 8);   // (unskinned too: the sampler never on unit 0, where the shadow map may sit)
       if (p.skin) { this.poseSkin(p); this.bindTex(8, gl.TEXTURE_2D, p.skin.tex, u.uJointTex); }
@@ -1223,6 +1232,7 @@ export class Renderer {
         gl.uniform1i(u.uHasPatLut, pl ? 1 : 0);
         this.bindTex(2, gl.TEXTURE_2D_ARRAY, (tx.idMasks ?? this.blank).tex, u.uIdMasks);
         gl.uniform1i(u.uIdLayers, p.params.fd_id_mask_layers?.[0] ?? tx.idMasks?.layers ?? 1);
+        gl.uniform1i(u.uHoles, holes(p) ? 1 : 0);
         if (u.uVehicle) gl.uniform1i(u.uVehicle, p.info?.vehicle ? 1 : 0);
         this.bindTex(3, gl.TEXTURE_2D_ARRAY, (p.baseData ?? this.white).tex, u.uBaseData);
         this.bindTex(4, gl.TEXTURE_2D_ARRAY, (tx.patMasks ?? this.blank).tex, u.uPatMasks);

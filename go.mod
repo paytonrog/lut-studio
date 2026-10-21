@@ -37,4 +37,4 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 )
 
-replace github.com/xypwn/filediver => github.com/paytonrog/filediver v0.7.56-0.20261021155806-86d748906523
+replace github.com/xypwn/filediver => github.com/paytonrog/filediver v0.7.56-0.20261021220650-f773e38a6c6f

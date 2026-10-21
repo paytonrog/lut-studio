@@ -98,8 +98,9 @@ func (quietPrinter) Statusf(string, ...any) {}
 func (quietPrinter) NoStatus()              {}
 
 // unitCache: the folder of exported units in the cache; a new name when the export changes, so older exports
-// aren't served (units-2: the Bastion cannon without its LODs).
-const unitCache = "units-2"
+// aren't served (units-2: the Bastion cannon without its LODs; units-3: materials name their base material,
+// fd_base_material).
+const unitCache = "units-3"
 
 // UnitGLB exports an armor piece (unit) as glTF binary with filediver: skinned mesh in bind pose, both UV sets,
 // tangents, and the material's parameters and texture slots (names = resource hashes) in material extras.

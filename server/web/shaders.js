@@ -287,6 +287,7 @@ uniform int uLutRows;
 uniform sampler2D uPatLut;         // pattern LUT 3 x 1
 uniform int uHasPatLut;
 uniform sampler2DArray uIdMasks;   uniform int uIdLayers;
+uniform int uHoles;                // the netting (NETTING_BASE): layer 1's red is a hole mask, the part two-sided
 uniform sampler2DArray uBaseData;
 uniform sampler2DArray uPatMasks;  uniform int uPatLayers;
 uniform sampler2DArray uDetail;    // customization_detail_tiler_array, 26 layers
@@ -437,6 +438,10 @@ void main() {
   for (int layer = 0; layer < 4; layer++) {
     if (layer >= uIdLayers) break;
     vec4 m = texture(uIdMasks, vec3(vUv0, float(layer)));
+    if (uHoles == 1 && layer == 1) {   // (the netting's ps: a hole above 0.5, and no zone from that channel)
+      if (m.r > 0.5) discard;
+      m.r = 0.0;
+    }
     if (m.r >= 0.496) zone = layer * 4;
     else if (m.g >= 0.496) zone = layer * 4 + 1;
     else if (m.b >= 0.496) zone = layer * 4 + 2;
@@ -458,7 +463,7 @@ void main() {
 #ifdef CAPE
   vec3 Ng = normalize(front ? vNrm : -vNrm);                            // two-sided cloth
 #else
-  vec3 Ng = normalize(vNrm);
+  vec3 Ng = normalize(uHoles == 1 && !gl_FrontFacing ? -vNrm : vNrm);   // (the netting: two-sided)
 #endif
   vec3 T0, B0, T1, B1;
   uvFrame(vUv0, vPos, Ng, T0, B0);
@@ -1000,11 +1005,15 @@ precision highp sampler2DArray;
 in vec2 vUv0;
 #ifdef CAPE
 uniform sampler2DArray uScalar; uniform sampler2DArray uTear; uniform float uTearAmount;
+#else
+uniform sampler2DArray uIdMasks; uniform int uHoles;
 #endif
 void main() {
 #ifdef CAPE
   float a = texture(uScalar, vec3(vUv0, 0.0)).a, t = texture(uTear, vec3(vUv0, 0.0)).r;
   if (min(0.51 * (1.0 + uTearAmount * (t - 1.0)), a) < 0.5) discard;
+#else
+  if (uHoles == 1 && texture(uIdMasks, vec3(vUv0, 1.0)).r > 0.5) discard;   // the netting's holes cast no shadow
 #endif
 }`;
 export const SHADOW_CAPE_FRAG = SHADOW_FRAG.replace('#version 300 es', '#version 300 es\n#define CAPE 1');

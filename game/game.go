@@ -44,6 +44,7 @@ type Game struct {
 	maskMu   sync.Mutex // MasksOfLUT (lutmasks.go)
 	lutUnits map[string][]uint64
 	lutMasks map[string][]uint64
+	holes    map[uint64]bool // the ID masks of netting materials (HoleMask)
 
 	weaponOnce    sync.Once // WeaponOptions' tables
 	weaponComps   map[stingray.Hash]datalib.WeaponCustomizationComponent

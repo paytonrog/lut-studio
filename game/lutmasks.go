@@ -9,6 +9,17 @@ import (
 	"github.com/xypwn/filediver/stingray/unit/material"
 )
 
+// NettingBase: the armor shader's netting variant (game build 25988413: the Mimetic armors' scrim), which cuts holes
+// where layer 1 of its ID mask is red above 0.5 and takes no zone from that channel (render.js NETTING_BASE).
+var NettingBase = stingray.Hash{Value: 0x8e7efcdf45ac19cf}
+
+// HoleMask: ID mask m is a netting material's (layer 1's red: holes), for a mask MasksOfLUT has listed.
+func (g *Game) HoleMask(m uint64) bool {
+	g.maskMu.Lock()
+	defer g.maskMu.Unlock()
+	return g.holes[m]
+}
+
 // MasksOfLUT: the ID masks (id_masks_array) of the parts that wear material LUT lut (0x hash): every material with a
 // mask on the units of the kit pieces using the LUT (the preview draws a piece's whole unit with the piece's LUT).
 // Cached per LUT.
@@ -33,6 +44,7 @@ func (g *Game) MasksOfLUT(idx *Index, lut string) []uint64 {
 			}
 		}
 		g.lutMasks = map[string][]uint64{}
+		g.holes = map[uint64]bool{}
 	}
 	maskSlot := stingray.Sum("id_masks_array").Thin()
 	var out []uint64
@@ -58,6 +70,9 @@ func (g *Game) MasksOfLUT(idx *Index, lut string) []uint64 {
 			if h := m.Textures[maskSlot].Value; h != 0 && !have[h] {
 				have[h] = true
 				out = append(out, h)
+				if m.BaseMaterial == NettingBase {
+					g.holes[h] = true
+				}
 			}
 		}
 	}
