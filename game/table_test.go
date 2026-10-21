@@ -27,12 +27,15 @@ func TestNameTemplates(t *testing.T) {
 }
 
 // The repo's item table gives the app the same index and the same weapon attachment menus as building them from the
-// data-library tables (filediver's embedded copies, which equal the decrypted install's for this build). Needs the
-// install it was generated from.
+// install's own data-library tables (decrypted, TestMain). Needs the install it was generated from and the key:
+// filediver's embedded copies are those of the build it last took them from (25480438's under 25988413).
 func TestTableMatchesDataLibrary(t *testing.T) {
 	dir := os.Getenv("LUTSTUDIO_GAME")
 	if dir == "" {
 		t.Skip("LUTSTUDIO_GAME not set")
+	}
+	if !decrypted {
+		t.Skip("LUTSTUDIO_DLBIN_KEY not set: the install's data-library tables can't be read")
 	}
 	raw, err := os.ReadFile("../data/table.json.gz")
 	if err != nil {

@@ -118,7 +118,9 @@ the pose holds it two-handed. A white or pastel theme lowers the scene's exposur
 - In-game behavior of built mods (by design: tests never launch or touch the game).
 - The item table against the game: `TestTableMatchesDataLibrary` (install tier) compares `data/table.json.gz`
   with the index and attachment menus built from the data-library tables of the same install (skipped when the
-  table is for another game build). No test goes online.
+  table is for another game build, and without `LUTSTUDIO_DLBIN_KEY`: the install's tables are decrypted for the
+  whole `game` package, filediver's embedded copies being those of the build it last took them from). No test goes
+  online.
 - Mods from other authors (their files can't be shipped): `tools/modprobe` shows what a downloaded mod contains.
   Checked by hand 2026-10-16: 35 downloaded mods imported and built back into mods: 26 build (weapon packs, Chrome
   armor and arsenal overhauls, HAA, Make It Yellow, vehicles, capes; 8 bring decal sheets or a cape design), one

@@ -21,9 +21,7 @@ import (
 	"strings"
 	"time"
 
-	datalib "github.com/xypwn/filediver/datalibrary"
 	stingray_strings "github.com/xypwn/filediver/stingray/strings"
-	"golang.org/x/crypto/nacl/box"
 
 	"lutstudio/game"
 )
@@ -39,7 +37,7 @@ func main() {
 	dir, err := game.Detect()
 	check(err)
 	if !*embedded {
-		check(loadDecrypted(dir, *keyFile))
+		check(game.LoadDecryptedTables(dir, *keyFile))
 	}
 	g, err := game.Open(dir)
 	check(err)
@@ -103,43 +101,6 @@ func passThrough(key string, embedded bool) []string {
 	}
 	return a
 }
-
-// loadDecrypted decrypts the data-library tables of the install and hands them to filediver's datalibrary.
-func loadDecrypted(dir, keyFile string) error {
-	if keyFile == "" {
-		keyFile = os.Getenv("LUTSTUDIO_DLBIN_KEY")
-	}
-	k, err := os.ReadFile(keyFile)
-	if err != nil {
-		return fmt.Errorf("key: %w (see the tool's doc comment)", err)
-	}
-	if len(k) != 64 {
-		return fmt.Errorf("key %s: %d bytes, want 64 (public key, secret key)", keyFile, len(k))
-	}
-	var pk, sk [32]byte
-	copy(pk[:], k[:32])
-	copy(sk[:], k[32:])
-	tables := map[string][]byte{}
-	for _, name := range datalib.TableNames() {
-		ct, err := os.ReadFile(filepath.Join(dir, "data", "game", name))
-		if err != nil {
-			return err
-		}
-		pt, ok := box.OpenAnonymous(nil, ct, &pk, &sk)
-		if !ok {
-			if strings.HasPrefix(string(ct), "LDLD") || strings.HasSuffix(name, ".dl_typelib") && len(ct) > 0 && !looksSealed(ct) {
-				pt = ct // not encrypted
-			} else {
-				return fmt.Errorf("%s: does not open with this key (a new key, or not a sealed box)", name)
-			}
-		}
-		tables[name] = pt
-	}
-	return datalib.LoadTables(tables)
-}
-
-// looksSealed: a sealed box is at least its 48 bytes of overhead (we can't tell more without the key).
-func looksSealed(b []byte) bool { return len(b) >= 48 && !strings.HasPrefix(string(b), "LDLD") }
 
 func sample(s []string) string {
 	seen := map[string]bool{}
