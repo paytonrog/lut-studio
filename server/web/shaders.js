@@ -292,7 +292,7 @@ uniform int uLutRows;
 uniform sampler2D uPatLut;         // pattern LUT 3 x 1
 uniform int uHasPatLut;
 uniform sampler2DArray uIdMasks;   uniform int uIdLayers;
-uniform int uHoles;                // the netting (NETTING_BASE): layer 1's red is a hole mask, the part two-sided
+uniform int uHoles;                // the netting (NETTING_BASE): layer 1's alpha is a hole mask, the part two-sided
 uniform sampler2DArray uBaseData;
 uniform sampler2DArray uPatMasks;  uniform int uPatLayers;
 uniform sampler2DArray uDetail;    // customization_detail_tiler_array, 26 layers (+ cobweb_tiler: uWebLayer)
@@ -444,8 +444,8 @@ void main() {
     if (layer >= uIdLayers) break;
     vec4 m = texture(uIdMasks, vec3(vUv0, float(layer)));
     if (uHoles == 1 && layer == 1) {   // (the netting's ps: a hole above 0.5, and no zone from that channel)
-      if (m.r > 0.5) discard;
-      m.r = 0.0;
+      if (m.a > 0.5) discard;
+      m.a = 0.0;
     }
     if (m.r >= 0.496) zone = layer * 4;
     else if (m.g >= 0.496) zone = layer * 4 + 1;
@@ -1028,7 +1028,7 @@ void main() {
   float a = texture(uScalar, vec3(vUv0, 0.0)).a, t = texture(uTear, vec3(vUv0, 0.0)).r;
   if (min(0.51 * (1.0 + uTearAmount * (t - 1.0)), a) < 0.5) discard;
 #else
-  if (uHoles == 1 && texture(uIdMasks, vec3(vUv0, 1.0)).r > 0.5) discard;   // the netting's holes cast no shadow
+  if (uHoles == 1 && texture(uIdMasks, vec3(vUv0, 1.0)).a > 0.5) discard;   // the netting's holes cast no shadow
 #endif
 }`;
 export const SHADOW_CAPE_FRAG = SHADOW_FRAG.replace('#version 300 es', '#version 300 es\n#define CAPE 1');

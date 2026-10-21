@@ -444,7 +444,7 @@ export function extractPieces(glb, opts = {}) {
 const NO_PATTERN_MASK = '0xf37a4e756300ab32';
 
 // the armor shader's netting variant (game build 25988413: the Mimetic armors' scrim): layer 1 of the ID masks cuts
-// holes (red above 0.5, in every pass) and the part is two-sided (research/version-history/build-25988413-shaders.md
+// holes (alpha above 0.5, in every pass) and the part is two-sided (research/version-history/build-25988413-shaders.md
 // §6.2 in HD2-Modding-Lab)
 export const NETTING_BASE = '0x8e7efcdf45ac19cf';
 const holes = p => p.params?.fd_base_material === NETTING_BASE;

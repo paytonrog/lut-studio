@@ -10,10 +10,11 @@ import (
 )
 
 // NettingBase: the armor shader's netting variant (game build 25988413: the Mimetic armors' scrim), which cuts holes
-// where layer 1 of its ID mask is red above 0.5 and takes no zone from that channel (render.js NETTING_BASE).
+// where layer 1 of its ID mask has alpha above 0.5 and takes no zone from that channel (render.js NETTING_BASE).
+// (The pixel shader samples the mask as .wxyz: its first component, the hole test, is the texel's alpha.)
 var NettingBase = stingray.Hash{Value: 0x8e7efcdf45ac19cf}
 
-// HoleMask: ID mask m is a netting material's (layer 1's red: holes), for a mask MasksOfLUT has listed.
+// HoleMask: ID mask m is a netting material's (layer 1's alpha: holes), for a mask MasksOfLUT has listed.
 func (g *Game) HoleMask(m uint64) bool {
 	g.maskMu.Lock()
 	defer g.maskMu.Unlock()

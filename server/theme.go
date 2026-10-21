@@ -364,15 +364,15 @@ func (s *Server) coverage(p *project.Project, v *project.Variant, h string, rows
 		if len(px) < n*layers*4 {
 			continue
 		}
-		holes := layers > 1 && g.HoleMask(m) // (netting: layer 1's red is holes, not a zone)
+		holes := layers > 1 && g.HoleMask(m) // (netting: layer 1's alpha is holes, not a zone)
 		for i := 0; i < n; i++ {
-			if holes && px[(n+i)*4] > 127 {
+			if holes && px[(n+i)*4+3] > 127 {
 				continue
 			}
 			z := -1
 			for l := 0; l < layers; l++ {
 				for c := 0; c < 4; c++ {
-					if holes && l == 1 && c == 0 {
+					if holes && l == 1 && c == 3 {
 						continue
 					}
 					if px[(l*n+i)*4+c] >= 127 {
