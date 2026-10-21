@@ -280,6 +280,11 @@ uniform int uDamageMask;           // vehicles: damage_mask_selector, one bit pe
 uniform float uDamageTile;         // vehicles: vehicle_damage_data_tile
 uniform sampler2DArray uDamageTex; // vehicles: vehicle_damage_data (.rg normal, .b amount, .a edge amount)
 #endif
+uniform float uWebLayer;           // cobweb_tiler: its layer of uDetail (the shader has 16 samplers)
+uniform float uWebInt;             // cobweb_intensity (the Cobwebs slider; 0: none)
+uniform vec3 uWebColor;            // cobweb_color
+uniform float uWebRough, uWebRes;  // cobweb_roughness, cobweb_resolution
+uniform vec2 uWebOff;              // the random tile offset from object_random + cobweb_uv_seed
 uniform sampler2DArray uDecalSheet;// emblem atlas (clamped): capes' decals; armor base 0xf5eb's decal sheet
 
 uniform sampler2D uLut;            // material LUT, RGBA32F, 23 x zones, texelFetch only
@@ -290,7 +295,7 @@ uniform sampler2DArray uIdMasks;   uniform int uIdLayers;
 uniform int uHoles;                // the netting (NETTING_BASE): layer 1's red is a hole mask, the part two-sided
 uniform sampler2DArray uBaseData;
 uniform sampler2DArray uPatMasks;  uniform int uPatLayers;
-uniform sampler2DArray uDetail;    // customization_detail_tiler_array, 26 layers
+uniform sampler2DArray uDetail;    // customization_detail_tiler_array, 26 layers (+ cobweb_tiler: uWebLayer)
 uniform sampler2DArray uCamo;      // customization_camo_tiler_array, 5 layers
 uniform sampler2DArray uComposite; // 2 layers
 uniform sampler2DArray uWDirt;     // weathering_dirt     .rg normal .b frost tint .a dirt pattern / burn phase
@@ -853,6 +858,16 @@ void main() {
   vec2 v = vec2(1.0 - Gt.r - Bt.r, Gt.g + Bt.g - 1.0) * nf * uBGNInt;
   float wN = sat(Bt.a * bm * uBloodNFade + Gt.a * gm * uGunkNFade) * pow(1.0 - fuzzC, 20.0);
   gradN = mix(gradN, grad(v, T1, B1), wN);
+
+  // ---- cobwebs (game build 25988413: armor, capes, the camo families): cobweb_tiler over UV1, .b coverage, .a the
+  // growth threshold (strands appear as the intensity rises), .rg the strands' normal; color and roughness blend in
+  if (uWebInt > 0.0) {
+    vec4 Wt = texture(uDetail, vec3(vUv1 * uWebRes + uWebOff, uWebLayer));
+    float wa = 2.0 * pow(Wt.a, 6.0) >= 1.0 - uWebInt ? sat(Wt.b * uWebInt) : 0.0;
+    gradN -= wa * grad(n2(Wt), T1, B1);
+    albedo = sat(albedo + wa * (uWebColor - albedo));
+    rough = sat(rough + wa * (uWebRough - rough));
+  }
 
 #ifdef CAPE
   // cape 4.8: the tear edge (paler, rougher torn cloth; tear_amount is 0 on stock materials)

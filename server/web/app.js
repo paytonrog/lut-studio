@@ -2228,6 +2228,7 @@ const WORLD_UI = [
   ['snow', 'Snow', 'Snow mode (replaces mud); under a planet light, the color of that planet snow (else a neutral white)'],
   ['frost', 'Frost', 'Pale blue-white frost on the grunge pattern'],
   ['burn', 'Burn', 'Animated burn glow on non-metal edges (replaces the LUT glow)'],
+  ['cobweb', 'Cobwebs', 'Cobwebs over armor and capes (game build 25988413): strands grow in as it rises, in the cobweb color of the material'],
 ];
 function buildWorldSliders() {
   const box = $('worldSliders');

@@ -459,7 +459,21 @@ export const DEBUG_VIEWS = [
 
 // mission-wear sliders -> the shader's world inputs
 // (damage: vehicles' per-instance vehicle_damage, the game's 1 - health / max)
-export const WORLD = { dirt: 0, mud: 0, blood: 0, gunk: 0, wet: 0, snow: 0, frost: 0, burn: 0, scorch: 0, damage: 0 };
+export const WORLD = { dirt: 0, mud: 0, blood: 0, gunk: 0, wet: 0, snow: 0, frost: 0, burn: 0, scorch: 0, damage: 0, cobweb: 0 };
+
+// cobwebs (game build 25988413): the cobweb_tiler every material with cobweb settings binds, and those settings by
+// name or, as filediver doesn't know the names, by thin hash
+export const COBWEB_TILER = '0x0d371130ba00addb';
+const WEB_KEYS = { cobweb_intensity: '0x8aefc6d8', cobweb_color: '0xaa31973b', cobweb_roughness: '0xdf9d64e9',
+  cobweb_uv_seed: '0x22aa32ae', cobweb_resolution: '0x1d3c6a38' };
+const webParam = (params, k) => params?.[k] ?? params?.[WEB_KEYS[k]];
+// the shader's tile offset: uint(object_random + cobweb_uv_seed), its low bits as two floats in [0, 1) (the detail
+// tilers' hash; object_random is 0 here, as for uRnd)
+function webOffset(seed) {
+  const x = Math.trunc(seed) >>> 0, f = new Float32Array(1), i = new Uint32Array(f.buffer);
+  const r = k => { i[0] = (k & 0x7fffff) | 0x3f800000; return f[0] - 1; };
+  return [r(x), r(x >>> 9)];
+}
 
 // the vehicle base material's (0x43865ef50d88395e) vehicle_damage_data, kept by every material on that base
 export const VEHICLE_DAMAGE_DATA = '0xd8aa88a9151b4ed8';
@@ -717,7 +731,34 @@ export class Renderer {
   }
 
   async loadShared() {
-    [this.detail] = await Promise.all([this.loadTexture('detail'), this.loadTables()]);
+    const [detail, web] = await Promise.all([this.loadTexture('detail'), this.loadTexture(COBWEB_TILER).catch(() => null), this.loadTables()]);
+    this.detail = detail; this.webLayer = -1;
+    if (detail && web) {   // the cobweb tiler as one more layer of the detail array (no sampler left for it)
+      this.detail = this.withLayer(detail, web);
+      this.webLayer = detail.layers;
+      for (const [k, t] of [['detail', detail], [COBWEB_TILER, web]]) { this.gl.deleteTexture(t.tex); this.tex.delete(k); }
+    }
+  }
+
+  // array a with texture b (layer 0, scaled to a's size) as one more layer, mipmapped
+  withLayer(a, b) {
+    const gl = this.gl, { w, h } = a, n = a.layers + 1, tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, Math.floor(Math.log2(Math.max(w, h))) + 1, gl.RGBA8, w, h, n);
+    const rf = gl.createFramebuffer(), df = gl.createFramebuffer();
+    for (let l = 0; l < n; l++) {
+      const [src, sl] = l < a.layers ? [a, l] : [b, 0];
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, rf); gl.framebufferTextureLayer(gl.READ_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, src.tex, 0, sl);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, df); gl.framebufferTextureLayer(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tex, 0, l);
+      gl.blitFramebuffer(0, 0, src.w, src.h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+    }
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+    gl.deleteFramebuffer(rf); gl.deleteFramebuffer(df);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+    gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return { tex, layers: n, w, h };
   }
 
   // the lighting's tables (shaders.js uLuts): layer 0 ibl_specular_brdf_lut, 1 ibl_brdf_lut (64 x 64 at texel 1,
@@ -850,6 +891,7 @@ export class Renderer {
     // the vehicle base material (damage_mask_selector): its vehicle_damage_data; filediver's glTF leaves that slot
     // out, and every material on that base keeps the base's own texture
     const damageTex = prim.params?.damage_mask_selector !== undefined ? await this.loadTexture(t.damage ?? VEHICLE_DAMAGE_DATA) : null;
+    const web = webParam(prim.params, 'cobweb_intensity') !== undefined;   // (the materials with cobwebs)
     let skin = null;
     if (prim.skin) {
       const jt = gl.createTexture();
@@ -868,7 +910,7 @@ export class Renderer {
     const patMaskHash = prim.kind !== 'cape' && t.patternMasks && t.patternMasks !== NO_PATTERN_MASK ? t.patternMasks : null;
     const splat = this.splatTexture(wBlood, wBug);   // (its own texture when bugLayer is 1: freed with the piece)
     const piece = { decalHash, scalarHash, idMaskHash, patMaskHash, uvWire, vao, buffers, count: prim.idx.length, idMasks, baseData, patMasks, camo, composite, skin, shift: prim.shift ?? [0, 0, 0],
-      wDirt, wSpecial, wSplat: splat.tex, bugLayer: splat.bugLayer, damageTex, lutKeys, info, kind: prim.kind, ...cape,
+      wDirt, wSpecial, wSplat: splat.tex, bugLayer: splat.bugLayer, damageTex, web, lutKeys, info, kind: prim.kind, ...cape,
       params: prim.params, bounds: bounds(prim.pos) };
     if (epoch !== this.epoch) {
       gl.deleteVertexArray(vao); buffers.forEach(b => gl.deleteBuffer(b));
@@ -1266,6 +1308,15 @@ export class Renderer {
         gl.uniform1f(u.uGunkScale, P('gunk_scale', 0.3)); gl.uniform1f(u.uGunkMin, P('bug_gunk_minimum', 0));
         gl.uniform1f(u.uBloodNFade, P('blood_normal_fade', 0.5)); gl.uniform1f(u.uGunkNFade, P('gunk_normal_fade', 0.8));
         gl.uniform1f(u.uBGNInt, P('blood_gunk_normal_intensity', 0.7));
+        const web = p.web && this.webLayer >= 0 ? (this.worldRaw?.cobweb ?? this.world.cobweb ?? 0) : 0;
+        gl.uniform1f(u.uWebInt, web);
+        if (web > 0) {
+          gl.uniform1f(u.uWebLayer, this.webLayer);
+          gl.uniform3fv(u.uWebColor, webParam(p.params, 'cobweb_color') ?? [0.7913, 0.5149, 0]);
+          gl.uniform1f(u.uWebRough, webParam(p.params, 'cobweb_roughness')?.[0] ?? 0);
+          gl.uniform1f(u.uWebRes, webParam(p.params, 'cobweb_resolution')?.[0] ?? 1);
+          gl.uniform2fv(u.uWebOff, webOffset(webParam(p.params, 'cobweb_uv_seed')?.[0] ?? 0));
+        }
         gl.uniform3fv(u.uBloodColor, p.params.blood_color ?? [0.251, 0, 0.051]);
         gl.uniform3fv(u.uGunkColor, p.params.special_gunk_color ?? [0.494, 0.337, 0.133]);
         this.bindTex(10, gl.TEXTURE_2D_ARRAY, (p.wDirt ?? this.blank).tex, u.uWDirt);
