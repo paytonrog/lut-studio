@@ -217,7 +217,7 @@ function planetEnv(p, w = null) {
   const e = { ...ENVS['Studio'], sun, sunIntensity: sunI, sunElev: elev, zenith, horizon,
     ground: gnd.map(v => v * E), exposure: p.exposureTarget / Math.max(lum709(gnd) * E, 1e-4), planet: p, weather: w, grade: {},
     fogDist: Math.min(150, Math.max(15, 60 / Math.max(w?.fogDensity ?? 0.5, 0.3))) };
-  if (!gradeCache.has(p.id)) gradeCache.set(p.id, R.loadGrade('planets/' + p.id + '.png'));
+  if (!gradeCache.has(p.id)) gradeCache.set(p.id, R.loadGrade('planets/' + (p.grade ?? p.id) + '.png'));   // (a city: its biome's)
   gradeCache.get(p.id).then(t => { e.grade.tex = t.tex; }).catch(err => { gradeCache.delete(p.id); status('Planet light: ' + err.message, true); });
   if (!groundCache.has(p.id)) groundCache.set(p.id, groundTile(p));
   groundCache.get(p.id).then(t => { e.groundTile = t; }).catch(() => groundCache.delete(p.id));

@@ -4,11 +4,11 @@
     "version": "0.5.0"
   },
   "table": {
-    "bytes": 170729,
+    "bytes": 177711,
     "file": "table.json.gz",
     "format": 1,
-    "game_build": "25480438",
-    "generated": "2026-10-17T21:56:28Z",
-    "sha256": "6b615137fb282bb7ad32fc610ce47e686df183799a3a5d87dda816281adea149"
+    "game_build": "25988413",
+    "generated": "2026-10-21T15:43:30Z",
+    "sha256": "3589c3813f7dfaf202bd5e39ccfec866370c1b12d1e307a71363613cef92bce8"
   }
 }

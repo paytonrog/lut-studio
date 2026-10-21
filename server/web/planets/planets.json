@@ -11247,6 +11247,2742 @@
     }
    ],
    "hills": 3
+  },
+  {
+   "id": "sandy_base_city",
+   "name": "Desert Dunes City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.78,
+    0.75,
+    0.72
+   ],
+   "ambientTint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "ambient": 1.0,
+   "exposureTarget": 0.3,
+   "ground": [
+    {
+     "name": "",
+     "texture": "0x480495fb579a7d49",
+     "albedo": [
+      0.535,
+      0.2877,
+      0.1107
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6e35f47727b30153",
+     "albedo": [
+      0.4922,
+      0.2684,
+      0.1079
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e483fc56b299a86",
+     "albedo": [
+      0.4969,
+      0.27,
+      0.1089
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x55d89042ea2cdf1f",
+     "albedo": [
+      0.4389,
+      0.2022,
+      0.0887
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6d1a9f7dadad67df",
+     "albedo": [
+      0.5705,
+      0.3116,
+      0.1201
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x5f595ffc5c75fe68",
+     "albedo": [
+      0.3247,
+      0.1466,
+      0.0388
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x0a01b40f4b071011",
+     "albedo": [
+      0.3103,
+      0.1413,
+      0.0357
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xe49405c1286c1d9f",
+     "albedo": [
+      0.3961,
+      0.1679,
+      0.0421
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x17576e7675ad27af",
+     "albedo": [
+      0.6223,
+      0.3644,
+      0.1338
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e2f5e65ba68caee",
+     "albedo": [
+      0.6277,
+      0.3561,
+      0.1367
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xba4048a9363acefe",
+     "albedo": [
+      0.5821,
+      0.3266,
+      0.1262
+     ]
+    }
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 0.33,
+     "default": true,
+     "sun": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.6115,
+      0.5647,
+      0.5198
+     ],
+     "fogDensity": 0.15,
+     "wet": 0.02,
+     "snow": 0.0
+    },
+    {
+     "label": "Storm",
+     "share": 0.02,
+     "default": false,
+     "sun": [
+      0.497,
+      0.2748,
+      0.1461
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.6115,
+      0.5647,
+      0.5198
+     ],
+     "fogDensity": 3.25,
+     "wet": 0.02,
+     "snow": 0.0
+    },
+    {
+     "label": "Hazy",
+     "share": 0.33,
+     "default": false,
+     "sun": [
+      0.916,
+      0.916,
+      0.916
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.6115,
+      0.5647,
+      0.5198
+     ],
+     "fogDensity": 0.22,
+     "wet": 0.02,
+     "snow": 0.0
+    },
+    {
+     "label": "Heatwave",
+     "share": 0.33,
+     "default": false,
+     "sun": [
+      1.719,
+      1.4285,
+      1.2411
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.6115,
+      0.5647,
+      0.5198
+     ],
+     "fogDensity": 0.01,
+     "wet": 0.02,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0x55d89042ea2cdf1f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.2572,
+      0.0967,
+      0.0571
+     ],
+     "weight": 0.1906
+    },
+    {
+     "kind": "rock",
+     "albedo": [
+      0.1871,
+      0.068,
+      0.053
+     ],
+     "weight": 0.0828
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1984,
+      0.0945,
+      0.0067
+     ],
+     "weight": 0.0788
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1585,
+      0.0948,
+      0.0311
+     ],
+     "weight": 0.0195
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "sandy_base"
+  },
+  {
+   "id": "sandy_spiky_city",
+   "name": "Desert Cliffs City",
+   "sun": [
+    1.0,
+    0.93,
+    0.86
+   ],
+   "fog": [
+    0.47,
+    0.56,
+    0.58
+   ],
+   "ambientTint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "ambient": 1.0,
+   "exposureTarget": 0.3,
+   "ground": [
+    {
+     "name": "",
+     "texture": "0x480495fb579a7d49",
+     "albedo": [
+      0.2382,
+      0.0743,
+      0.0432
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6e35f47727b30153",
+     "albedo": [
+      0.2696,
+      0.0706,
+      0.0332
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e483fc56b299a86",
+     "albedo": [
+      0.2716,
+      0.0717,
+      0.0341
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x55d89042ea2cdf1f",
+     "albedo": [
+      0.2201,
+      0.0658,
+      0.0525
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6d1a9f7dadad67df",
+     "albedo": [
+      0.2711,
+      0.076,
+      0.0398
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x5f595ffc5c75fe68",
+     "albedo": [
+      0.1839,
+      0.0685,
+      0.0413
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x0a01b40f4b071011",
+     "albedo": [
+      0.1781,
+      0.0641,
+      0.0375
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xe49405c1286c1d9f",
+     "albedo": [
+      0.2204,
+      0.0679,
+      0.0364
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x17576e7675ad27af",
+     "albedo": [
+      0.3356,
+      0.0855,
+      0.027
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e2f5e65ba68caee",
+     "albedo": [
+      0.3417,
+      0.0807,
+      0.0306
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xba4048a9363acefe",
+     "albedo": [
+      0.2973,
+      0.0771,
+      0.0345
+     ]
+    }
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 0.69,
+     "default": true,
+     "sun": [
+      0.937,
+      0.8667,
+      0.8086
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.2195,
+      0.3119,
+      0.3341
+     ],
+     "fogDensity": 0.95,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Dustdevils",
+     "share": 0.02,
+     "default": false,
+     "sun": [
+      0.536,
+      0.4958,
+      0.4626
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.2195,
+      0.3119,
+      0.3341
+     ],
+     "fogDensity": 0.45,
+     "wet": 0.04,
+     "snow": 0.0
+    },
+    {
+     "label": "Sandrain",
+     "share": 0.29,
+     "default": false,
+     "sun": [
+      0.536,
+      0.4958,
+      0.4626
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.3704,
+      0.182,
+      0.134
+     ],
+     "fogDensity": 0.5,
+     "wet": 0.0,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0x55d89042ea2cdf1f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.1324,
+      0.0612,
+      0.0498
+     ],
+     "weight": 0.1906
+    },
+    {
+     "kind": "rock",
+     "albedo": [
+      0.0976,
+      0.0512,
+      0.045
+     ],
+     "weight": 0.0828
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.2579,
+      0.1234,
+      0.0743
+     ],
+     "weight": 0.0788
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.2128,
+      0.1528,
+      0.1259
+     ],
+     "weight": 0.0195
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "sandy_spiky"
+  },
+  {
+   "id": "sandy_acid_city",
+   "name": "Acidic Badlands City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.86,
+    0.81,
+    0.63
+   ],
+   "ambientTint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "ambient": 1.0,
+   "exposureTarget": 0.3,
+   "ground": [
+    {
+     "name": "",
+     "texture": "0x480495fb579a7d49",
+     "albedo": [
+      0.5514,
+      0.4331,
+      0.1591
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6e35f47727b30153",
+     "albedo": [
+      0.4751,
+      0.3524,
+      0.1054
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e483fc56b299a86",
+     "albedo": [
+      0.4812,
+      0.3561,
+      0.1074
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x55d89042ea2cdf1f",
+     "albedo": [
+      0.4415,
+      0.2985,
+      0.0904
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6d1a9f7dadad67df",
+     "albedo": [
+      0.5701,
+      0.4436,
+      0.1513
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x5f595ffc5c75fe68",
+     "albedo": [
+      0.3465,
+      0.2382,
+      0.0479
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x0a01b40f4b071011",
+     "albedo": [
+      0.3247,
+      0.2237,
+      0.0429
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xe49405c1286c1d9f",
+     "albedo": [
+      0.3253,
+      0.2134,
+      0.0453
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x17576e7675ad27af",
+     "albedo": [
+      0.5849,
+      0.4555,
+      0.1278
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e2f5e65ba68caee",
+     "albedo": [
+      0.5862,
+      0.4467,
+      0.1241
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xba4048a9363acefe",
+     "albedo": [
+      0.5626,
+      0.4348,
+      0.1353
+     ]
+    }
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 0.96,
+     "default": true,
+     "sun": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.7422,
+      0.6545,
+      0.395
+     ],
+     "fogDensity": 0.6,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Acidstorm",
+     "share": 0.04,
+     "default": false,
+     "sun": [
+      0.454,
+      0.454,
+      0.454
+     ],
+     "ambient": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "fog": [
+      0.4687,
+      0.499,
+      0.1134
+     ],
+     "fogDensity": 1.1,
+     "wet": 0.4,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0x55d89042ea2cdf1f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.3172,
+      0.1989,
+      0.0931
+     ],
+     "weight": 0.1906
+    },
+    {
+     "kind": "rock",
+     "albedo": [
+      0.2661,
+      0.1652,
+      0.0794
+     ],
+     "weight": 0.0828
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.2686,
+      0.2647,
+      0.3175
+     ],
+     "weight": 0.0788
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.3453,
+      0.2778,
+      0.2826
+     ],
+     "weight": 0.0195
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "sandy_acid"
+  },
+  {
+   "id": "sandy_mineral_city",
+   "name": "Rocky Canyons City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.4,
+    0.53,
+    0.38
+   ],
+   "ambientTint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "ambient": 1.0,
+   "exposureTarget": 0.3,
+   "ground": [
+    {
+     "name": "",
+     "texture": "0x480495fb579a7d49",
+     "albedo": [
+      0.1021,
+      0.0754,
+      0.0769
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6e35f47727b30153",
+     "albedo": [
+      0.0703,
+      0.1012,
+      0.1084
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e483fc56b299a86",
+     "albedo": [
+      0.0723,
+      0.103,
+      0.1097
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x55d89042ea2cdf1f",
+     "albedo": [
+      0.0681,
+      0.1073,
+      0.1149
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x56f9934c3015e865",
+     "albedo": [
+      0.086,
+      0.0829,
+      0.0882
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x5f595ffc5c75fe68",
+     "albedo": [
+      0.2097,
+      0.1054,
+      0.0698
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x0a01b40f4b071011",
+     "albedo": [
+      0.1917,
+      0.0951,
+      0.062
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xe49405c1286c1d9f",
+     "albedo": [
+      0.1511,
+      0.0906,
+      0.0733
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xaddbdfc2f32deb6b",
+     "albedo": [
+      0.1022,
+      0.063,
+      0.0627
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x02960bd9c6ac2278",
+     "albedo": [
+      0.1128,
+      0.0515,
+      0.0471
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x516da930c9acc94a",
+     "albedo": [
+      0.0886,
+      0.0787,
+      0.0832
+     ]
+    }
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 1.0,
+     "default": true,
+     "sun": [
+      0.597,
+      0.597,
+      0.597
+     ],
+     "ambient": [
+      1.2,
+      1.2,
+      1.2
+     ],
+     "fog": [
+      0.16,
+      0.2783,
+      0.1444
+     ],
+     "fogDensity": 0.5,
+     "wet": 0.0,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0x55d89042ea2cdf1f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.0985,
+      0.0963,
+      0.0879
+     ],
+     "weight": 0.1906
+    },
+    {
+     "kind": "rock",
+     "albedo": [
+      0.0766,
+      0.0714,
+      0.0825
+     ],
+     "weight": 0.0828
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1507,
+      0.0311,
+      0.0356
+     ],
+     "weight": 0.0788
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1498,
+      0.0454,
+      0.0279
+     ],
+     "weight": 0.0195
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "sandy_mineral"
+  },
+  {
+   "id": "sandy_moon_city",
+   "name": "Moon City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.17,
+    0.23,
+    0.27
+   ],
+   "ambientTint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "ambient": 1.0,
+   "exposureTarget": 0.3,
+   "ground": [
+    {
+     "name": "",
+     "texture": "0x480495fb579a7d49",
+     "albedo": [
+      0.32,
+      0.3142,
+      0.3072
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6e35f47727b30153",
+     "albedo": [
+      0.2816,
+      0.2771,
+      0.2699
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x1e483fc56b299a86",
+     "albedo": [
+      0.2856,
+      0.2811,
+      0.2739
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x55d89042ea2cdf1f",
+     "albedo": [
+      0.2336,
+      0.2327,
+      0.2325
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6d1a9f7dadad67df",
+     "albedo": [
+      0.3327,
+      0.3265,
+      0.3184
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x5f595ffc5c75fe68",
+     "albedo": [
+      0.2755,
+      0.2754,
+      0.2754
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x0a01b40f4b071011",
+     "albedo": [
+      0.2585,
+      0.2584,
+      0.2584
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0xe49405c1286c1d9f",
+     "albedo": [
+      0.2421,
+      0.244,
+      0.2463
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x91e4866e8ed3a5f9",
+     "albedo": [
+      0.3418,
+      0.3355,
+      0.3257
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x6804e31c209c08b0",
+     "albedo": [
+      0.337,
+      0.3308,
+      0.3215
+     ]
+    },
+    {
+     "name": "",
+     "texture": "0x598d7ec016645083",
+     "albedo": [
+      0.3293,
+      0.3231,
+      0.3143
+     ]
+    }
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 1.0,
+     "default": true,
+     "sun": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "ambient": [
+      1.2,
+      1.2,
+      1.2
+     ],
+     "fog": [
+      0.0287,
+      0.0531,
+      0.0743
+     ],
+     "fogDensity": 0.1,
+     "wet": 0.0,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0x55d89042ea2cdf1f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.1865,
+      0.1865,
+      0.1865
+     ],
+     "weight": 0.1898
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1833,
+      0.1192,
+      0.1024
+     ],
+     "weight": 0.1062
+    },
+    {
+     "kind": "rock",
+     "albedo": [
+      0.108,
+      0.108,
+      0.108
+     ],
+     "weight": 0.0828
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "sandy_moon"
+  },
+  {
+   "id": "arctic_glacier_base_city",
+   "name": "Icy Glaciers City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.7,
+    0.81,
+    1.0
+   ],
+   "ambientTint": [
+    0.31,
+    0.64,
+    1.0
+   ],
+   "ambient": 1.0,
+   "exposureTarget": 0.225,
+   "ground": [
+    {
+     "name": "arctic_dirt",
+     "texture": "0x2ee56a5a4a368be8",
+     "albedo": [
+      0.0886,
+      0.0935,
+      0.1027
+     ]
+    },
+    {
+     "name": "arctic_pebbles_small",
+     "texture": "0x5d750610aa1d5611",
+     "albedo": [
+      0.068,
+      0.0698,
+      0.0702
+     ]
+    },
+    {
+     "name": "arctic_pebbles_heavy",
+     "texture": "0x279c476d8167e09e",
+     "albedo": [
+      0.1049,
+      0.1139,
+      0.1188
+     ]
+    },
+    {
+     "name": "arctic_rock",
+     "texture": "0xaebb53fd3209d85f",
+     "albedo": [
+      0.1276,
+      0.1611,
+      0.1872
+     ]
+    },
+    {
+     "name": "arctic_road",
+     "texture": "0x69546176ee4c171e",
+     "albedo": [
+      0.0512,
+      0.0459,
+      0.0419
+     ]
+    },
+    {
+     "name": "ice_clear",
+     "texture": "0xad47e724c0f66622",
+     "albedo": [
+      0.0145,
+      0.0197,
+      0.0319
+     ]
+    }
+   ],
+   "snow": [
+    0.7099,
+    0.7099,
+    0.7099
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 0.98,
+     "default": true,
+     "sun": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "ambient": [
+      0.31,
+      0.643,
+      1.0
+     ],
+     "fog": [
+      0.4914,
+      0.6545,
+      1.0
+     ],
+     "fogDensity": 0.2,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Cloudy",
+     "share": 0.0,
+     "default": false,
+     "sun": [
+      0.919,
+      0.919,
+      0.919
+     ],
+     "ambient": [
+      0.31,
+      0.643,
+      1.0
+     ],
+     "fog": [
+      0.4914,
+      0.6545,
+      1.0
+     ],
+     "fogDensity": 0.2,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Snowstorm",
+     "share": 0.02,
+     "default": false,
+     "sun": [
+      0.073,
+      0.1302,
+      0.2
+     ],
+     "ambient": [
+      0.9074,
+      0.9477,
+      1.1934
+     ],
+     "fog": [
+      0.5054,
+      0.7306,
+      1.0
+     ],
+     "fogDensity": 4.0,
+     "wet": 0.0,
+     "snow": 1.0
+    }
+   ],
+   "rockTex": "0xaebb53fd3209d85f",
+   "foliage": [
+    {
+     "kind": "plant",
+     "albedo": [
+      0.7291,
+      0.7413,
+      0.7517
+     ],
+     "weight": 0.0492
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.4382,
+      0.4459,
+      0.4388
+     ],
+     "weight": 0.0224
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.244,
+      0.2341,
+      0.2282
+     ],
+     "weight": 0.0109
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.4352,
+      0.4215,
+      0.4158
+     ],
+     "weight": 0.0022
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "arctic_glacier_base"
+  },
+  {
+   "id": "arctic_glacier_coldrocky_city",
+   "name": "Boneyard City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.71,
+    0.78,
+    0.8
+   ],
+   "ambientTint": [
+    0.75,
+    0.86,
+    0.82
+   ],
+   "ambient": 2.0,
+   "exposureTarget": 0.225,
+   "ground": [
+    {
+     "name": "arctic_dirt",
+     "texture": "0x5e30dea576f1952c",
+     "albedo": [
+      0.0821,
+      0.0788,
+      0.0791
+     ]
+    },
+    {
+     "name": "arctic_pebbles_small",
+     "texture": "0x5d750610aa1d5611",
+     "albedo": [
+      0.0437,
+      0.0434,
+      0.0436
+     ]
+    },
+    {
+     "name": "arctic_pebbles_heavy",
+     "texture": "0x279c476d8167e09e",
+     "albedo": [
+      0.0824,
+      0.0825,
+      0.0842
+     ]
+    },
+    {
+     "name": "arctic_rock",
+     "texture": "0xaebb53fd3209d85f",
+     "albedo": [
+      0.0618,
+      0.0732,
+      0.0691
+     ]
+    },
+    {
+     "name": "arctic_road",
+     "texture": "0x69546176ee4c171e",
+     "albedo": [
+      0.0567,
+      0.0687,
+      0.071
+     ]
+    },
+    {
+     "name": "snow_fresh",
+     "texture": "0x2ee56a5a4a368be8",
+     "albedo": [
+      0.0951,
+      0.0903,
+      0.0892
+     ]
+    }
+   ],
+   "snow": [
+    0.5756,
+    0.7019,
+    0.8276
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 0.0,
+     "default": false,
+     "sun": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "ambient": [
+      0.749,
+      0.859,
+      0.816
+     ],
+     "fog": [
+      0.5013,
+      0.6053,
+      0.64
+     ],
+     "fogDensity": 0.1,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Overcast",
+     "share": 0.73,
+     "default": true,
+     "sun": [
+      0.724,
+      0.724,
+      0.724
+     ],
+     "ambient": [
+      1.498,
+      1.718,
+      1.632
+     ],
+     "fog": [
+      0.5013,
+      0.6053,
+      0.64
+     ],
+     "fogDensity": 1.4,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Heavy overcast",
+     "share": 0.27,
+     "default": false,
+     "sun": [
+      0.468,
+      0.468,
+      0.468
+     ],
+     "ambient": [
+      1.498,
+      1.718,
+      1.632
+     ],
+     "fog": [
+      0.5013,
+      0.6053,
+      0.64
+     ],
+     "fogDensity": 1.15,
+     "wet": 0.0,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0xaebb53fd3209d85f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.1017,
+      0.1114,
+      0.116
+     ],
+     "weight": 0.3039
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0697,
+      0.0351,
+      0.0181
+     ],
+     "weight": 0.0826
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1033,
+      0.0518,
+      0.0561
+     ],
+     "weight": 0.0522
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0951,
+      0.048,
+      0.067
+     ],
+     "weight": 0.0522
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0986,
+      0.0505,
+      0.0663
+     ],
+     "weight": 0.026
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0736,
+      0.0439,
+      0.0208
+     ],
+     "weight": 0.0134
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "arctic_glacier_coldrocky"
+  },
+  {
+   "id": "arctic_cyberstan_city",
+   "name": "Cyberstan Megafactory City",
+   "sun": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "fog": [
+    0.71,
+    0.78,
+    0.8
+   ],
+   "ambientTint": [
+    0.75,
+    0.86,
+    0.82
+   ],
+   "ambient": 2.0,
+   "exposureTarget": 0.225,
+   "ground": [
+    {
+     "name": "arctic_dirt",
+     "texture": "0x5e30dea576f1952c",
+     "albedo": [
+      0.0821,
+      0.0788,
+      0.0791
+     ]
+    },
+    {
+     "name": "arctic_pebbles_small",
+     "texture": "0x5d750610aa1d5611",
+     "albedo": [
+      0.0437,
+      0.0434,
+      0.0436
+     ]
+    },
+    {
+     "name": "arctic_pebbles_heavy",
+     "texture": "0x279c476d8167e09e",
+     "albedo": [
+      0.0824,
+      0.0825,
+      0.0842
+     ]
+    },
+    {
+     "name": "arctic_rock",
+     "texture": "0xaebb53fd3209d85f",
+     "albedo": [
+      0.0618,
+      0.0732,
+      0.0691
+     ]
+    },
+    {
+     "name": "arctic_road",
+     "texture": "0x69546176ee4c171e",
+     "albedo": [
+      0.0567,
+      0.0687,
+      0.071
+     ]
+    },
+    {
+     "name": "snow_fresh",
+     "texture": "0x2ee56a5a4a368be8",
+     "albedo": [
+      0.0951,
+      0.0903,
+      0.0892
+     ]
+    }
+   ],
+   "snow": [
+    0.5756,
+    0.7019,
+    0.8276
+   ],
+   "weathers": [
+    {
+     "label": "Clear",
+     "share": 0.0,
+     "default": false,
+     "sun": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "ambient": [
+      0.749,
+      0.859,
+      0.816
+     ],
+     "fog": [
+      0.5013,
+      0.6053,
+      0.64
+     ],
+     "fogDensity": 0.1,
+     "wet": 0.0,
+     "snow": 0.0
+    },
+    {
+     "label": "Overcast",
+     "share": 1.0,
+     "default": true,
+     "sun": [
+      0.724,
+      0.724,
+      0.724
+     ],
+     "ambient": [
+      1.498,
+      1.718,
+      1.632
+     ],
+     "fog": [
+      0.5013,
+      0.6053,
+      0.64
+     ],
+     "fogDensity": 1.4,
+     "wet": 0.0,
+     "snow": 0.0
+    }
+   ],
+   "rockTex": "0xaebb53fd3209d85f",
+   "foliage": [
+    {
+     "kind": "rock",
+     "albedo": [
+      0.1017,
+      0.1114,
+      0.116
+     ],
+     "weight": 0.168
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0697,
+      0.0351,
+      0.0181
+     ],
+     "weight": 0.0642
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.1033,
+      0.0518,
+      0.0561
+     ],
+     "weight": 0.0374
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0951,
+      0.048,
+      0.067
+     ],
+     "weight": 0.0374
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0986,
+      0.0505,
+      0.0663
+     ],
+     "weight": 0.0187
+    },
+    {
+     "kind": "plant",
+     "albedo": [
+      0.0736,
+      0.0439,
+      0.0208
+     ],
+     "weight": 0.0134
+    }
+   ],
+   "scenery": [
+    {
+     "unit": "0x0bb634c7632e6fcd",
+     "kind": "other",
+     "w": 22.54,
+     "h": 72.34,
+     "weight": 0.0795,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x41fb7a01c3e101bb",
+     "kind": "other",
+     "w": 27.76,
+     "h": 35.78,
+     "weight": 0.0443,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x0a28fbadb5a1d940",
+     "kind": "other",
+     "w": 20.46,
+     "h": 49.59,
+     "weight": 0.0418,
+     "albedo": [
+      0.1678,
+      0.1635,
+      0.145
+     ]
+    },
+    {
+     "unit": "0xa6cd690df5a625d6",
+     "kind": "other",
+     "w": 17.27,
+     "h": 16.17,
+     "weight": 0.0278,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x26ba5d5ae688498f",
+     "kind": "other",
+     "w": 17.17,
+     "h": 16.08,
+     "weight": 0.0271,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x3675d816fe7e4ca7",
+     "kind": "other",
+     "w": 14.1,
+     "h": 16.71,
+     "weight": 0.0262,
+     "albedo": [
+      0.2837,
+      0.2681,
+      0.2126
+     ]
+    },
+    {
+     "unit": "0x246144231754fff4",
+     "kind": "other",
+     "w": 5.73,
+     "h": 1.94,
+     "weight": 0.0253,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x505e5edd2a89853a",
+     "kind": "other",
+     "w": 17.19,
+     "h": 12.69,
+     "weight": 0.025,
+     "albedo": [
+      0.2736,
+      0.2738,
+      0.2806
+     ]
+    },
+    {
+     "unit": "0x4b7cd895ff08ec3f",
+     "kind": "other",
+     "w": 5.94,
+     "h": 1.95,
+     "weight": 0.0243,
+     "albedo": [
+      0.2422,
+      0.1401,
+      0.1517
+     ]
+    },
+    {
+     "unit": "0x71dda84a377ce150",
+     "kind": "boulder",
+     "w": 13.93,
+     "h": 4.27,
+     "weight": 0.0227,
+     "albedo": [
+      0.1663,
+      0.1425,
+      0.1319
+     ]
+    },
+    {
+     "unit": "0x26e076cfc6fd9568",
+     "kind": "other",
+     "w": 22.99,
+     "h": 6.04,
+     "weight": 0.0224,
+     "albedo": [
+      0.2148,
+      0.2092,
+      0.1923
+     ]
+    }
+   ],
+   "hills": 3,
+   "grade": "arctic_cyberstan"
   }
  ]
 }

@@ -200,6 +200,53 @@ type Piece struct {
 	Mounted           bool   `json:"mounted,omitempty"`   // vehicles: an override of a mounted weapon's material
 }
 
+// camoLookNames: the camouflage types an armor piece can carry its own material LUT for (game build 25988413+: the
+// Mimetic armors and capes; the SEAF soldiers' types 2-4). Type 5 is new in 25988413, its name stripped from the game;
+// "Red" after its LUTs' colors (research/version-history/build-25988413-shaders.md §6).
+var camoLookNames = map[uint32]string{2: "Jungle", 3: "Desert", 4: "Arctic", 5: "Red"}
+
+// camoKits: a kit whose pieces carry camouflage LUTs, once per camouflage type ("<kit>: Jungle camo", as the SEAF
+// looks): every piece with a LUT for that type takes it, the others keep theirs. The game binds those LUTs on
+// planets of that camouflage type.
+func camoKits(k Kit, s datalib.ArmorSet) []Kit {
+	byUnit := map[string]map[uint32]stingray.Hash{}
+	types := map[uint32]bool{}
+	for unit, p := range s.UnitMetadata {
+		for _, v := range p.CamoVariants {
+			if v.MaterialLut.Value == 0 {
+				continue
+			}
+			u := lut.HashString(unit.Value)
+			if byUnit[u] == nil {
+				byUnit[u] = map[uint32]stingray.Hash{}
+			}
+			byUnit[u][v.Type] = v.MaterialLut
+			types[v.Type] = true
+		}
+	}
+	var order []uint32
+	for t := range types {
+		order = append(order, t)
+	}
+	sort.Slice(order, func(i, j int) bool { return order[i] < order[j] })
+	var out []Kit
+	for _, t := range order {
+		name, ok := camoLookNames[t]
+		if !ok {
+			name = fmt.Sprintf("Type %d", t)
+		}
+		c := Kit{ID: fmt.Sprintf("%s.camo%d", k.ID, t), Name: k.Name + ": " + name + " camo", Type: k.Type, Units: k.Units}
+		for _, p := range k.Pieces {
+			if l, ok := byUnit[p.Unit][t]; ok {
+				p.MaterialLUT = hashOrEmpty(l)
+			}
+			c.Pieces = append(c.Pieces, p)
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
 func hashOrEmpty(h stingray.Hash) string {
 	if h.Value == 0 {
 		return ""
@@ -248,6 +295,7 @@ func (g *Game) buildIndexWith(languageMap map[uint32]string) (*Index, error) {
 			return a.Unit < b.Unit
 		})
 		idx.Kits = append(idx.Kits, k)
+		idx.Kits = append(idx.Kits, camoKits(k, s)...)
 	}
 	vk, err := g.vehicleKits(languageMap)
 	if err != nil {
@@ -423,8 +471,8 @@ func (idx *Index) Parts() map[string][]Part {
 	return out
 }
 
-// IndexVersion: bump when the index gains data (2: vehicles; 3: Pelican name; 4: vehicle parts; 5: nth arm; 6: standard skins, extra override lists; 7: weapons; 8: weapon slots only; 9: weapon attachments; 10: weapon variants on their base unit; 11: backpacks; 12: SEAF, the Bastion's cannon; 13: no pattern LUT on pieces without a pattern mask; 14: throwables, attachments, stratagems, gear; 15: SEAF camouflage looks, the SEAF medic and weapons).
-const IndexVersion = 15
+// IndexVersion: bump when the index gains data (2: vehicles; 3: Pelican name; 4: vehicle parts; 5: nth arm; 6: standard skins, extra override lists; 7: weapons; 8: weapon slots only; 9: weapon attachments; 10: weapon variants on their base unit; 11: backpacks; 12: SEAF, the Bastion's cannon; 13: no pattern LUT on pieces without a pattern mask; 14: throwables, attachments, stratagems, gear; 15: SEAF camouflage looks, the SEAF medic and weapons; 16: armor camouflage looks, game build 25988413).
+const IndexVersion = 16
 
 // DataDir: the install's archives (tools).
 func (g *Game) DataDir() *stingray.DataDir { return g.data }

@@ -341,6 +341,22 @@ Object.assign(PRESETS, {
   'Biome: Void Source Forest': T('#514938', '#474f22', '#393327', '#4b4333', { pf: FIN.matte, cc: CM(3, ['#514938', '#474f22', '#878475', '#5e542f']) }),
   'Biome: Super Earth Metropolis': T('#6a6a66', '#3a3c3e', '#1a1c1e', '#5a5a56', { pf: FIN.matte, cc: CM(1, ['#6a6a66', '#3a3c3e', '#8e8c86', '#222426']) }),
 });
+// planet biomes, city: the mega cities on a biome's planets (the game's *_city resource overrides: Super Earth's city,
+// its trees and bushes swapped for the biome's), each lit by its planet (Light: Planets, "<biome> City"); primary the
+// city's big props (its buildings' and rubble's albedo, the same in every biome), secondary the biome's ground (its
+// snow on the arctic ones), trim the streets' oil-dark asphalt, cloth near the primary; the urban digital pattern on
+// the cloth in the city's and the ground's colors; matte
+const CITY = (ground, rubble = '#72706a') => T('#888483', ground, '#1d1c21', '#7a7774', { pf: FIN.matte, cc: CM(0, ['#888483', ground, rubble, '#2a2928'], 2.2) });
+Object.assign(PRESETS, {
+  'Biome: Desert Dunes City': CITY('#ba8b57'),
+  'Biome: Desert Cliffs City': CITY('#8b4c36'),
+  'Biome: Acidic Badlands City': CITY('#b8a15a'),
+  'Biome: Rocky Canyons City': CITY('#5f5351', '#a29f98'),
+  'Biome: Moon City': CITY('#949392', '#5a5856'),
+  'Biome: Icy Glaciers City': CITY('#dbdbdb', '#4e5256'),
+  'Biome: Boneyard City': CITY('#c8daeb', '#4b4c4c'),
+  'Biome: Cyberstan Megafactory City': CITY('#c8daeb', '#6e6251'),
+});
 
 // planet biomes, showcase: each biome's look turned up for show, the counterpart of its field camo (its signature color
 // bright, gloss and metal, the glow of its light: lava, auroras, fireflies, spores, lightning). Where a theme above is
