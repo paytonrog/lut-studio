@@ -427,9 +427,10 @@ func (c attachCand) option(level int) AttachOption {
 // bestCand: of the same-named items of a slot (a "Muzzle Brake" per caliber and its weapon-specific twins), the one
 // this weapon gets: its default item; else the one of its caliber and its default's family ("Rifle 5,5x50mm", not
 // "Whisper Rifle 5,5x50mm") whose extra internal-name words ("Custom Penetrator", "Drum Carbine", "Fastreload") are
-// in the weapon's name, unit or default items, the plain one otherwise. ok = false when every one is of another
-// caliber.
-func bestCand(cs []attachCand, def *datalib.WeaponCustomizableItem, wcal string, ctx []string) (attachCand, bool) {
+// in the weapon's name, unit or default items, the plain one otherwise; a tie goes to the one whose extra words are
+// in name (the menu's name for it: "4x Combat Scope" is COMBAT SCOPE 4x, not the ION SCOPE 4x of game build
+// 25988413). ok = false when every one is of another caliber.
+func bestCand(cs []attachCand, def *datalib.WeaponCustomizableItem, wcal string, ctx, name []string) (attachCand, bool) {
 	defFam := ""
 	if def != nil {
 		defFam = family(def.DebugName)
@@ -444,9 +445,9 @@ func bestCand(cs []attachCand, def *datalib.WeaponCustomizableItem, wcal string,
 			}
 		}
 	}
-	best, bestScore, ok := cs[0], -1<<30, false
+	best, bestScore, bestHits, ok := cs[0], -1<<30, 0, false
 	for _, c := range cs {
-		score := 0
+		score, hits := 0, 0
 		cal := caliber(family(c.it.DebugName))
 		switch {
 		case def != nil && c.id == def.ID.Value:
@@ -471,9 +472,12 @@ func bestCand(cs []attachCand, def *datalib.WeaponCustomizableItem, wcal string,
 			} else {
 				score -= 2
 			}
+			if matchWord(w, name) {
+				hits++
+			}
 		}
-		if score > bestScore {
-			best, bestScore = c, score
+		if score > bestScore || score == bestScore && hits > bestHits {
+			best, bestScore, bestHits = c, score, hits
 		}
 	}
 	return best, ok
@@ -638,6 +642,7 @@ func wikiOptions(slot enum.WeaponCustomizationSlot, listed map[string]int, cands
 			n = a
 		}
 		cs := byName[n]
+		nw := words(n)
 		option := func(c attachCand) AttachOption {
 			o := c.option(lvl)
 			if c.it.NameCased == "" { // no English name in the game: the wiki's
@@ -656,15 +661,18 @@ func wikiOptions(slot enum.WeaponCustomizationSlot, listed map[string]int, cands
 				o := *standard
 				o.Level = lvl
 				add(o)
-			} else if c, ok := bestOf(cs, def, wcal, ctx); ok {
+			} else if c, ok := bestOf(cs, def, wcal, ctx, nw); ok {
 				add(option(c))
 			} else {
 				add(AttachOption{Name: "None", Level: lvl})
 			}
+		case n == "NO ATTACHMENT" || n == "NO CHOKE":
+			// the bare muzzle: nothing in other slots (not an item of that name there, as the AR-23L Liberator
+			// Legacy's default grip of game build 25988413)
 		case len(cs) > 0:
-			c, ok := bestOf(cs, def, wcal, ctx)
+			c, ok := bestOf(cs, def, wcal, ctx, nw)
 			if !ok { // only other calibers' (a gap in the item table): the plainest one
-				c, _ = bestOf(cs, def, "", ctx)
+				c, _ = bestOf(cs, def, "", ctx, nw)
 			}
 			add(option(c))
 		}
@@ -678,11 +686,11 @@ func wikiOptions(slot enum.WeaponCustomizationSlot, listed map[string]int, cands
 	return out
 }
 
-func bestOf(cs []attachCand, def *datalib.WeaponCustomizableItem, wcal string, ctx []string) (attachCand, bool) {
+func bestOf(cs []attachCand, def *datalib.WeaponCustomizableItem, wcal string, ctx, name []string) (attachCand, bool) {
 	if len(cs) == 0 {
 		return attachCand{}, false
 	}
-	return bestCand(cs, def, wcal, ctx)
+	return bestCand(cs, def, wcal, ctx, name)
 }
 
 // guessOptions: every attachment of the slot that fits the weapon (no per-weapon list): magazines of the default's
