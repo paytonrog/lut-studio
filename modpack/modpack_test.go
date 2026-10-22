@@ -3,6 +3,7 @@ package modpack
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"io"
 	"os"
@@ -24,6 +25,23 @@ func TestArchiveRoundTrip(t *testing.T) {
 	}
 	if len(headerStamp) != 56 {
 		t.Fatalf("header stamp %d bytes", len(headerStamp))
+	}
+	// The loaded-buffer layout of the game's own archives: rows at running totals of 256-rounded sizes, the totals in
+	// the header (the sample's 340-byte mains take 512 each, its 1928- and 32-byte GPU data 2048 and 256; rows by name,
+	// the 32-byte one first), main data after the 264-byte table padded to 512.
+	le := binary.LittleEndian
+	if m, g := le.Uint64(a.TOC[32:]), le.Uint64(a.TOC[40:]); m != 1024 || g != 2304 {
+		t.Errorf("header totals %d / %d, want 1024 / 2304", m, g)
+	}
+	rows := 72 + 32
+	for i, want := range [][2]uint64{{0, 0}, {512, 256}} {
+		row := a.TOC[rows+80*i:]
+		if m, g := le.Uint64(row[40:]), le.Uint64(row[48:]); m != want[0] || g != want[1] {
+			t.Errorf("row %d at %d / %d, want %v", i, m, g, want)
+		}
+	}
+	if off := le.Uint64(a.TOC[rows+16:]); off != 512 {
+		t.Errorf("main data at %d, want the table padded to 512", off)
 	}
 	// LUTSTUDIO_ARCHIVE_FIXTURE: a patch archive of the same resources known to load in game - see README "Checks".
 	if f := os.Getenv("LUTSTUDIO_ARCHIVE_FIXTURE"); f != "" {

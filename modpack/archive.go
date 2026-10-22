@@ -15,7 +15,8 @@ const BootArchive = "9ba626afa44a3aa3"
 
 // headerStamp: bytes +16..+72 of every content patch that loads in today's game (157 of 160 deployed patches start
 // with 0xF4F509CE; this is the most common block verbatim). Zeros there gave a fatal "unexpected file" error
-// in game.
+// in game. Its +32/+40 qwords (the donor's main and GPU totals) are overwritten with the archive's own, see
+// WriteArchive.
 var headerStamp = append(mustHex("ce09f5f4000000000c729f9e8872b8bd00a06b0200000000007951"), make([]byte, 29)...)
 
 func mustHex(s string) []byte {
@@ -35,8 +36,12 @@ type Archive struct{ TOC, Stream, GPU []byte }
 
 func align(n, a int) int { return (n + a - 1) / a * a }
 
-// WriteArchive lays out a patch archive as patches that load in game do: 72-byte header, 32-byte type rows, 80-byte file rows grouped by type, main data 16-aligned,
-// stream / GPU data 64-aligned.
+// WriteArchive lays out a patch archive as the game's own archives are: 72-byte header, 32-byte type rows, 80-byte
+// file rows grouped by type, the table padded to 256, main data 16-aligned, stream / GPU data 64-aligned. Each row's
+// +40/+48 is where its main / GPU data goes in the loaded buffers (the sum of the earlier rows' sizes, each rounded
+// up to 256) and header +32/+40 are the buffers' totals: vanilla archives hold exactly these. The game sizes the
+// buffers from the header, so a smaller total than the data (the donor stamp's 5.3 MB GPU total, kept before) has
+// it read past them: the crash 22 s into boot of Adaptive Camo Overhaul v2 2.0.2, whose boot patch held 9.5 MB.
 func WriteArchive(res []Resource) Archive {
 	res = append([]Resource(nil), res...)
 	sort.Slice(res, func(i, j int) bool {
@@ -68,8 +73,9 @@ func WriteArchive(res []Resource) Archive {
 	}
 	rows := len(toc)
 	toc = append(toc, make([]byte, 80*len(res))...)
-	toc = append(toc, make([]byte, align(len(toc), 16)-len(toc))...)
+	toc = append(toc, make([]byte, align(len(toc), 256)-len(toc))...)
 	var gpu, stream []byte
+	var mainSum, gpuSum int
 	for i, r := range res {
 		mainOff := len(toc)
 		toc = append(toc, r.Main...)
@@ -84,6 +90,10 @@ func WriteArchive(res []Resource) Archive {
 		le.PutUint64(row[16:], uint64(mainOff))
 		le.PutUint64(row[24:], uint64(sOff))
 		le.PutUint64(row[32:], uint64(gOff))
+		le.PutUint64(row[40:], uint64(mainSum))
+		le.PutUint64(row[48:], uint64(gpuSum))
+		mainSum += align(len(r.Main), 256)
+		gpuSum += align(len(r.GPU), 256)
 		le.PutUint32(row[56:], uint32(len(r.Main)))
 		le.PutUint32(row[60:], uint32(len(r.Stream)))
 		le.PutUint32(row[64:], uint32(len(r.GPU)))
@@ -91,6 +101,8 @@ func WriteArchive(res []Resource) Archive {
 		le.PutUint32(row[72:], 64)
 		le.PutUint32(row[76:], uint32(i))
 	}
+	le.PutUint64(toc[32:], uint64(mainSum))
+	le.PutUint64(toc[40:], uint64(gpuSum))
 	return Archive{TOC: toc, Stream: stream, GPU: gpu}
 }
 
