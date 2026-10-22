@@ -32,10 +32,12 @@ async function sheetPixels(hash) {
   if (cache.has(hash)) return cache.get(hash);
   let out = null;
   try {
-    const b = new Uint8Array(await (await fetch('/api/tex?hash=' + hash)).arrayBuffer()), dv = new DataView(b.buffer);
+    const r = await fetch('/api/tex?hash=' + hash);
+    if (!r.ok) return null;   // (not kept: asked again next time)
+    const b = new Uint8Array(await r.arrayBuffer()), dv = new DataView(b.buffer);
     const w = dv.getUint32(4, true), h = dv.getUint32(8, true), fmt = dv.getUint32(16, true);
     if (fmt === 0 && w * h > 16 * 16 && b.length >= 20 + w * h * 4) out = { w, h, px: b.slice(20, 20 + w * h * 4) };
-  } catch { }
+  } catch { return null; }
   cache.set(hash, out);
   return out;
 }

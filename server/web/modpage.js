@@ -235,9 +235,15 @@ export async function modPage(app) {
         <div class="row"><button class="mpOUp" ${i ? '' : 'disabled'}>↑</button><button class="mpODown" ${i < opts.length - 1 ? '' : 'disabled'}>↓</button>
           <button class="mpODel">Remove option</button></div></div>`).join('')}`;
   };
+  // (edits saved one after another, each on top of the last one made: a second edit before the first's save is back
+  // keeps the first)
+  let pending = null, queue = Promise.resolve();
   const wireOptions = st => {
-    const list = () => structuredClone(app.state().project.options ?? []);
-    const change = async f => { const l = list(); f(l); await saveOptions(l); render(); };
+    const list = () => structuredClone(pending ?? app.state().project.options ?? []);
+    const change = f => {
+      const l = list(); f(l); pending = l;
+      return (queue = queue.then(async () => { await saveOptions(l); if (pending === l) { pending = null; render(); } }));
+    };
     $('mpAddOpt').onclick = () => change(l => l.push({ name: 'Option ' + (l.length + 1), parts: [], variants: [app.state().variants[0].folder] }));
     $('mpSplit').onclick = async () => { if (confirm('Replace the options with one per item?')) { await saveOptions(splitByItem(app.state())); render(); } };
     const groups = partsOf(st);

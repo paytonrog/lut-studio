@@ -227,12 +227,14 @@ export async function maskDialog(app) {
   const fillParts = () => { $('mkPart').innerHTML = list.map((m, i) => `<option value="${i}">${esc(label(m))}</option>`).join(''); $('mkPart').value = list.indexOf(cur); };
   $('mkPart').onchange = async () => {
     if (dirty && !confirm('Discard the unsaved changes to this mask?')) { $('mkPart').value = list.indexOf(cur); return; }
+    dirty = false; $('mkSave').disabled = true;   // (the old mask's pixels aren't saved over the new part while it loads)
     await R.refreshDecals(cur.hash);
     cur = list[+$('mkPart').value];
     await load();
   };
   $('mkKind').onchange = async () => {
     if (dirty && !confirm('Discard the unsaved changes to this mask?')) { $('mkKind').value = kind; return; }
+    dirty = false; $('mkSave').disabled = true;
     await R.refreshDecals(cur.hash);
     kind = $('mkKind').value; list = lists[kind]; zoneSel = kind === 'pattern' ? 1 : 0;
     cur = list.find(m => m.lut === app.startLut) ?? list[0];

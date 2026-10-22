@@ -925,9 +925,22 @@ export class Renderer {
   // the decal sheets and cape designs of the pieces again (after the variant changed or one was edited): only hash,
   // or all; drops a preview (previewTexture)
   async refreshDecals(hash = null) {
-    if (hash) for (const k of [...this.tex.keys()]) if (k.endsWith(hash)) this.tex.delete(k);
+    const dropped = [];   // (the cached ones read again: freed once no piece shows them)
+    if (hash) for (const [k, t] of [...this.tex]) if (k.endsWith(hash)) { if (t?.tex) dropped.push(t.tex); this.tex.delete(k); }
     const v = this.variant;   // (a later variant switch wins: an older refresh finishing late doesn't overwrite it)
-    const put = (p, key, t) => { if (this.variant === v) p[key] = t; };
+    const put = (p, key, t) => {
+      if (this.variant !== v) return;
+      const old = p[key];
+      p[key] = t;
+      if (old?.preview && old.tex !== t?.tex) dropped.push(old.tex);
+    };
+    try { await this.refreshPieces(hash, put); } finally {
+      const used = new Set(this.pieces.flatMap(p => [p.decalSheet, p.scalar, p.idMasks, p.patMasks].map(t => t?.tex)));
+      for (const t of [...this.tex.values()]) used.add(t?.tex);
+      for (const t of new Set(dropped)) if (t && !used.has(t)) this.gl.deleteTexture(t);
+    }
+  }
+  async refreshPieces(hash, put) {
     await Promise.all(this.pieces.map(async p => {
       if (p.decalHash && (!hash || p.decalHash === hash)) put(p, 'decalSheet', await this.loadTexture(p.decalHash, { clamp: true, key: 'clamp:', variant: true }));
       if (p.scalarHash && (!hash || p.scalarHash === hash)) put(p, 'scalar', await this.loadTexture(p.scalarHash, { variant: true }));
@@ -1344,7 +1357,7 @@ export class Renderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.deleteFramebuffer(fbo); gl.deleteTexture(tex); gl.deleteRenderbuffer(rb);
       if (pick.mode === 2) return { u: (px[0] * 255 + px[1]) / 65025, v: (px[2] * 255 + px[3]) / 65025 };
-      return px[3] ? { piece: px[1], zone: px[0] } : null;
+      return px[3] ? { piece: px[1] + px[2] * 256, zone: px[0] } : null;
     }
     return null;
   }

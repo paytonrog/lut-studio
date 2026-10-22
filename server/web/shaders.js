@@ -454,7 +454,8 @@ void main() {
   }
   zone = min(zone, uLutRows - 1);
 #endif
-  if (uPick == 1) { outColor = vec4(float(zone) / 255.0, uPieceId / 255.0, 0.0, 1.0); return; }
+  // (the zone a LUT row: a cape's back reads past a short LUT's rows; the piece over two bytes, more than 256 parts)
+  if (uPick == 1) { outColor = vec4(float(min(zone, uLutRows - 1)) / 255.0, mod(uPieceId, 256.0) / 255.0, floor(uPieceId / 256.0) / 255.0, 1.0); return; }
   if (uPick == 2) {                    // the UV0 under the pointer (the mask editor paints there), 16 bits per axis
     vec2 q = fract(vUv0), hi = floor(q * 255.0), lo = floor(fract(q * 255.0) * 255.0);
     outColor = vec4(hi.x, lo.x, hi.y, lo.y) / 255.0; return;

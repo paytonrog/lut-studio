@@ -578,8 +578,13 @@ async function loadKit(name) {
   status(`Loading ${kitLabel(name)}… (first time per piece: a few seconds)`);
   const gen = ++S.loadGen;
   R.clearPieces();
-  const pieces = (await api('/api/kit?name=' + encodeURIComponent(name)))
-    .filter(p => p.material_lut && (p.body === 'any' || p.body === S.body));
+  let pieces;
+  try {
+    pieces = (await api('/api/kit?name=' + encodeURIComponent(name))).filter(p => p.material_lut && (p.body === 'any' || p.body === S.body));
+  } catch (e) {
+    if (gen === S.loadGen) { status(`${kitLabel(name)}: ${e.message}`, true); renderLists(); renderFields(); }
+    return;
+  }
   if (gen !== S.loadGen) return;
   const vehicle = pieces.length > 0 && pieces.every(p => OTHER_TYPES.includes(p.kit_type));
   document.body.classList.toggle('vehicle', vehicle);   // hides the armor-only controls (body, pickers, pose)
@@ -641,6 +646,7 @@ async function loadVehicle(name, pieces, gen) {
   const skin = pieces[0].skin;
   let n = 0, body = null, aside = 0;
   for (const ku of kitUnits) {
+    if (gen !== S.loadGen) return;   // (another item picked meanwhile)
     const unit = ku.unit;
     try {
       const glb = parseGLB(await (await api('/api/unit?hash=' + unit)).arrayBuffer());
@@ -672,6 +678,7 @@ async function loadVehicle(name, pieces, gen) {
         n++;
       }
     } catch (e) { console.error(e); status(`${unit}: ${e.message}`, true); }
+    if (gen !== S.loadGen) return;
     status(`Loading ${kitLabel(name)}… ${n} parts`);
   }
   R.frame();
@@ -775,7 +782,7 @@ async function undoThemeStep(id = S.undo.at(-1)?.theme) {
   if (S.themeUndoing) return false;
   S.themeUndoing = true;
   try {
-    await saveAll();
+    if (!(await saveAll())) return false;   // (the reload below would drop what stays unsaved)
     const r = await api('/api/theme/undo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ID: id }) });
     for (const h of S.history.values()) h.undo = h.undo.filter(e => e.theme !== id);
     S.undo = S.undo.filter(e => e.theme !== id); S.redo = [];
@@ -803,15 +810,17 @@ function changed(l) {
 }
 
 function restore(stack, other) {
+  if (S.varLoading) return;   // (its LUTs aren't in yet: every step would look gone)
   if (stack.at(-1)?.theme) return stack === S.undo ? undoThemeStep() : null;
   const s = stack.pop(); if (!s) return;
   const l = S.luts.get(s.lut);
   if (!l?.edited) return restore(stack, other);   // (a LUT no longer in the variant: that step is gone)
   other.push({ lut: s.lut, px: l.edited.slice(), labels: [...l.labels] });
   l.edited.set(s.px); l.labels = s.labels;
+  if (S.sel.lut !== s.lut) selectOnly();   // (another LUT: the other zones selected were the old one's)
   S.sel.lut = s.lut;
   S.sel.zone = Math.min(S.sel.zone, l.h - 1);
-  if (S.luts.get(S.sel.lut) !== l) selectOnly();
+  S.lastSnap = 0;   // (the next edit: a step of its own)
   changed(l);
   renderLists(); renderFields();
 }
@@ -1891,16 +1900,16 @@ async function loadMissingDocs() {
 
 // hash: the LUT to select afterwards; also: a second LUT, or 'kit:<id>' (pulls the kit's LUTs instead, with labels)
 async function pullLut(hash, zone = 0, also = null) {
-  await saveAll();
+  if (!(await saveAll())) return;   // (the variant is loaded again below)
   try {
     const kitRef = also?.startsWith('kit:') ? also : null, alsoLut = kitRef ? null : also;
     await api('/api/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ LUT: kitRef ?? hash }) });
     if (alsoLut) await api('/api/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ LUT: alsoLut }) });
     S.state = await api('/api/state');
     fillKits();
-    S.sel = { lut: hash, zone };
+    S.sel = { lut: hash, zone, more: new Set() };
     await loadVariant(S.variant);
-    S.sel = { lut: hash, zone };
+    S.sel = { lut: hash, zone, more: new Set() };
     renderLists(); renderFields();
     status(`Added ${hash} to the project`);
   } catch (e) { status(e.message, true); }
@@ -1977,27 +1986,30 @@ function buildSummary(r) {
 // picked their own with the snapshot buttons (those stay).
 async function renderImage(target, auto) {
   const keep = { cam: { ...R.cam, target: [...R.cam.target] }, env: R.env, world: R.world, debug: R.debug, split: R.split, hl: R.highlight };
-  R.world = { ...WORLD }; R.debug = 0; R.split = false; R.highlight = { lut: null, zone: -1, piece: -1 };
   const keepPose = R.pose;
-  const idle = POSE.list.find(p => p.name.startsWith('Armory idle'));
-  if (idle) {                                         // icons show the armory pose, not the T-pose
-    let clip = POSE.cache.get(idle.animation);
-    if (!clip) { clip = prepareClip(await api('/api/anim?hash=' + idle.animation)); POSE.cache.set(idle.animation, clip); }
-    R.pose = { clip, time: 0 };
-  }
-  gripHeld();   // (the held weapon on the hands for this pose)
-  setCamera('Front ¾');
-  R.env = { ...ENVS['Studio'], sunAz: R.cam.yaw - 0.7, sunElev: 0.6, exposure: 1.15 };   // key light from the camera side
-  // (the image's own lighting: not the view's light switches)
   const lights = { sunOn: R.sunOn, shadows: R.shadows, sunElevUser: R.sunElevUser, rim: R.rim };
-  Object.assign(R, { sunOn: true, shadows: true, sunElevUser: null, rim: R.rim.map(l => ({ ...l, on: false })) });
-  const cv = $('canvas'), size = Math.min(512, cv.width, cv.height);
-  R.draw(0, null, [size, size]);
-  Object.assign(R, lights);
   const out = document.createElement('canvas'); out.width = out.height = 512;
-  out.getContext('2d').drawImage(cv, 0, cv.height - size, size, size, 0, 0, 512, 512);
-  Object.assign(R, { cam: keep.cam, env: keep.env, world: keep.world, debug: keep.debug, split: keep.split, highlight: keep.hl, pose: keepPose });
-  gripHeld();
+  try {   // (the view's own settings back however the picture went)
+    R.world = { ...WORLD }; R.debug = 0; R.split = false; R.highlight = { lut: null, zone: -1, piece: -1 };
+    const idle = POSE.list.find(p => p.name.startsWith('Armory idle'));
+    if (idle) {                                         // icons show the armory pose, not the T-pose
+      let clip = POSE.cache.get(idle.animation);
+      if (!clip) { clip = prepareClip(await api('/api/anim?hash=' + idle.animation)); POSE.cache.set(idle.animation, clip); }
+      R.pose = { clip, time: 0 };
+    }
+    gripHeld();   // (the held weapon on the hands for this pose)
+    setCamera('Front ¾');
+    R.env = { ...ENVS['Studio'], sunAz: R.cam.yaw - 0.7, sunElev: 0.6, exposure: 1.15 };   // key light from the camera side
+    // (the image's own lighting: not the view's light switches)
+    Object.assign(R, { sunOn: true, shadows: true, sunElevUser: null, rim: R.rim.map(l => ({ ...l, on: false })) });
+    const cv = $('canvas'), size = Math.min(512, cv.width, cv.height);
+    R.draw(0, null, [size, size]);
+    out.getContext('2d').drawImage(cv, 0, cv.height - size, size, size, 0, 0, 512, 512);
+  } finally {
+    Object.assign(R, lights);
+    Object.assign(R, { cam: keep.cam, env: keep.env, world: keep.world, debug: keep.debug, split: keep.split, highlight: keep.hl, pose: keepPose });
+    gripHeld();
+  }
   return api('/api/image', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ Target: target, PNG: out.toDataURL('image/png'), Auto: auto }) });
 }
@@ -2104,7 +2116,7 @@ async function projectDialog() {
   $('pdSaveAs').onclick = async () => {
     const name = prompt('Name of the copy:', p.name + ' copy');
     if (!name) return;
-    await saveAll();
+    if (!(await saveAll())) return;   // (the page reloads)
     try { await api('/api/saveas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ Name: name }) }); location.reload(); }
     catch (e) { status(e.message, true); }
   };

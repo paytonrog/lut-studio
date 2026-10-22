@@ -45,6 +45,7 @@ export async function rolesDialog(app) {
   const names = data.names;
   let brush = 'primary', group = 'Armor';
   const work = new Map();      // lut -> {roles, from: 'mine' | 'built-in' | 'suggested', dirty, coverage}
+  if (!(await closeSide())) return;   // (a panel opened while this one loaded)
   const close = openSide(`<h3>Zone roles</h3>
     <p class="hint">What each zone is on its item, so a theme can give every item the same look per role. Click a zone
       on the model to give it the selected role. Confirmed roles are kept for every project and every item sharing the

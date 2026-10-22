@@ -513,11 +513,15 @@ export async function themeDialog(app, opts = {}) {
   // item on screen changes (screenZones)
   let onScreen = [], zones = [];   // zones: {lut, z, role, cov}
   let sizeSwap = {};   // LUT -> a bySize preset swaps its primary and secondary looks (the server's decision)
+  let zonesGen = 0;   // (items switched quickly: only the last one's answers are taken)
   const screenZones = async () => {
+    const gen = ++zonesGen;
     const on = [...new Set(R.pieces.map(p => p.info.lut))].filter(h => app.lut(h)?.kind === 'material');
-    let sug = {};
+    let sug = {}, swap = {};
     try { sug = await app.api(`/api/roles/suggest?variant=${encodeURIComponent(app.variant)}&luts=${on.join(',')}`); } catch { }
-    try { sizeSwap = await app.api(`/api/theme/sizes?variant=${encodeURIComponent(app.variant)}&luts=${on.join(',')}`); } catch { sizeSwap = {}; }
+    try { swap = await app.api(`/api/theme/sizes?variant=${encodeURIComponent(app.variant)}&luts=${on.join(',')}`); } catch { }
+    if (gen !== zonesGen) return;
+    sizeSwap = swap;
     const zs = [];
     for (const h of on) {
       const l = app.lut(h), roles = data.mine[h] ?? data.builtin[h] ?? sug[h]?.roles ?? [];
@@ -536,6 +540,7 @@ export async function themeDialog(app, opts = {}) {
   const pick = {}, camo = {};   // camo[role]: {layer, colors: 4 x rgb, tiling}
   for (const n of names) pick[n] = zones.filter(x => x.role === n).sort((a, b) => b.cov - a.cov)[0] ?? null;
   const shownGroups = new Set((data.items ?? []).filter(it => app.current().includes(it.value)).map(it => it.group));
+  if (!(await closeSide())) return;   // (a panel opened while this one loaded)
   const close = openSide(`<h3 id="thTitle">Theme everything like this</h3>
     <div class="row"><input type="search" id="thSearch" placeholder="Search presets (name or group: red, camo, Destiny 2…)" title="Shows only the presets whose name or group has these words" style="flex:1;min-width:0">
       <select id="thD2By" title="How the Destiny 2 shaders are grouped in the list"><option value="season">Destiny 2 by season</option><option value="color">Destiny 2 by color</option></select></div>
@@ -684,11 +689,11 @@ export async function themeDialog(app, opts = {}) {
     if ($('thMetal').checked) {
       // metal parts: the hardware look (its zone on screen, else any metal zone) in the chosen color
       const x = pick.hardware ?? zones.find(z => z.role === 'hardware');
-      if (!x && P?.hardware) return { looks, groupLooks };   // (a preset's metal: from the first item shown with metal parts)
-      if (!x) return { error: 'No metal part on screen to take the metal look from: show an item with metal parts.' };
-      const row = rowOf(x);
-      if (P?.hardware) looks.hardware = presetRow(row, { ...P.hardware, c: $('thMetalColor').value }, 'hardware');
-      else {
+      if (!x && !P?.hardware) return { error: 'No metal part on screen to take the metal look from: show an item with metal parts.' };
+      // (none on screen with a preset: its metal from the first item shown with metal parts; the tints still apply)
+      if (x && P?.hardware) looks.hardware = presetRow(rowOf(x), { ...P.hardware, c: $('thMetalColor').value }, 'hardware');
+      else if (x) {
+        const row = rowOf(x);
         const c = unhexc($('thMetalColor').value);
         for (const col of [0, 5, 6]) for (let k = 0; k < 3; k++) row[col * 4 + k] = c[k];   // (paint and wear colors)
         looks.hardware = row;
@@ -790,8 +795,14 @@ export async function themeDialog(app, opts = {}) {
     if (await closeSide()) app.openShowcase({ theme });
   };
 
+  let applying = false;   // (a second click while the first saves: one theme, one undo step)
   $('thApply').onclick = async () => {
-    await app.saveAll();   // (edits made while the panel is open: saved before the theme reloads the LUTs)
+    if (applying) return;
+    applying = true;
+    try { await applyTheme(); } finally { applying = false; }
+  };
+  const applyTheme = async () => {
+    if (!(await app.saveAll())) return;   // (edits made while the panel is open: saved before the theme reloads the LUTs)
     const { looks, groupLooks, error } = lookRows();
     if (error) return info(error);
     unpreview();

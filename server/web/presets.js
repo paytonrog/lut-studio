@@ -62,7 +62,8 @@ export function applyPreset(preset, l, z, fields) {
 // 3 pattern: the same raw texel values LUT Studio edits; category Paydex)
 export function importLooks(j) {
   const KIND = { 23: 'material', 16: 'cape', 3: 'pattern' };
-  if (Array.isArray(j)) return j.filter(p => p && typeof p.name === 'string' && Array.isArray(p.row) && KIND[p.row.length / 4] === p.kind)
+  if (Array.isArray(j)) return j.filter(p => p && typeof p.name === 'string' && Array.isArray(p.row) && KIND[p.row.length / 4] === p.kind &&
+      p.row.every(v => v !== null && v !== '' && Number.isFinite(Number(v))))   // (a value that isn't a number: not a look)
     .map(p => ({ name: p.name, kind: p.kind, ...(typeof p.category === 'string' && p.category ? { category: p.category } : {}),
       row: p.row.map(Number), ...(p.saved ? { saved: String(p.saved) } : {}) }));
   const out = [];
