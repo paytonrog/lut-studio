@@ -199,6 +199,7 @@ func (s *Server) Handler() http.Handler {
 	}))
 	mux.HandleFunc("POST /api/variant", s.needs(false, true, s.newVariant))
 	mux.HandleFunc("POST /api/pull", s.needs(true, true, s.pull))
+	mux.HandleFunc("POST /api/gameupdate", s.needs(true, true, s.postGameUpdate))
 	mux.HandleFunc("POST /api/image", s.needs(false, true, s.image))
 	mux.HandleFunc("GET /api/image", s.needs(false, true, s.getImage))
 	mux.HandleFunc("DELETE /api/image", s.needs(false, true, s.deleteImage))
@@ -264,6 +265,8 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		Labels   map[string]string      `json:"labels"` // kit key -> name for the dropdown
 		Users    map[string][]string    `json:"users"`
 		Parts    map[string][]game.Part `json:"parts"` // per LUT of the project: every use (kit, slot, kind of piece)
+		// the LUTs a game update changed since the project last saw the game (gameupdate.go)
+		GameUpdate *gameUpdate `json:"game_update,omitempty"`
 	}{Project: p, Users: map[string][]string{}, Parts: map[string][]game.Part{}, Labels: map[string]string{}}
 	kits := map[string]map[string]bool{} // kit name -> the project's LUTs it uses
 	for _, v := range p.Variants {
@@ -320,6 +323,10 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		}
 		return a < b
 	})
+	if out.GameUpdate, err = s.gameUpdateOf(); err != nil {
+		fail(w, 500, err)
+		return
+	}
 	writeJSON(w, out)
 }
 

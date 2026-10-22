@@ -2,6 +2,7 @@
 //
 //	<dir>/lutstudio.json          name, description, GUID, icon, variants
 //	<dir>/variants/<folder>/*.lut.json   one LUT document each (lut.Document)
+//	<dir>/gamevalues/*.lut.json          the game's values of each LUT when it came into the project (Game says which game)
 //
 // Everything is plain text, so projects diff, merge and share well; the build turns them into a mod zip.
 package project
@@ -68,6 +69,9 @@ type Project struct {
 	// Options: the mod as several options, each switched on by itself in the mod manager (empty: one choice between
 	// the variants, above)
 	Options []Option `json:"options,omitempty"`
+	// Game: the game the project's LUTs were last checked against (game.Game.CacheKey): after an update, the LUTs whose
+	// game values changed since gamevalues/ was written are offered the new ones (server/gameupdate.go)
+	Game string `json:"game,omitempty"`
 
 	Dir string `json:"-"`
 }
@@ -216,9 +220,22 @@ func WriteDoc(path string, d *lut.Document) error {
 	return atomicfile.WriteFile(path, b, 0o644)
 }
 
+// GameValuesDir: the game's values of the project's LUTs, one document per LUT (whatever the variants).
+func (p *Project) GameValuesDir() string { return filepath.Join(p.Dir, "gamevalues") }
+
+// GameValuesPath is where the game's values of a LUT are kept.
+func (p *Project) GameValuesPath(hash string) string {
+	return filepath.Join(p.GameValuesDir(), hash+".lut.json")
+}
+
 // Docs reads every LUT document of a variant, sorted by file name. Errors name the file.
-func (p *Project) Docs(v Variant) ([]*lut.Document, []string, error) {
-	files := ListFiles(p.VariantDir(v), "", ".lut.json")
+func (p *Project) Docs(v Variant) ([]*lut.Document, []string, error) { return docsIn(p.VariantDir(v)) }
+
+// GameValues reads the game's values of the project's LUTs (GameValuesPath), as Docs.
+func (p *Project) GameValues() ([]*lut.Document, []string, error) { return docsIn(p.GameValuesDir()) }
+
+func docsIn(dir string) ([]*lut.Document, []string, error) {
+	files := ListFiles(dir, "", ".lut.json")
 	sort.Strings(files)
 	// parsed in parallel and cached by file time and size: an overhaul is ~800 LUTs x 14 variants
 	parsed := make([]parsedDoc, len(files))

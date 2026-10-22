@@ -2262,6 +2262,40 @@ function showModal(title, text) {
   $('modalBody').innerHTML = `<h3>${esc(title)}</h3><pre>${esc(text)}</pre>`;
   $('modal').hidden = false;
 }
+// a game update changed the game's values of some of the project's LUTs (server/gameupdate.go): take the new values
+// where the project still has the old ones, or keep the project as it is; closing asks again next time
+function showGameUpdate(up) {
+  const build = k => String(k).replace(/^build-/, '');
+  const which = /^build-/.test(up.from) && /^build-/.test(up.to) ? ` (game build ${esc(build(up.from))} → ${esc(build(up.to))})` : '';
+  const n = (k, one, many = one + 's') => `${k} ${k === 1 ? one : many}`;
+  const rows = up.luts.map(c => {
+    const who = c.users?.length ? esc(c.users.slice(0, 3).join(', ')) + (c.users.length > 3 ? ` and ${c.users.length - 3} more` : '') : '';
+    const what = c.gone ? 'no longer in the game (your values stay)'
+      : c.size ? `its size changed (${esc(c.size)}): not updated, check it`
+      : n(c.changed, 'value') + ' changed' + (c.edited ? `, ${c.edited} of them edited by you (kept)` : '');
+    return `<li><code>${esc(c.lut)}</code>${who ? ' ' + who : ''}: ${what}</li>`;
+  }).join('');
+  $('modalBody').innerHTML = `<h3>The game was updated</h3>
+    <p>The update${which} changed the game's values of ${n(up.luts.length, 'LUT')} in this project:</p>
+    <ul class="hint">${rows}</ul>
+    <p class="hint"><b>Take the game's new values</b> changes only what your project still has as the game had it; your own
+      edits stay. <b>Keep my values</b> leaves the project as it is (the mod then puts the old game values back).</p>
+    <div class="row"><button id="guTake" class="primary">Take the game's new values</button><button id="guKeep">Keep my values</button></div>`;
+  $('modal').hidden = false;
+  const apply = async take => {
+    if (!(await saveAll())) return;
+    try {
+      const r = await api('/api/gameupdate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ take }) });
+      $('modal').hidden = true;
+      S.state = await api('/api/state');
+      await loadVariant(S.variant);
+      status(take ? `Took ${n(r.taken, "new game value")}` : 'Kept your values');
+    } catch (e) { status(e.message, true); }
+  };
+  $('guTake').onclick = () => apply(true);
+  $('guKeep').onclick = () => apply(false);
+}
+
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 async function boot() {
@@ -2305,6 +2339,7 @@ async function boot() {
   let report = null;       // a mod was just imported (start page): say what came in
   try { report = sessionStorage.getItem('lutstudio.importReport'); sessionStorage.removeItem('lutstudio.importReport'); } catch { }
   if (report) showModal('Mod imported', report);
+  else if (S.state.game_update) showGameUpdate(S.state.game_update);
   document.title = `${S.state.project.name} - LUT Studio`;
 }
 boot().catch(e => { console.error(e); status(e.message, true); });

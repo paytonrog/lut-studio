@@ -41,7 +41,7 @@ func (e *env) importMod(dir string, im *modpack.Imported) (string, error) {
 		return "", err
 	}
 	// the mod's LUTs the game has (items' and other materials'); left out: LUTs the game doesn't have (the mod's own,
-	// for models it adds or replaces)
+	// for models it adds or replaces, or ones an update removed from a mod made for an older game)
 	parts := idx.Parts()
 	all, other, own := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	for _, v := range im.Variants {
@@ -64,11 +64,12 @@ func (e *env) importMod(dir string, im *modpack.Imported) (string, error) {
 		if len(own) == 0 {
 			return ""
 		}
-		return fmt.Sprintf("%d LUT(s) are the mod's own (new textures for the models it adds; the game has no such LUT, so there is nothing to show them on)", len(own))
+		return fmt.Sprintf("%d LUT(s) this game build doesn't have: the mod may be made for an older version of the game "+
+			"(an update removed or renamed them), or they are the mod's own, for models it adds (nothing to show them on)", len(own))
 	}
 	if len(all) == 0 && textures == 0 {
 		if len(own) > 0 {
-			return "", fmt.Errorf("none of this mod's LUTs is one the game has: %s", leftOut())
+			return "", fmt.Errorf("none of this mod's LUTs is in this game build: %s", leftOut())
 		}
 		return "", fmt.Errorf("no LUT edits found in this mod (%d other files: meshes, textures or other data LUT Studio doesn't edit)", im.Skipped)
 	}

@@ -61,8 +61,9 @@ list of items is a small table of ids whose names come from your install (see **
    identity (its GUID) comes in too, so building it again updates the installed mod instead of adding a second copy.
    Its icon, the variants' descriptions and pictures and the name of the choice come along to the **Mod page** tab.
    A mod with several options keeps them as the project's options (their parts, choices and pictures).
-   Left out, and LUT Studio tells you what: models and other textures, and the LUTs of models the mod adds (the game
-   has nothing to show them on). An option that only changed such files changes nothing in the project; the build
+   Left out, and LUT Studio tells you what: models and other textures, and LUTs this game build doesn't have: the LUTs
+   of models the mod adds (the game has nothing to show them on), or, in a mod made for an older version of the game,
+   LUTs an update removed or renamed. An option that only changed such files changes nothing in the project; the build
    leaves it out.
    Overhauls (one option per armor, players switch on many at once) come in as one project with all of them; their
    styles (e.g. Chrome, Cavalier) become the variants. In a big project the **Materials** list shows the item on screen;
@@ -410,8 +411,11 @@ What is still LUT Studio's own, so judge final colors in the armory and check un
   instead of a name.
 - **A part that isn't in the project**: click it and edit it; your first change adds its LUT to the project (all
   variants). Looking at it adds nothing.
-- **After a game update**: LUT Studio reads the game fresh every time. If an update changed an armor's LUT, its
-  project files keep your values; check the result and rebuild.
+- **After a game update**: LUT Studio reads the game fresh every time. A project remembers the game's values of its
+  LUTs (its `gamevalues` folder) and the game it last saw. When you open it after an update that changed some of
+  them, it lists those LUTs: **Take the game's new values** changes what your project still has as the game had it
+  (your own edits stay), **Keep my values** leaves it as it is (the mod then puts the old values back). A LUT whose
+  size changed, or that the game no longer has, is named but left alone: check it. Then rebuild the mod.
 
 Files: projects live in your projects folder when you chose one (Chrome, Edge), else in the browser's storage for
 the LUT Studio site, like your settings, looks and a cache of the game's item list. Clearing the site's data (or the
