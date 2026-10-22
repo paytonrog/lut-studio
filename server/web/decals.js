@@ -4,7 +4,7 @@
 // the selected area. Saved per variant as the whole sheet (PUT /api/sheet, server/decals.go); the build writes it as
 // the game's texture. Sheets are shared by several items: every item using one changes.
 
-import { $, esc, openSide, closeSide, drawWire, saveFile, pickFile, throttled } from './texedit.js';
+import { $, esc, openSide, closeSide, drawWire, fetchRaw, lstx, pngBlob, straightPixels, saveFile, pickFile, throttled } from './texedit.js';
 
 // R: the renderer (its pieces' decal sheets, previewTexture, refreshDecals); variant: the variant folder; only: one
 // sheet hash
@@ -39,11 +39,16 @@ export async function decalDialog(R, variant, only = null) {
   }, null, 'decals');
   close.isDirty = () => dirty || !!layer;   // (unsaved changes: the tab's close asks first)
   const view = $('dsView'), vg = view.getContext('2d');
-  let hash = hashes[0], full = null, sel = null, drag = null, dirty = false, layer = null;
+  // the sheet: its pixels (RGBA8, straight alpha) are what is edited and saved, never a canvas' (a 2D canvas keeps
+  // them premultiplied: the colors under low alpha would be lost, fringes in the game's filtering); shown: a canvas
+  // of them, only to draw the view
+  let hash = hashes[0], W = 0, H = 0, px = null, sel = null, drag = null, dirty = false, layer = null;
+  const shown = document.createElement('canvas');
   const undos = [], redos = [];
   const info = t => { $('dsInfo').textContent = t; };
-  const size = () => +view.width;                       // the view's pixels (512 x zoom)
-  const k = () => size() / full.width;                  // sheet px -> view px
+  const k = () => view.width / W;                       // sheet px -> view px (the view has the sheet's shape)
+  const fit = () => { view.width = 512 * +$('dsZoom').value; view.height = Math.max(1, Math.round(view.width * H / W)); };
+  const reshow = () => { shown.width = W; shown.height = H; shown.getContext('2d').putImageData(new ImageData(px, W, H), 0, 0); };
 
   // ---- drawing
   const layerBox = () => {                              // the layer's corners in sheet px
@@ -60,10 +65,10 @@ export async function decalDialog(R, variant, only = null) {
     g.restore();
   };
   const draw = () => {
-    const s = size();
-    vg.clearRect(0, 0, s, s);
-    if (!full) return;
-    vg.drawImage(full, 0, 0, s, s);
+    const s = view.width, sh = view.height;
+    vg.clearRect(0, 0, s, sh);
+    if (!px) return;
+    vg.drawImage(shown, 0, 0, s, sh);
     if (layer) {
       if ($('dsClear').checked && sel) vg.clearRect(sel.x * k(), sel.y * k(), sel.w * k(), sel.h * k());
       drawLayer(vg, k());
@@ -72,11 +77,11 @@ export async function decalDialog(R, variant, only = null) {
     vg.strokeStyle = 'rgba(255,255,255,0.25)';
     for (let i = 1; i < n; i++) {
       vg.beginPath();
-      vg.moveTo(i * s / n, 0); vg.lineTo(i * s / n, s);
-      vg.moveTo(0, i * s / n); vg.lineTo(s, i * s / n);
+      vg.moveTo(i * s / n, 0); vg.lineTo(i * s / n, sh);
+      vg.moveTo(0, i * sh / n); vg.lineTo(s, i * sh / n);
       vg.stroke();
     }
-    if ($('dsWire').checked) drawWire(vg, R.pieces.filter(p => p.decalHash === hash && p.kind !== 'cape'), 'uv2', s);
+    if ($('dsWire').checked) { vg.save(); vg.scale(1, sh / s); drawWire(vg, R.pieces.filter(p => p.decalHash === hash && p.kind !== 'cape'), 'uv2', s); vg.restore(); }
     if (sel) {
       vg.strokeStyle = '#f2c14e'; vg.lineWidth = 2;
       vg.strokeRect(sel.x * k(), sel.y * k(), sel.w * k(), sel.h * k());
@@ -92,37 +97,70 @@ export async function decalDialog(R, variant, only = null) {
   };
 
   // ---- the model: the sheet with the unapplied layer (and the highlighted area), shown before saving
+  // a rectangle of the sheet (whole pixels, inside it), or null when empty
+  const clip = r => {
+    const x = Math.max(0, Math.floor(r.x)), y = Math.max(0, Math.floor(r.y));
+    const x1 = Math.min(W, Math.ceil(r.x + r.w)), y1 = Math.min(H, Math.ceil(r.y + r.h));
+    return x1 > x && y1 > y ? { x, y, w: x1 - x, h: y1 - y } : null;
+  };
+  const fill = (dst, r, rgba) => {
+    if (!(r = clip(r))) return;
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) dst.set(rgba, (y * W + x) * 4);
+  };
+  const layerRect = () => {
+    const pts = layerBox(), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    return clip({ x: Math.min(...xs) - 2, y: Math.min(...ys) - 2, w: Math.max(...xs) - Math.min(...xs) + 4, h: Math.max(...ys) - Math.min(...ys) + 4 });
+  };
+  // the layer drawn over dst (straight alpha, "over"): where it is transparent the sheet's pixels stay exactly
+  const putLayer = dst => {
+    const r = layerRect();
+    if (!r) return;
+    const c = document.createElement('canvas'); c.width = r.w; c.height = r.h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.translate(-r.x, -r.y); drawLayer(g, 1);
+    const src = g.getImageData(0, 0, r.w, r.h).data;
+    for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) {
+      const s = (y * r.w + x) * 4, la = src[s + 3] / 255;
+      if (!la) continue;
+      const d = ((r.y + y) * W + r.x + x) * 4, da = dst[d + 3] / 255, oa = la + da * (1 - la);
+      for (let ch = 0; ch < 3; ch++) dst[d + ch] = (src[s + ch] * la + dst[d + ch] * da * (1 - la)) / oa;
+      dst[d + 3] = oa * 255;
+    }
+  };
   const composed = () => {
-    const c = document.createElement('canvas'); c.width = full.width; c.height = full.height;
-    const g = c.getContext('2d');
-    g.drawImage(full, 0, 0);
-    if (layer) { if ($('dsClear').checked && sel) g.clearRect(sel.x, sel.y, sel.w, sel.h); drawLayer(g, 1); }
-    return c;
+    const out = px.slice();
+    if (layer) { if ($('dsClear').checked && sel) fill(out, sel, [0, 0, 0, 0]); putLayer(out); }
+    return out;
   };
   const preview = throttled(() => {
-    if (!full) return;
-    const c = composed(), g = c.getContext('2d');
-    if ($('dsMark').checked && sel) { g.fillStyle = '#ff00ff'; g.fillRect(sel.x, sel.y, sel.w, sel.h); }
-    R.previewTexture(hash, c.width, c.height, new Uint8Array(g.getImageData(0, 0, c.width, c.height).data.buffer));
+    if (!px) return;
+    const out = composed();
+    if ($('dsMark').checked && sel) fill(out, sel, [255, 0, 255, 255]);
+    R.previewTexture(hash, W, H, new Uint8Array(out.buffer));
   });
 
   // ---- undo: the changed rectangle before and after
-  const fg = () => full.getContext('2d', { willReadFrequently: true });
+  // undo: the changed rectangle's pixels before
+  const take = r => {
+    const out = new Uint8ClampedArray(r.w * r.h * 4);
+    for (let y = 0; y < r.h; y++) out.set(px.subarray(((r.y + y) * W + r.x) * 4, ((r.y + y) * W + r.x + r.w) * 4), y * r.w * 4);
+    return out;
+  };
+  const give = (r, data) => { for (let y = 0; y < r.h; y++) px.set(data.subarray(y * r.w * 4, (y + 1) * r.w * 4), ((r.y + y) * W + r.x) * 4); };
   const record = r => {
-    r = { x: Math.max(0, Math.floor(r.x)), y: Math.max(0, Math.floor(r.y)), w: 0, h: 0, x1: Math.min(full.width, Math.ceil(r.x + r.w)), y1: Math.min(full.height, Math.ceil(r.y + r.h)) };
-    r.w = Math.max(1, r.x1 - r.x); r.h = Math.max(1, r.y1 - r.y);
-    undos.push({ r, data: fg().getImageData(r.x, r.y, r.w, r.h) });
+    if (!(r = clip(r))) return;
+    undos.push({ r, data: take(r) });
     if (undos.length > 40) undos.shift();
     redos.length = 0;
   };
   const step = (from, to) => {
     const u = from.pop();
     if (!u) return;
-    to.push({ r: u.r, data: fg().getImageData(u.r.x, u.r.y, u.r.w, u.r.h) });
-    fg().putImageData(u.data, u.r.x, u.r.y);
+    to.push({ r: u.r, data: take(u.r) });
+    give(u.r, u.data);
     changed();
   };
-  const changed = () => { dirty = true; $('dsSave').disabled = false; draw(); preview(); };
+  const changed = () => { dirty = true; $('dsSave').disabled = false; reshow(); draw(); preview(); };
   $('modal').addEventListener('texundo', () => step(undos, redos), { signal: close.signal });
   $('modal').addEventListener('texredo', () => step(redos, undos), { signal: close.signal });
   $('dsUndo').onclick = () => step(undos, redos);
@@ -133,28 +171,25 @@ export async function decalDialog(R, variant, only = null) {
     const gen = ++loadGen;
     info('Loading the sheet…'); sel = null; layer = null; dirty = false; undos.length = redos.length = 0;
     $('dsSave').disabled = true; $('dsLayer').hidden = true;
-    const r = await fetch(q(hash));
+    let t;
+    try { t = await fetchRaw(hash, variant); } catch (e) { if (gen === loadGen) info(e.message); return; }
     if (gen !== loadGen) return;
-    if (!r.ok) { info(await r.text()); return; }
-    const bmp = await createImageBitmap(await r.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-    if (gen !== loadGen) return;
-    full = document.createElement('canvas'); full.width = bmp.width; full.height = bmp.height;
-    fg().drawImage(bmp, 0, 0);
-    const edited = r.headers.get('X-Edited') === '1';
-    info(`${bmp.width} × ${bmp.height} · ${edited ? 'edited in this variant' : "the game's sheet"}`);
+    W = t.w; H = t.h * t.layers; px = t.px;
+    fit(); reshow();
+    info(`${W} × ${H} · ${t.edited ? 'edited in this variant' : "the game's sheet"}`);
     draw();
   };
 
   // ---- pointer: select an area, or move / scale the layer
   const at = e => {
     const r = view.getBoundingClientRect();
-    return [(e.clientX - r.left) / r.width * full.width, (e.clientY - r.top) / r.height * full.height];
+    return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
   };
   const snapSel = (x0, y0, x1, y1) => {
     let ax = Math.min(x0, x1), bx = Math.max(x0, x1), ay = Math.min(y0, y1), by = Math.max(y0, y1);
     const n = +$('dsGrid').value;
     if (n) {
-      const cx = full.width / n, cy = full.height / n;
+      const cx = W / n, cy = H / n;
       ax = Math.floor(ax / cx) * cx; bx = Math.ceil(Math.max(bx, ax + 1) / cx) * cx;
       ay = Math.floor(ay / cy) * cy; by = Math.ceil(Math.max(by, ay + 1) / cy) * cy;
     }
@@ -167,7 +202,7 @@ export async function decalDialog(R, variant, only = null) {
   };
   const sizeSlider = () => { $('dsSize').value = Math.log2(layer.s / layer.s0); };
   view.onpointerdown = e => {
-    if (!full) return;
+    if (!px) return;
     const p = at(e);
     view.setPointerCapture(e.pointerId);
     if (layer) {
@@ -201,7 +236,7 @@ export async function decalDialog(R, variant, only = null) {
   $('dsWire').onchange = draw;
   $('dsMark').onchange = preview;
   $('dsClear').onchange = () => { draw(); preview(); };
-  $('dsZoom').onchange = () => { view.width = view.height = 512 * +$('dsZoom').value; draw(); };
+  $('dsZoom').onchange = () => { if (px) fit(); draw(); };
   if ($('dsSheet')) $('dsSheet').onchange = async () => {
     if ((dirty || layer) && !confirm('Discard the unsaved changes to this sheet?')) { $('dsSheet').value = hash; return; }
     await R.refreshDecals(hash);
@@ -228,35 +263,41 @@ export async function decalDialog(R, variant, only = null) {
   $('dsCancel').onclick = () => { layer = null; $('dsLayer').hidden = true; draw(); preview(); };
   $('dsApply').onclick = () => {
     if (!layer) return;
-    const pts = layerBox(), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-    let r = { x: Math.min(...xs) - 2, y: Math.min(...ys) - 2, w: Math.max(...xs) - Math.min(...xs) + 4, h: Math.max(...ys) - Math.min(...ys) + 4 };
+    let r = layerRect() ?? sel;
     const clear = $('dsClear').checked && sel;
-    if (clear) { const x = Math.min(r.x, sel.x), y = Math.min(r.y, sel.y); r = { x, y, w: Math.max(r.x + r.w, sel.x + sel.w) - x, h: Math.max(r.y + r.h, sel.y + sel.h) - y }; }
-    record(r);
-    if (clear) fg().clearRect(sel.x, sel.y, sel.w, sel.h);
-    drawLayer(fg(), 1);
+    if (clear && r) { const x = Math.min(r.x, sel.x), y = Math.min(r.y, sel.y); r = { x, y, w: Math.max(r.x + r.w, sel.x + sel.w) - x, h: Math.max(r.y + r.h, sel.y + sel.h) - y }; }
+    if (r) record(r);
+    if (clear) fill(px, sel, [0, 0, 0, 0]);
+    putLayer(px);
     layer = null; $('dsLayer').hidden = true;
     changed();
   };
   $('dsErase').onclick = () => {
     if (!sel) return info('Select an area first.');
     record(sel);
-    fg().clearRect(sel.x, sel.y, sel.w, sel.h);
+    fill(px, sel, [0, 0, 0, 0]);
     changed();
   };
 
   // ---- files
-  $('dsExport').onclick = () => full && full.toBlob(b => saveFile(b, `decal-sheet-${hash}.png`), 'image/png');
+  $('dsExport').onclick = async () => px && saveFile(await pngBlob(W, H, px), `decal-sheet-${hash}.png`);
   $('dsImport').onclick = async () => {
     const f = await pickFile('image/png,image/*');
-    if (!f || !full) return;
-    const img = await createImageBitmap(f, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }).catch(() => null);
+    if (!f || !px) return;
+    const img = await straightPixels(f);   // (its pixels as they are: an exported sheet comes back exactly)
     if (!img) return info('That file is not an image.');
-    if ((img.width !== full.width || img.height !== full.height) &&
-      !confirm(`The image is ${img.width} × ${img.height}, the sheet ${full.width} × ${full.height}: stretch it to fit?`)) return;
-    record({ x: 0, y: 0, w: full.width, h: full.height });
-    fg().clearRect(0, 0, full.width, full.height);
-    fg().drawImage(img, 0, 0, full.width, full.height);
+    let pixels = img.px;
+    if (img.w !== W || img.h !== H) {
+      if (!confirm(`The image is ${img.w} × ${img.h}, the sheet ${W} × ${H}: stretch it to fit?`)) return;
+      const bmp = await createImageBitmap(f);   // (resampled anyway: through a canvas)
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(bmp, 0, 0, W, H);
+      pixels = g.getImageData(0, 0, W, H).data;
+    }
+    record({ x: 0, y: 0, w: W, h: H });
+    px.set(pixels);
     changed();
   };
 
@@ -264,9 +305,9 @@ export async function decalDialog(R, variant, only = null) {
   $('dsSave').onclick = async () => {
     if (layer) $('dsApply').onclick();
     info('Saving…');
-    const png = await new Promise(r => full.toBlob(r, 'image/png'));
+    const body = lstx(W, H, px);   // (the pixels as they are: no canvas)
     dirty = false;   // (an edit made while it saves sets it again: not taken for saved)
-    const r = await fetch(q(hash), { method: 'PUT', body: png });
+    const r = await fetch(q(hash), { method: 'PUT', body });
     if (!r.ok) { dirty = true; return info(await r.text()); }
     $('dsSave').disabled = !dirty;
     await R.refreshDecals(hash);

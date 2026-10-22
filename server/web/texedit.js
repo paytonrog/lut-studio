@@ -112,6 +112,56 @@ export function lstx(w, h, px) {
   return out;
 }
 
+// raw RGBA8 (straight alpha) as a PNG file, colors under zero alpha kept (a canvas' toBlob loses them)
+export async function pngBlob(w, h, px) {
+  const rows = new Uint8Array(h * (w * 4 + 1));          // each row: filter 0, then its pixels
+  for (let y = 0; y < h; y++) rows.set(px.subarray(y * w * 4, (y + 1) * w * 4), y * (w * 4 + 1) + 1);
+  const z = new Uint8Array(await new Response(new Blob([rows]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+  const chunk = (type, data) => {
+    const out = new Uint8Array(12 + data.length), dv = new DataView(out.buffer);
+    dv.setUint32(0, data.length);
+    for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+    out.set(data, 8);
+    dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+    return out;
+  };
+  const ihdr = new Uint8Array(13), dv = new DataView(ihdr.buffer);
+  dv.setUint32(0, w); dv.setUint32(4, h);
+  ihdr.set([8, 6, 0, 0, 0], 8);                          // 8 bits, RGBA
+  return new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', z), chunk('IEND', new Uint8Array(0))], { type: 'image/png' });
+}
+let crcTable = null;
+function crc32(b) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcTable[n] = c >>> 0; }
+  }
+  let c = 0xffffffff;
+  for (const v of b) c = crcTable[(c ^ v) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+// an image file's pixels as they are in it (RGBA8, straight alpha: colors under zero alpha kept), or null; read
+// through WebGL, which uploads them unpremultiplied (a 2D canvas stores them premultiplied)
+export async function straightPixels(file) {
+  const bmp = await createImageBitmap(file, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }).catch(() => null);
+  if (!bmp) return null;
+  const { width: w, height: h } = bmp, gl = new OffscreenCanvas(1, 1).getContext('webgl2');
+  if (!gl) return null;
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+  const tex = gl.createTexture(), fb = gl.createFramebuffer();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  const px = new Uint8ClampedArray(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);   // (row 0 is the image's top: uploaded as it is)
+  gl.deleteFramebuffer(fb); gl.deleteTexture(tex);
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  return { w, h, px };
+}
+
 export function saveFile(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;

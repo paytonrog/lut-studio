@@ -473,6 +473,15 @@ async function designEditor(kind) {
 // the decal editor on the open model: an area, an image placed as a layer, moved and turned, applied, undo / redo,
 // saved
 async function decalEditor(kind) {
+  // the sheet's colors under low alpha (the game's): a save must keep them (no premultiplied canvas)
+  const hidden = await evaluate(`(async () => {
+    const R = window.lutstudio.R, h = R.pieces.find(p => p.decalHash)?.decalHash;
+    const b = new Uint8Array(await (await fetch('/api/tex?hash=' + h)).arrayBuffer()), px = b.subarray(20);
+    const keep = [];
+    for (let i = 0; i < px.length && keep.length < 4000; i += 4) if (px[i + 3] < 8 && px[i] + px[i + 1] + px[i + 2] > 30) keep.push([i, px[i], px[i + 1], px[i + 2]]);
+    window.__hidden = { h, keep };
+    return keep.length;
+  })()`);
   await evaluate(`(document.getElementById('decals').click(), 1)`);
   const opened = await waitFor(`/2048 × 2048/.test(document.getElementById('dsInfo')?.textContent ?? '') && document.getElementById('dsInfo').textContent`, 30000);
   check(`${kind}: the decal editor opens`, !!opened, opened || 'not opened');
@@ -503,6 +512,14 @@ async function decalEditor(kind) {
   await evaluate(`(document.getElementById('dsSave').click(), 1)`);
   const saved = await waitFor(`/^Saved/.test(document.getElementById('dsInfo').textContent)`, 60000);
   check(`${kind}: decal sheet saved`, !!saved && errors.length === 0, errors.slice(0, 2).join(' | '));
+  const kept = await evaluate(`(async () => {
+    const { h, keep } = window.__hidden, R = window.lutstudio.R;
+    const b = new Uint8Array(await (await fetch('/api/tex?hash=' + h + '&variant=' + encodeURIComponent(R.variant))).arrayBuffer()), px = b.subarray(20);
+    let same = 0;   // (pixels the edit painted over differ: most don't)
+    for (const [i, r, g, bl] of keep) if (px[i] === r && px[i + 1] === g && px[i + 2] === bl) same++;
+    return same;
+  })()`);
+  check(`${kind}: decals: the colors under the sheet's zero alpha survive the save`, hidden > 0 && kept > hidden * 0.9, `${kept} of ${hidden} kept`);
   await evaluate(`(document.getElementById(document.getElementById('sidePanel')?.hidden === false ? 'sideClose' : 'modalClose').click(), 1)`);   // (a side panel's own Close, else the dialog's)
   await sleep(500);
 }

@@ -181,3 +181,24 @@ test('decals in a theme: recolored as the server does', () => {
   assert.deepEqual(decalColors({ primary: [0.5, 0.5, 0.5] }).dark, [0.5, 0.5, 0.5]);
   assert.equal(decalColors({}), null);
 });
+
+test('pngBlob writes the pixels as they are: colors under zero alpha kept', async () => {
+  const { pngBlob } = await import('../../server/web/texedit.js');
+  const { inflateSync, crc32 } = await import('node:zlib');
+  const w = 3, h = 2, px = new Uint8Array([200, 10, 30, 0, 1, 2, 3, 4, 255, 255, 255, 255, 9, 8, 7, 0, 0, 0, 0, 0, 50, 60, 70, 128]);
+  const b = new Uint8Array(await (await pngBlob(w, h, px)).arrayBuffer());
+  assert.deepEqual([...b.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  const dv = new DataView(b.buffer);
+  let p = 8, idat = [];
+  while (p < b.length) {
+    const n = dv.getUint32(p), type = String.fromCharCode(...b.subarray(p + 4, p + 8));
+    assert.equal(dv.getUint32(p + 8 + n), crc32(b.subarray(p + 4, p + 8 + n)), type + ' crc');
+    if (type === 'IHDR') assert.deepEqual([dv.getUint32(p + 8), dv.getUint32(p + 12), b[p + 16], b[p + 17]], [w, h, 8, 6]);
+    if (type === 'IDAT') idat.push(b.subarray(p + 8, p + 8 + n));
+    p += 12 + n;
+  }
+  const rows = inflateSync(Buffer.concat(idat));
+  const back = [];
+  for (let y = 0; y < h; y++) { assert.equal(rows[y * (w * 4 + 1)], 0); back.push(...rows.subarray(y * (w * 4 + 1) + 1, (y + 1) * (w * 4 + 1))); }
+  assert.deepEqual(back, [...px]);
+});
