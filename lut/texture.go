@@ -53,7 +53,9 @@ func (t *Texture) At(x, y, ch int) float32 { return t.Px[(y*t.Width+x)*4+ch] }
 func (t *Texture) Set(x, y, ch int, v float32) { t.Px[(y*t.Width+x)*4+ch] = Round(v) }
 
 // Round returns v as the game will store it (nearest half float).
-func Round(v float32) float32 { return float16.Fromfloat32(v).Float32() }
+func Round(v float32) float32 {
+	return float16.Fromfloat32(max(-65504, min(65504, v))).Float32() // (past the half range it would be Inf, which JSON can't hold)
+}
 
 func mipCount(w, h int) int {
 	n := 1

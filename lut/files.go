@@ -213,6 +213,9 @@ func readEXR(b []byte) (*Texture, error) {
 				if xs, ys := binary.LittleEndian.Uint32(v[q+i+9:]), binary.LittleEndian.Uint32(v[q+i+13:]); xs != 1 || ys != 1 {
 					return nil, fmt.Errorf("the .exr channel %s is subsampled", c.name)
 				}
+				if c.typ < 0 || c.typ > 2 {
+					return nil, fmt.Errorf("the .exr channel %s has an unknown pixel type", c.name)
+				}
 				chans = append(chans, c)
 				q += i + 17
 			}

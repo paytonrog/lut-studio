@@ -76,3 +76,16 @@ func TestReadEXRZip(t *testing.T) {
 		t.Error("ZIP .exr read back differs")
 	}
 }
+
+// an .exr channel of a pixel type that isn't uint, half or float is refused, not read past its data
+func TestReadEXRUnknownType(t *testing.T) {
+	b := New(MaterialWidth, 2).FileEXR()
+	i := bytes.Index(b, []byte("R\x00"))
+	if i < 0 {
+		t.Fatal("no R channel")
+	}
+	binary.LittleEndian.PutUint32(b[i+2:], 7)
+	if _, err := ReadFile(b); err == nil {
+		t.Fatal("an unknown channel type read")
+	}
+}

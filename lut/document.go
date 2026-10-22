@@ -173,8 +173,8 @@ func (d *Document) UnmarshalJSON(data []byte) error {
 	var rows []map[string]json.RawMessage
 	if d.Kind != "pattern" { // material and cape LUTs: one row per zone
 		allowed["zones"] = true
-		if err := json.Unmarshal(raw["zones"], &rows); err != nil || len(rows) == 0 || len(rows) > 64 { // (mods ship LUTs with more zones than the game's 8)
-			bad("zones: expected a list of 1-64 zones")
+		if err := json.Unmarshal(raw["zones"], &rows); err != nil || len(rows) == 0 || len(rows) > 1024 { // (mods ship LUTs with more zones than the game's 8; modpack reads them up to maxLUTBytes)
+			bad("zones: expected a list of 1-1024 zones")
 			return &pe
 		}
 	} else {

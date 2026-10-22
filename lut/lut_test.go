@@ -268,3 +268,21 @@ func TestDecodeMalformed(t *testing.T) {
 		t.Fatal("an absurd size decoded")
 	}
 }
+
+// an edit past the half-float range is kept finite (Inf would make the document unreadable JSON); a mod's LUT with
+// more zones than 64 reads back
+func TestOutOfRangeAndManyZones(t *testing.T) {
+	if Round(1e5) != 65504 || Round(-1e5) != -65504 {
+		t.Fatalf("Round: %v %v", Round(1e5), Round(-1e5))
+	}
+	tex := New(MaterialWidth, 100)
+	tex.Px[0] = Round(1e5)
+	b, err := json.Marshal(&Document{LUT: "0x00000000000000aa", Kind: "material", Tex: tex})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d Document
+	if err := json.Unmarshal(b, &d); err != nil || d.Tex.Height != 100 || d.Tex.Px[0] != 65504 {
+		t.Fatalf("100 zones, a clamped value: %v", err)
+	}
+}
