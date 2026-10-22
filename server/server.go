@@ -61,14 +61,21 @@ type Server struct {
 	gameErr string
 }
 
-// SetGame installs an opened install (or the error that kept it from opening).
+// SetGame installs an opened install (or the error that kept it from opening; an install already open stays, as
+// /api/game keeps it when another fails to open).
 func (s *Server) SetGame(g *game.Game, idx *game.Index, a *game.Assets, err error) {
 	s.st.Lock()
 	defer s.st.Unlock()
+	if err != nil && s.g != nil {
+		return
+	}
 	s.g, s.idx, s.assets, s.gameErr = g, idx, a, ""
 	if err != nil {
 		s.gameErr = err.Error()
 	}
+	s.colorMu.Lock()
+	s.colors = nil // (kitColor's names are the old install's)
+	s.colorMu.Unlock()
 }
 
 // SetProject opens a project folder ("" closes it).

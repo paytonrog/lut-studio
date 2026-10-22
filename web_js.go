@@ -60,7 +60,14 @@ func main() {
 			defer exec.Release()
 			resolve := pr[0]
 			go func() {
-				req := httptest.NewRequest(method, url, bytes.NewReader(body))
+				req, err := http.NewRequest(method, url, bytes.NewReader(body))
+				if err != nil { // (a URL that doesn't parse: an error answer, not a panic ending the program)
+					rec := httptest.NewRecorder()
+					rec.WriteHeader(400)
+					fmt.Fprintf(rec, "bad request: %v", err)
+					resolve.Invoke(response(rec.Result()))
+					return
+				}
 				if ctype != "" {
 					req.Header.Set("Content-Type", ctype)
 				}

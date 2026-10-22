@@ -197,6 +197,7 @@ func (s *Server) deleteVariant(w http.ResponseWriter, r *http.Request) {
 			delete(o.Images, folder)
 		}
 		if err := p.Save(); err != nil {
+			os.Rename(trash, p.VariantDir(v)) // (the project still lists it: its files back)
 			fail(w, 500, err)
 			return
 		}

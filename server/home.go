@@ -501,6 +501,8 @@ func copyTree(src, dst string, keep func(rel string) bool) error {
 
 // exportProject sends the whole project (settings, variants, images; not dist/) as one .lutproj file (a zip).
 func (s *Server) exportProject(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock() // (its files as one save left them, not halfway through a theme or an update)
+	defer s.mu.Unlock()
 	p, err := s.project()
 	if err != nil {
 		fail(w, 500, err)
@@ -596,6 +598,12 @@ func (s *Server) importProject(w http.ResponseWriter, r *http.Request) {
 	c := appcfg.Load()
 	newName := uniqueName(c, p.Name) // (another project has its name: "name 2")
 	dst := freeDir(filepath.Join(c.ProjectsFolder(), project.Folder(newName)))
+	ok := false
+	defer func() {
+		if !ok { // (a folder of its own, new: no half-imported project left on the start page)
+			os.RemoveAll(dst)
+		}
+	}()
 	for _, f := range zr.File {
 		clean := filepath.Clean(filepath.FromSlash(f.Name))
 		if strings.HasPrefix(clean, "..") || filepath.IsAbs(clean) || f.FileInfo().IsDir() {
@@ -624,13 +632,17 @@ func (s *Server) importProject(w http.ResponseWriter, r *http.Request) {
 	if newName != p.Name {
 		if q, err := project.Load(dst); err == nil {
 			q.Name = newName
-			q.Save()
+			if err := q.Save(); err != nil {
+				fail(w, 500, err)
+				return
+			}
 		}
 	}
 	if err := s.SetProject(dst); err != nil {
 		fail(w, 400, err)
 		return
 	}
+	ok = true
 	writeJSON(w, map[string]string{"project": dst})
 }
 

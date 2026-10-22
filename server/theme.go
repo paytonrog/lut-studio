@@ -598,7 +598,7 @@ func CopyThemeRecord(p *project.Project, from, to string) {
 	}
 	st.Written[to] = st.Written[from]
 	if b, err := json.MarshalIndent(st, "", " "); err == nil {
-		os.WriteFile(themePath(p), b, 0o644)
+		atomicfile.WriteFile(themePath(p), b, 0o644)
 	}
 }
 
@@ -748,7 +748,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		added += min(n, 1)
 		d, err := readDoc(p.DocPath(v, hs))
-		if err != nil {
+		if err != nil || d.Tex.Width != lut.MaterialWidth { // (a mod's LUT of another kind under that hash)
 			continue
 		}
 		wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
@@ -1053,8 +1053,10 @@ func (j *fileJournal) keep(path string) {
 		return
 	}
 	b, err := os.ReadFile(path)
-	if err != nil {
-		b = nil
+	if errors.Is(err, os.ErrNotExist) {
+		b = nil // (undone: removed)
+	} else if err != nil {
+		return // (not read: an undo leaves it, never deletes it)
 	}
 	j.was[path] = b
 	j.order = append(j.order, path)
@@ -1070,6 +1072,8 @@ func (j *fileJournal) restore() error {
 			if err = os.Remove(path); errors.Is(err, os.ErrNotExist) {
 				err = nil
 			}
+		} else if _, serr := os.Stat(filepath.Dir(path)); errors.Is(serr, os.ErrNotExist) {
+			continue // (its variant deleted since: nothing to restore it into)
 		} else {
 			err = atomicfile.WriteFile(path, b, 0o644)
 		}
@@ -1106,11 +1110,11 @@ func (s *Server) undoTheme(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, fmt.Errorf("a theme applied after it (maybe in another variant) has to be undone first"))
 		return
 	}
-	s.themes = s.themes[:len(s.themes)-1]
 	jr := last.jr
-	if err := jr.restore(); err != nil {
+	if err := jr.restore(); err != nil { // (kept: undoing it again restores the rest)
 		fail(w, 500, err)
 		return
 	}
+	s.themes = s.themes[:len(s.themes)-1]
 	writeJSON(w, map[string]any{"files": len(jr.order)})
 }

@@ -19,7 +19,7 @@ func (s *Server) lutFile(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, err)
 		return
 	}
-	if in.Width < 1 || in.Height < 1 || in.Width*in.Height > 1<<20 || len(in.Px) != in.Width*in.Height*4 {
+	if in.Width < 1 || in.Height < 1 || in.Width > 1<<20 || in.Height > 1<<20 || in.Width*in.Height > 1<<20 || len(in.Px) != in.Width*in.Height*4 {
 		fail(w, 400, fmt.Errorf("%d values for %d x %d", len(in.Px), in.Width, in.Height))
 		return
 	}
