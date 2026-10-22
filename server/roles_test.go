@@ -297,3 +297,34 @@ func TestCopyColors(t *testing.T) {
 		t.Errorf("copyColors: %v", cur[:24])
 	}
 }
+
+// focusItems: the items with a LUT in focus, and every earlier item sharing a LUT with one taken (and theirs in turn);
+// not later items, not unwanted ones
+func TestFocusItems(t *testing.T) {
+	item := func(luts ...string) roleItem {
+		it := roleItem{Group: "Armor"}
+		for _, l := range luts {
+			it.LUTs = append(it.LUTs, roleLUT{LUT: l})
+		}
+		return it
+	}
+	all := []roleItem{
+		item("a", "b"), // 0: shares b with 2, which shares c with 3 (in focus): taken
+		item("x"),      // 1: shares nothing: not taken
+		item("b", "c"), // 2: shares c with 3: taken
+		item("c", "d"), // 3: d in focus: taken
+		item("d", "e"), // 4: d in focus: taken
+		item("e"),      // 5: shares e with 4, but later: not taken
+		{Group: "Capes", LUTs: []roleLUT{{LUT: "c"}}}, // 6: not wanted
+	}
+	want := func(it roleItem) bool { return it.Group == "Armor" }
+	need := focusItems(all, want, map[string]bool{"d": true})
+	for i, exp := range []bool{true, false, true, true, true, false, false} {
+		if need(i) != exp {
+			t.Errorf("item %d: %v, want %v", i, need(i), exp)
+		}
+	}
+	if all := focusItems(all, want, nil); !all(1) || !all(5) {
+		t.Error("no focus: every item")
+	}
+}

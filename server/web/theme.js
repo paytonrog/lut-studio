@@ -488,9 +488,10 @@ export function presetTheme(name, metal = null) {
 // the look's colors only (paint, secondary, wear, camo), keeping its cloth finish
 export function putLook(px, l, z, look, role) {
   const base = z * l.w * 4, cloth = Math.round((l.vanilla ?? px)[base + 3]) === 1 && role !== 'cloth';   // (the game's mode, as Apply decides)
-  if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) px[base + i] = look[i]; return; }
+  // (column 20's r, g, b: the build mark's, which a theme never writes: lut/mark.go)
+  if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) if (i >> 2 !== 20 || (i & 3) === 3) px[base + i] = look[i]; return; }
   for (const col of [0, 2, 5, 6]) for (let k = 0; k < 3; k++) px[base + col * 4 + k] = look[col * 4 + k];
-  if (look[21 * 4 + 3] !== -1) for (let col = 16; col <= 21; col++) for (let k = 0; k < 4; k++) if (col !== 16 || k < 3) px[base + col * 4 + k] = look[col * 4 + k];
+  if (look[21 * 4 + 3] !== -1) for (let col = 16; col <= 21; col++) for (let k = 0; k < 4; k++) if ((col !== 16 || k < 3) && (col !== 20 || k === 3)) px[base + col * 4 + k] = look[col * 4 + k];
 }
 
 // app: { R, api, variant, lut(hash), lutLabel(hash), showItem(value), current() -> item values on screen, saveAll(),
@@ -512,16 +513,13 @@ export async function themeDialog(app, opts = {}) {
   // the LUTs on screen, the roles of their zones (saved, else suggested) and each zone's share: read again when the
   // item on screen changes (screenZones)
   let onScreen = [], zones = [];   // zones: {lut, z, role, cov}
-  let sizeSwap = {};   // LUT -> a bySize preset swaps its primary and secondary looks (the server's decision)
   let zonesGen = 0;   // (items switched quickly: only the last one's answers are taken)
   const screenZones = async () => {
     const gen = ++zonesGen;
     const on = [...new Set(R.pieces.map(p => p.info.lut))].filter(h => app.lut(h)?.kind === 'material');
-    let sug = {}, swap = {};
+    let sug = {};
     try { sug = await app.api(`/api/roles/suggest?variant=${encodeURIComponent(app.variant)}&luts=${on.join(',')}`); } catch { }
-    try { swap = await app.api(`/api/theme/sizes?variant=${encodeURIComponent(app.variant)}&luts=${on.join(',')}`); } catch { }
     if (gen !== zonesGen) return;
-    sizeSwap = swap;
     const zs = [];
     for (const h of on) {
       const l = app.lut(h), roles = data.mine[h] ?? data.builtin[h] ?? sug[h]?.roles ?? [];
@@ -643,6 +641,8 @@ export async function themeDialog(app, opts = {}) {
   const targets = () => (data.items ?? []).filter(it => itemMode()
     ? app.current().includes(it.value) || (weaponsOn() && it.value === app.held?.())
     : groups().includes(it.group));
+  // what Apply themes, as POST /api/theme takes it (the preview asks the server for the same: /api/theme/preview)
+  const applyTargets = () => ({ Groups: groups(), Items: itemMode() ? targets().map(it => it.value) : [], OnlyInMod: $('thOnly').checked });
   // what Apply will do, said before it's done: the items and LUTs, those added to the mod, hand edits, decals
   const count = () => {
     const item = itemMode();
@@ -666,7 +666,9 @@ export async function themeDialog(app, opts = {}) {
   weaponsBox.addEventListener('change', () => { syncHeld(); if (previewing) preview(); });
   document.querySelectorAll('input[name=thTarget]').forEach(c => c.addEventListener('change', () => { syncHeld(); if (previewing) preview(); }));
   syncHeld();
-  $('thOnly').onchange = count;
+  $('thOnly').onchange = () => { count(); if (previewing) preview(); };
+  // (the kinds ticked: what Apply themes, so what the preview shows; Weapons has its own listener above)
+  document.querySelectorAll('.thGroup:not([value=Weapons])').forEach(c => c.addEventListener('change', () => { if (previewing) preview(); }));
   document.addEventListener('lutstudio:recolor', () => { document.querySelector('input[name=thTarget][value=item]').checked = true; count(); }, { signal: close.signal });
 
   const rowOf = x => { const l = app.lut(x.lut), a = l.edited ?? l.vanilla; return Array.from(a.slice(x.z * l.w * 4, (x.z + 1) * l.w * 4)); };
@@ -716,51 +718,63 @@ export async function themeDialog(app, opts = {}) {
   let decalShown = [];   // (the decal sheets shown recolored)
   let previewSeq = 0;
   function unpreview() {
+    previewSeq++;   // (a preview still asking the server: dropped)
     unpreviewDecals(R, decalShown); decalShown = [];
     if (!previewing) return;
     for (const [p, keys] of previewing) Object.assign(p.lutKeys, keys);
     previewing = null;
     if ($('thPreview')) $('thPreview').textContent = 'Preview on screen';
   }
-  function preview() {
+  async function preview() {
     unpreview();
     const { looks, groupLooks, error } = lookRows();
     const P = PRESETS[$('thPreset').value];
-    const looksAt = h => {
-      const L = groupLooks?.[groupOf.get(h)] ?? looks;
-      return P?.bySize && sizeSwap[h] ? swapLooks(L) : L;   // (as Apply decides it: /api/theme/sizes)
-    };
     if (error) return info(error);
     if (!Object.keys(looks).length) return info('Pick a preset or at least one role\'s look.');
+    const seq = ++previewSeq;   // (a newer preview, or decals unticked meanwhile: these sheets put back)
+    // what Apply does to the LUTs on screen, as the server decides it for Apply: which it themes (the kinds ticked,
+    // the weapon in hand only with Weapons), each zone's role (an armor, its helmet and cape each an item of its own),
+    // the bySize swaps, the patterns and capes whose trim rows take the trim color
+    const t = applyTargets(), luts = [...new Set(R.pieces.flatMap(p => [p.info.lut, p.info.pattern, p.info.cape]).filter(Boolean))];
+    let plan;
+    try {
+      plan = await app.api(`/api/theme/preview?variant=${encodeURIComponent(app.variant)}&groups=${encodeURIComponent(JSON.stringify(t.Groups))}` +
+        `&items=${encodeURIComponent(JSON.stringify(t.Items))}&only=${t.OnlyInMod ? 1 : 0}&size=${P?.bySize ? 1 : 0}&luts=${luts.join(',')}`);
+    } catch (e) { return info(e.message); }
+    if (seq !== previewSeq) return;   // (another preview, or the preview ended, meanwhile)
+    const looksAt = h => {
+      const L = groupLooks?.[groupOf.get(h)] ?? looks;
+      return P?.bySize && plan.materials[h]?.swap ? swapLooks(L) : L;
+    };
     previewing = new Map(R.pieces.map(p => [p, { ...p.lutKeys }]));
-    const roleOf = {};
-    for (const x of zones) (roleOf[x.lut] ??= [])[x.z] = x.role;
-    // (the weapon in hand: only when Weapons is on; else it keeps its own looks)
-    const heldOnly = new Set(R.pieces.filter(p => p.info?.held).map(p => p.info.lut));
-    for (const p of R.pieces) if (!p.info?.held) heldOnly.delete(p.info.lut);
-    for (const h of onScreen) {
-      if (heldOnly.has(h) && !weaponsOn()) continue;
-      const l = app.lut(h), px = (l.edited ?? l.vanilla).slice();
-      for (let z = 0; z < l.h; z++) { const n = roleOf[h]?.[z], look = looksAt(h)[n]; if (look && l.w === W) putLook(px, l, z, look, n); }
+    for (const [h, m] of Object.entries(plan.materials)) {
+      const l = app.lut(h);
+      if (!l || l.w !== W) continue;
+      const px = (l.edited ?? l.vanilla).slice();
+      for (let z = 0; z < l.h; z++) { const n = m.roles[z], look = looksAt(h)[n]; if (look && n !== 'keep' && n !== 'unused') putLook(px, l, z, look, n); }
       R.setLut('pv:' + h, l.w, l.h, px);
     }
-    for (const p of R.pieces) {
-      if (p.info?.held && !weaponsOn()) continue;
-      if (onScreen.includes(p.info.lut)) p.lutKeys.edited = 'pv:' + p.info.lut;
-      // patterns and capes' trim lines: the trim look's color (a cape's: the capes' trim)
-      const trim = looksAt(p.info.lut).trim;
-      for (const [key, h, rows] of [['pattern', p.info.pattern, true], ['cape', p.info.cape, false]]) {
-        const l = h && app.lut(h);
-        if (!trim || !l) continue;
+    // the trim color, as Apply's: the theme's on the patterned rows (of the game's LUT) of patterns, the capes' own
+    // (else the theme's) on every row of cape designs; none without a trim look
+    const trimOf = { pattern: looks.trim, cape: groupLooks?.Capes?.trim ?? looks.trim };
+    const trimmed = { pattern: new Set(plan.patterns), cape: new Set(plan.capes) };
+    for (const key of ['pattern', 'cape']) {
+      const trim = trimOf[key];
+      if (!looks.trim || !trim) { trimmed[key].clear(); continue; }
+      for (const h of trimmed[key]) {
+        const l = app.lut(h);
+        if (!l) { trimmed[key].delete(h); continue; }
         const px = (l.edited ?? l.vanilla).slice();
-        for (let z = 0; z < l.h; z++) if (!rows || px[z * l.w * 4 + 3] !== -1) for (let k = 0; k < 3; k++) px[z * l.w * 4 + k] = trim[k];
+        for (let z = 0; z < l.h; z++) if (key === 'cape' || l.vanilla[z * l.w * 4 + 3] !== -1) for (let k = 0; k < 3; k++) px[z * l.w * 4 + k] = trim[k];
         R.setLut('pv' + key + ':' + h, l.w, l.h, px);
-        p.lutKeys[key] = 'pv' + key + ':' + h;
       }
+    }
+    for (const p of R.pieces) {
+      if (plan.materials[p.info.lut] && app.lut(p.info.lut)?.w === W) p.lutKeys.edited = 'pv:' + p.info.lut;
+      for (const key of ['pattern', 'cape']) if (trimmed[key].has(p.info[key])) p.lutKeys[key] = 'pv' + key + ':' + p.info[key];
     }
     // decals: the sheets on screen recolored in the theme's colors
     const dc = $('thDecals').checked && decalColors(looks);
-    const seq = ++previewSeq;   // (a newer preview, or decals unticked meanwhile: these sheets put back)
     if (dc) previewDecals(R, R.pieces, $('thDecalMode').value, dc).then(h => { if (previewing && seq === previewSeq && $('thDecals').checked) decalShown = h; else unpreviewDecals(R, h); });
     $('thPreview').textContent = 'End preview';
     info('Preview: the theme on the item on screen (nothing saved). Apply theme to keep it.');
@@ -815,7 +829,7 @@ export async function themeDialog(app, opts = {}) {
     info('Applying… (the first time reads every item\'s masks: a little while)');
     try {
       const r = await app.api('/api/theme', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Variant: app.variant, Looks: looks, GroupLooks: groupLooks ?? {}, BySize: !!PRESETS[$('thPreset').value]?.bySize, Groups: groups(), Items: itemMode() ? its.map(it => it.value) : [], OnlyInMod: $('thOnly').checked, Overwrite: $('thOverwrite').checked,
+        body: JSON.stringify({ Variant: app.variant, Looks: looks, GroupLooks: groupLooks ?? {}, BySize: !!PRESETS[$('thPreset').value]?.bySize, ...applyTargets(), Overwrite: $('thOverwrite').checked,
           Decals: $('thDecals').checked ? $('thDecalMode').value : '' }) });
       app.track('theme applied', { item_only: itemMode(), tinted: Object.keys(tint), groups: groups(), roles: Object.keys(looks), preset: $('thPreset').value || null, camo: Object.keys(camo), paint_metal: $('thMetal').checked, decals: $('thDecals').checked ? $('thDecalMode').value : null, decal_sheets: r.decal_sheets, items: r.items, luts: r.luts, zones: r.zones, kept: r.kept, added: r.added, only_in_mod: $('thOnly').checked });
       await app.refresh();

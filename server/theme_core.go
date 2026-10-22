@@ -37,7 +37,9 @@ type themeTargetSet struct {
 // themeTargets: the LUTs of every item in the groups (or the items named), their roles' sources, and (bySize) the
 // swaps. p, v: the project and variant (onlyInMod: only LUTs already in it; edited masks count in the coverage); nil
 // for a theme in memory.
-func (s *Server) themeTargets(idx *game.Index, p *project.Project, v *project.Variant, groups, items []string, onlyInMod, bySize bool) *themeTargetSet {
+// focus (nil: every LUT): only these LUTs' roles and swaps are needed (the preview's, on screen): the suggestions and
+// size swaps are decided only for the items that bear on them, with the same results (focusItems).
+func (s *Server) themeTargets(idx *game.Index, p *project.Project, v *project.Variant, groups, items []string, onlyInMod, bySize bool, focus map[string]bool) *themeTargetSet {
 	want := map[string]bool{}
 	for _, g := range groups {
 		want[g] = true
@@ -84,9 +86,10 @@ func (s *Server) themeTargets(idx *game.Index, p *project.Project, v *project.Va
 		}
 	}
 	tg.mine, tg.builtin, tg.users = myRoles(), BuiltinRoles(), idx.Users()
+	needed := focusItems(s.roleItems(idx), wantItem, focus)
 	tg.suggested = map[string][]string{}
-	for _, it := range s.roleItems(idx) {
-		if !wantItem(it) {
+	for i, it := range s.roleItems(idx) {
+		if !wantItem(it) || !needed(i) {
 			continue
 		}
 		var hs []string
@@ -106,9 +109,53 @@ func (s *Server) themeTargets(idx *game.Index, p *project.Project, v *project.Va
 	}
 	tg.swapped = map[string]bool{}
 	if bySize {
-		tg.swapped = s.sizeSwaps(p, v, func(it roleItem) bool { return wantItem(it) }, func(h string) bool { return tg.seen[h] }, tg.mine, tg.builtin, tg.suggested)
+		tg.swapped = s.sizeSwaps(p, v, func(i int, it roleItem) bool { return wantItem(it) && needed(i) }, func(h string) bool { return tg.seen[h] }, tg.mine, tg.builtin, tg.suggested)
 	}
 	return tg
+}
+
+// focusItems: which of the items (by index; want: those themed) bear on the roles and size swaps of the LUTs in focus
+// (nil: all). An item's suggestions and swap are decided over its LUTs less those an earlier item already decided, so
+// they depend on the earlier items it shares a LUT with, and on theirs in turn: the items with a LUT in focus and,
+// repeatedly, every earlier item sharing a LUT with one taken. Deciding only those gives the focus LUTs the results
+// deciding them all gives.
+func focusItems(all []roleItem, want func(roleItem) bool, focus map[string]bool) func(int) bool {
+	if focus == nil {
+		return func(int) bool { return true }
+	}
+	in := make([]bool, len(all))
+	shares := func(a, b roleItem) bool {
+		for _, x := range a.LUTs {
+			for _, y := range b.LUTs {
+				if x.LUT == y.LUT {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for i, it := range all {
+		for _, l := range it.LUTs {
+			if want(it) && focus[l.LUT] {
+				in[i] = true
+			}
+		}
+	}
+	for grew := true; grew; {
+		grew = false
+		for i := range all {
+			if in[i] || !want(all[i]) {
+				continue
+			}
+			for j := i + 1; j < len(all); j++ {
+				if in[j] && shares(all[i], all[j]) {
+					in[i], grew = true, true
+					break
+				}
+			}
+		}
+	}
+	return func(i int) bool { return in[i] }
 }
 
 // trimTargets: the cape design LUTs of the capes themed and the pattern LUTs of the items themed (the trim look's
@@ -302,7 +349,7 @@ func (s *Server) PlanTheme(groups []string) (*ThemePlan, error) {
 	if idx == nil || g == nil {
 		return nil, fmt.Errorf("no game")
 	}
-	tg := s.themeTargets(idx, nil, nil, groups, nil, false, true)
+	tg := s.themeTargets(idx, nil, nil, groups, nil, false, true, nil)
 	pl := &ThemePlan{swapped: tg.swapped}
 	add := func(list *[]planLUT, hs string, width int, roles bool) error {
 		h, err := lut.ParseHash(hs)

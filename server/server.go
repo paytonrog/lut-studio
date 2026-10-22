@@ -131,6 +131,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/theme", s.needs(true, true, s.applyTheme))
 	mux.HandleFunc("POST /api/theme/undo", s.needs(true, false, s.undoTheme))
 	mux.HandleFunc("GET /api/theme/sizes", s.needs(true, false, s.themeSizes))
+	mux.HandleFunc("GET /api/theme/preview", s.needs(true, false, s.themePreview))
 	mux.HandleFunc("POST /api/lut/file", s.lutFile)
 	mux.HandleFunc("POST /api/lut/read", s.lutRead)
 	mux.HandleFunc("GET /api/state", s.needs(false, true, s.state))

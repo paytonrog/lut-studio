@@ -693,7 +693,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, err)
 		return
 	}
-	tg := s.themeTargets(idx, p, &v, in.Groups, in.Items, in.OnlyInMod, in.BySize)
+	tg := s.themeTargets(idx, p, &v, in.Groups, in.Items, in.OnlyInMod, in.BySize, nil)
 	luts, seen, lutGroup, items, wantKit := tg.luts, tg.seen, tg.lutGroup, tg.items, tg.wantKit
 	mine, builtin, users, suggested, swapped := tg.mine, tg.builtin, tg.users, tg.suggested, tg.swapped
 	s.mu.Lock()
@@ -963,14 +963,14 @@ func (s *Server) addLUT(p *project.Project, h uint64, van *lut.Texture, users ma
 // sizeSwaps: per item (wanted), whether its secondary zones cover more of it than its primary ones (each LUT's zone
 // shares by its surface area, over the item's LUTs that count); for its LUTs (a LUT several items share: its first
 // item's): a bySize theme swaps the two looks there
-func (s *Server) sizeSwaps(p *project.Project, v *project.Variant, want func(roleItem) bool, counts func(string) bool, mine, builtin, suggested map[string][]string) map[string]bool {
+func (s *Server) sizeSwaps(p *project.Project, v *project.Variant, want func(int, roleItem) bool, counts func(string) bool, mine, builtin, suggested map[string][]string) map[string]bool {
 	out := map[string]bool{}
 	idx := s.index()
 	if idx == nil {
 		return out
 	}
-	for _, it := range s.roleItems(idx) {
-		if !want(it) {
+	for i, it := range s.roleItems(idx) {
+		if !want(i, it) {
 			continue
 		}
 		var hs []string
@@ -1004,6 +1004,79 @@ func (s *Server) sizeSwaps(p *project.Project, v *project.Variant, want func(rol
 	return out
 }
 
+// GET /api/theme/preview?variant=&groups=&items=&only=&size=&luts=h1,h2: what Apply (POST /api/theme with these
+// Groups and Items, JSON arrays; only=1: OnlyInMod; size=1: BySize) does to these LUTs, decided as Apply decides it
+// (themeTargets, rolesOf), for the Theme panel's preview to show exactly that: per material LUT it themes, its zones'
+// roles and whether its primary and secondary looks swap; the pattern and cape LUTs whose trim rows it recolors.
+// (The LUTs on screen together aren't one item to Apply: an armor, its helmet and cape each get their own roles.)
+func (s *Server) themePreview(w http.ResponseWriter, r *http.Request) {
+	p, _ := s.project()
+	var v *project.Variant
+	if p != nil {
+		if pv, err := p.Variant(r.URL.Query().Get("variant")); err == nil {
+			v = &pv
+		}
+	}
+	q := r.URL.Query()
+	var groups, items []string
+	for k, dst := range map[string]*[]string{"groups": &groups, "items": &items} {
+		if q.Get(k) != "" {
+			if err := json.Unmarshal([]byte(q.Get(k)), dst); err != nil {
+				fail(w, 400, fmt.Errorf("%s: %w", k, err))
+				return
+			}
+		}
+	}
+	idx := s.index()
+	if idx == nil {
+		fail(w, 409, fmt.Errorf("no game"))
+		return
+	}
+	onlyInMod := q.Get("only") == "1"
+	focus := map[string]bool{}
+	for _, hs := range strings.Split(q.Get("luts"), ",") {
+		focus[hs] = true
+	}
+	tg := s.themeTargets(idx, p, v, groups, items, onlyInMod, q.Get("size") == "1", focus)
+	capeLUTs, patterns, _ := tg.trimTargets(idx)
+	inMod := func(hs string) bool { // (as Apply's trimRows)
+		if !onlyInMod || p == nil || v == nil {
+			return true
+		}
+		_, err := os.Stat(p.DocPath(*v, hs))
+		return err == nil
+	}
+	type material struct {
+		Roles []string `json:"roles"`
+		Swap  bool     `json:"swap"`
+	}
+	out := struct {
+		Materials map[string]material `json:"materials"`
+		Patterns  []string            `json:"patterns"`
+		Capes     []string            `json:"capes"`
+	}{Materials: map[string]material{}, Patterns: []string{}, Capes: []string{}}
+	for _, hs := range strings.Split(q.Get("luts"), ",") {
+		switch {
+		case tg.seen[hs]:
+			h, err := lut.ParseHash(hs)
+			if err != nil {
+				continue
+			}
+			van, err := s.game().ReadLUT(h)
+			if err != nil || van.Width != lut.MaterialWidth {
+				continue
+			}
+			roles, _, _ := s.rolesOf(p, v, hs, van, tg.mine, tg.builtin, tg.suggested)
+			out.Materials[hs] = material{roles, tg.swapped[hs]}
+		case patterns[hs] && inMod(hs):
+			out.Patterns = append(out.Patterns, hs)
+		case capeLUTs[hs] && inMod(hs):
+			out.Capes = append(out.Capes, hs)
+		}
+	}
+	writeJSON(w, out)
+}
+
 // GET /api/theme/sizes?variant=&luts=h1,h2: for each of these LUTs, whether a bySize theme swaps its primary and
 // secondary looks (sizeSwaps: as Apply decides it, by the item the LUT is of)
 func (s *Server) themeSizes(w http.ResponseWriter, r *http.Request) {
@@ -1028,7 +1101,7 @@ func (s *Server) themeSizes(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	sw := s.sizeSwaps(p, v, func(it roleItem) bool { return items[it.Value] }, func(string) bool { return true }, myRoles(), BuiltinRoles(), map[string][]string{})
+	sw := s.sizeSwaps(p, v, func(_ int, it roleItem) bool { return items[it.Value] }, func(string) bool { return true }, myRoles(), BuiltinRoles(), map[string][]string{})
 	out := map[string]bool{}
 	for _, h := range hs {
 		out[h] = sw[h]
