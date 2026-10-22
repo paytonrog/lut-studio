@@ -17,6 +17,9 @@ func WriteFile(path string, data []byte, perm os.FileMode) error {
 	}
 	tmp := f.Name()
 	_, err = f.Write(data)
+	if err == nil {
+		err = f.Sync() // (on disk before it replaces the file: a power cut after the rename can't leave it empty)
+	}
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
