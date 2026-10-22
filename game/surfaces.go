@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -30,21 +31,42 @@ type Surface struct {
 //go:embed surfaces.json
 var surfacesJSON []byte
 
-var builtinSurfaces = sync.OnceValue(func() map[string]Surface {
-	var f struct {
-		Surfaces map[string]Surface `json:"surfaces"`
-	}
+type surfaceTable struct {
+	Build    string             `json:"game_build"` // (the install's CacheKey it was made from)
+	Surfaces map[string]Surface `json:"surfaces"`
+}
+
+var builtinSurfaces = sync.OnceValue(func() surfaceTable {
+	var f surfaceTable
 	json.Unmarshal(surfacesJSON, &f)
 	if f.Surfaces == nil {
 		f.Surfaces = map[string]Surface{}
 	}
-	return f.Surfaces
+	return f
 })
 
 // BuiltinSurface: LUT lut's surface from the shipped table
 func BuiltinSurface(lut string) (Surface, bool) {
-	s, ok := builtinSurfaces()[lut]
+	s, ok := builtinSurfaces().Surfaces[lut]
 	return s, ok
+}
+
+// builtinCurrent: whether the shipped table's entry s for lut still holds for this install: made from this build, or
+// (after a game update) its masks are all still among the LUT's
+func (a *Assets) builtinCurrent(idx *Index, lut string, s Surface) bool {
+	if builtinSurfaces().Build == a.g.CacheKey() || idx == nil {
+		return true
+	}
+	have := map[string]bool{}
+	for _, m := range a.g.MasksOfLUT(idx, lut) {
+		have[fmt.Sprintf("0x%016x", m)] = true
+	}
+	for _, m := range s.Masks {
+		if !have[strings.ToLower(m)] {
+			return false
+		}
+	}
+	return true
 }
 
 // charType: the kinds drawn as a Helldiver's pieces (a piece is its whole unit); the rest are drawn per material slot
@@ -358,7 +380,7 @@ func (a *Assets) LUTSurfaces(idx *Index, only map[string]bool) map[string]Surfac
 
 // Surface: LUT lut's surface, from the shipped table, else computed (once per LUT)
 func (a *Assets) Surface(idx *Index, lut string) (Surface, bool) {
-	if s, ok := BuiltinSurface(lut); ok {
+	if s, ok := BuiltinSurface(lut); ok && a.builtinCurrent(idx, lut, s) {
 		return s, true
 	}
 	a.surfMu.Lock()

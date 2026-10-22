@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"maps"
 	"path"
 	"slices"
 	"sort"
@@ -249,7 +250,9 @@ func (g *Game) gearKits(existing []Kit) []Kit {
 		}
 	}
 	named := map[uint64]bool{}
-	for v, p := range knownTable {
+	// (in a fixed order: a unit joining a kit decides whether a later one with the same LUTs still brings a new one)
+	for _, v := range slices.Sorted(maps.Keys(knownTable)) {
+		p := knownTable[v]
 		typ := gearType(p)
 		if typ == "" {
 			continue
@@ -262,12 +265,17 @@ func (g *Game) gearKits(existing []Kit) []Kit {
 		add(h, p, typ)
 	}
 	unitType := stingray.Sum("unit")
+	var rest []uint64
 	for id := range g.data.Files {
 		if id.Type == unitType && !named[id.Name.Value] {
 			if _, ok := knownTable[id.Name.Value]; !ok {
-				add(id.Name, lut.HashString(id.Name.Value), UnitType)
+				rest = append(rest, id.Name.Value)
 			}
 		}
+	}
+	slices.Sort(rest)
+	for _, v := range rest {
+		add(stingray.Hash{Value: v}, lut.HashString(v), UnitType)
 	}
 	// named groups first (their names are clues for the unnamed ones)
 	var kits []Kit

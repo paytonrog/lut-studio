@@ -68,10 +68,12 @@ func (g *Game) MasksOfLUT(idx *Index, lut string) []uint64 {
 			if err != nil {
 				continue
 			}
-			if h := m.Textures[maskSlot].Value; h != 0 && !have[h] {
-				have[h] = true
-				out = append(out, h)
-				if m.BaseMaterial == NettingBase {
+			if h := m.Textures[maskSlot].Value; h != 0 {
+				if !have[h] {
+					have[h] = true
+					out = append(out, h)
+				}
+				if m.BaseMaterial == NettingBase { // (any material binding it: the first may be another kind)
 					g.holes[h] = true
 				}
 			}
