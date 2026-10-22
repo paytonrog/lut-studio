@@ -89,6 +89,16 @@ var folderRe = regexp.MustCompile(`[^a-z0-9_-]+`)
 // MaxFolder: the longest folder name (HD2 Arsenal's mod builder allows 29 characters).
 const MaxFolder = 29
 
+// OptionImage: where option id's picture goes in the project (folder != "": its picture of that variant). Options
+// have a folder of their own, each option's choices one in it: a variant's (images/<folder>.png) and another
+// option's can't have the same name (neither an id nor a folder holds a slash).
+func OptionImage(id, folder string) string {
+	if folder == "" {
+		return "images/options/" + id + ".png"
+	}
+	return "images/options/" + id + "/" + folder + ".png"
+}
+
 // Folder makes a folder name from a variant name (at most MaxFolder characters).
 func Folder(name string) string {
 	f := strings.Trim(folderRe.ReplaceAllString(strings.ToLower(name), "-"), "-")

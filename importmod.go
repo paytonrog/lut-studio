@@ -205,11 +205,11 @@ func (e *env) importMod(dir string, im *modpack.Imported) (string, error) {
 		}
 		usedIDs[o.ID] = true
 		if !bytes.Equal(lo.Image, im.Icon) { // (the icon stands in for none)
-			o.Image = keep(lo.Image, "images/opt-"+o.ID+".png")
+			o.Image = keep(lo.Image, project.OptionImage(o.ID, ""))
 		}
 		for i, v := range im.Variants {
 			if b := lo.ChoiceImage[v.Name]; b != nil && !bytes.Equal(b, im.Icon) && slices.Contains(o.Variants, p.Variants[i].Folder) {
-				if rel := keep(b, "images/opt-"+o.ID+"-"+p.Variants[i].Folder+".png"); rel != "" {
+				if rel := keep(b, project.OptionImage(o.ID, p.Variants[i].Folder)); rel != "" {
 					if o.Images == nil {
 						o.Images = map[string]string{}
 					}

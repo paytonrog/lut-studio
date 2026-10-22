@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"lutstudio/appcfg"
+	"lutstudio/atomicfile"
 	"lutstudio/game"
 	"lutstudio/lut"
 	"lutstudio/modpack"
@@ -744,7 +745,7 @@ func (s *Server) image(w http.ResponseWriter, r *http.Request) {
 		*ref.auto = in.Auto
 	}
 	os.MkdirAll(filepath.Dir(filepath.Join(p.Dir, rel)), 0o755)
-	if err := os.WriteFile(filepath.Join(p.Dir, rel), data, 0o644); err != nil {
+	if err := atomicfile.WriteFile(filepath.Join(p.Dir, rel), data, 0o644); err != nil {
 		fail(w, 500, err)
 		return
 	}

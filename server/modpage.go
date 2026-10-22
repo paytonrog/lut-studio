@@ -50,7 +50,7 @@ func imageRef(p *project.Project, target string) (picRef, error) {
 				continue
 			}
 			if folder == "" {
-				return fieldRef(&o.Image, nil, "images/opt-"+id+".png"), nil
+				return fieldRef(&o.Image, nil, project.OptionImage(id, "")), nil
 			}
 			if _, err := p.Variant(folder); err != nil {
 				return picRef{}, err
@@ -64,7 +64,7 @@ func imageRef(p *project.Project, target string) (picRef, error) {
 				} else {
 					o.Images[folder] = v
 				}
-			}, nil, "images/opt-" + id + "-" + folder + ".png"}, nil
+			}, nil, project.OptionImage(id, folder)}, nil
 		}
 		return picRef{}, fmt.Errorf("no option %q", id)
 	}
