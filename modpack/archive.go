@@ -39,9 +39,10 @@ func align(n, a int) int { return (n + a - 1) / a * a }
 // WriteArchive lays out a patch archive as the game's own archives are: 72-byte header, 32-byte type rows, 80-byte
 // file rows grouped by type, the table padded to 256, main data 16-aligned, stream / GPU data 64-aligned. Each row's
 // +40/+48 is where its main / GPU data goes in the loaded buffers (the sum of the earlier rows' sizes, each rounded
-// up to 256) and header +32/+40 are the buffers' totals: vanilla archives hold exactly these. The game sizes the
-// buffers from the header, so a smaller total than the data (the donor stamp's 5.3 MB GPU total, kept before) has
-// it read past them: the crash 22 s into boot of Adaptive Camo Overhaul v2 2.0.2, whose boot patch held 9.5 MB.
+// up to 256) and header +32/+40 are the buffers' totals: vanilla archives hold exactly these. A total smaller than
+// the data (the donor stamp's 5.3 MB GPU total, kept before) is the likely cause of the crash 22 s into boot of
+// Adaptive Camo Overhaul v2 2.0.2, whose boot patch held 9.5 MB (an access violation; the exe is obfuscated, so not
+// traced to the reader: inferred from the sizes).
 func WriteArchive(res []Resource) Archive {
 	res = append([]Resource(nil), res...)
 	sort.Slice(res, func(i, j int) bool {
