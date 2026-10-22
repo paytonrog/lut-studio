@@ -723,7 +723,10 @@ func (e *env) cmdBuild(dir, out string) error {
 	if err != nil {
 		return err
 	}
-	p, _ := project.Load(dir)
+	p, err := project.Load(dir)
+	if err != nil {
+		return err
+	}
 	m := modpack.Mod{Name: p.Name, Description: p.Description, GUID: p.GUID, OptionName: p.Option, OptionDescription: p.OptionDescription}
 	if p.OptionImage != "" && len(b) > 1 {
 		if m.OptionImage, err = os.ReadFile(filepath.Join(p.Dir, p.OptionImage)); err != nil {

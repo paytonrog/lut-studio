@@ -128,6 +128,20 @@ func ReadModWith(src Source, fallbackName string, o Options) (*Imported, error) 
 			rel[strings.TrimPrefix(p, root+"/")] = p
 		}
 	}
+	// (the mod managers find paths on Windows, where case doesn't matter: a lookup falls back to any case)
+	relLower := map[string]string{}
+	for k, v := range rel {
+		if _, ok := relLower[strings.ToLower(k)]; !ok || k < v { // (two spellings of one path: a fixed pick)
+			relLower[strings.ToLower(k)] = v
+		}
+	}
+	find := func(p string) (string, bool) {
+		if f, ok := rel[p]; ok {
+			return f, true
+		}
+		f, ok := relLower[strings.ToLower(p)]
+		return f, ok
+	}
 	im := &Imported{Name: fallbackName}
 	type option struct {
 		name    string
@@ -140,7 +154,7 @@ func ReadModWith(src Source, fallbackName string, o Options) (*Imported, error) 
 		if p == "" {
 			return nil
 		}
-		f, ok := rel[strings.TrimPrefix(path.Clean(strings.ReplaceAll(p, `\`, "/")), "/")]
+		f, ok := find(strings.TrimPrefix(path.Clean(strings.ReplaceAll(p, `\`, "/")), "/"))
 		if !ok {
 			return nil
 		}
@@ -275,11 +289,16 @@ func ReadModWith(src Source, fallbackName string, o Options) (*Imported, error) 
 		folder = strings.Trim(path.Clean(strings.ReplaceAll(folder, `\`, "/")), "/")
 		var patches []string
 		for p := range rel {
-			if patchName.MatchString(path.Base(p)) && path.Dir(p) == folder {
+			if patchName.MatchString(path.Base(p)) && strings.EqualFold(path.Dir(p), folder) {
 				patches = append(patches, p)
 			}
 		}
-		sort.Slice(patches, func(i, j int) bool { return patchNum(patches[i]) < patchNum(patches[j]) }) // later wins
+		sort.Slice(patches, func(i, j int) bool { // later wins (same number: by name, a fixed order)
+			if a, b := patchNum(patches[i]), patchNum(patches[j]); a != b {
+				return a < b
+			}
+			return patches[i] < patches[j]
+		})
 		return patches
 	}
 	var used []string
@@ -294,7 +313,7 @@ func ReadModWith(src Source, fallbackName string, o Options) (*Imported, error) 
 			}
 		}
 	}
-	read := readPatches(src, rel, used, o.WantTexture)
+	read := readPatches(src, rel, find, used, o.WantTexture)
 	skipped := map[string]bool{}
 	for _, o := range opts {
 		v := ImportedVariant{Name: o.name, Description: o.desc, Image: picture(o.image), LUTs: map[uint64]*lut.Texture{}, Textures: map[uint64]RawTexture{}}
@@ -386,7 +405,7 @@ type orderer interface{ order(p string) int }
 // from their .gpu_resources / .stream only the textures small enough to be LUTs (maxLUTBytes) and the wanted ones
 // (want, up to maxTextureBytes), each data file in one pass, all in the archive's order. A texture whose data lies
 // outside its files (a damaged or cut-off mod) counts as not a LUT.
-func readPatches(src Source, rel map[string]string, patches []string, want func(uint64) bool) map[string]*patchLUTs {
+func readPatches(src Source, rel map[string]string, find func(string) (string, bool), patches []string, want func(uint64) bool) map[string]*patchLUTs {
 	ord := func(p string) int {
 		if o, ok := src.(orderer); ok {
 			return o.order(p)
@@ -420,10 +439,10 @@ func readPatches(src Source, rel map[string]string, patches []string, want func(
 			if !isCand(e) {
 				continue
 			}
-			if f, ok := rel[p+".gpu_resources"]; ok && e.GPUSize > 0 {
+			if f, ok := find(p + ".gpu_resources"); ok && e.GPUSize > 0 {
 				wanted[f] = append(wanted[f], part{e.GPUOff, e.GPUSize})
 			}
-			if f, ok := rel[p+".stream"]; ok && e.StreamSize > 0 {
+			if f, ok := find(p + ".stream"); ok && e.StreamSize > 0 {
 				wanted[f] = append(wanted[f], part{e.StreamOff, e.StreamSize})
 			}
 		}
@@ -445,7 +464,7 @@ func readPatches(src Source, rel map[string]string, patches []string, want func(
 	// a patch whose GPU or stream part can't be read: said as the patch's error (a note), not taken for "no LUTs"
 	for _, p := range sorted {
 		for _, ext := range []string{".gpu_resources", ".stream"} {
-			if f, ok := rel[p+ext]; ok && readErr[f] != nil && len(wanted[f]) > 0 && out[p] != nil && out[p].err == nil {
+			if f, ok := find(p + ext); ok && readErr[f] != nil && len(wanted[f]) > 0 && out[p] != nil && out[p].err == nil {
 				out[p].err = fmt.Errorf("%s can't be read: %w", path.Base(f), readErr[f])
 			}
 		}
@@ -462,8 +481,10 @@ func readPatches(src Source, rel map[string]string, patches []string, want func(
 				continue
 			}
 			m, ok := span(tocs[p], e.MainOff, e.MainSize)
-			g, gok := data[rel[p+".gpu_resources"]][part{e.GPUOff, e.GPUSize}]
-			st, sok := data[rel[p+".stream"]][part{e.StreamOff, e.StreamSize}]
+			gf, _ := find(p + ".gpu_resources")
+			sf, _ := find(p + ".stream")
+			g, gok := data[gf][part{e.GPUOff, e.GPUSize}]
+			st, sok := data[sf][part{e.StreamOff, e.StreamSize}]
 			if !ok || !(gok || e.GPUSize == 0) || !(sok || e.StreamSize == 0) {
 				pr.skipped[key] = true
 				continue
