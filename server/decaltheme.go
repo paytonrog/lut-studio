@@ -42,16 +42,9 @@ func smooth(a, b, x float32) float32 {
 	return t * t * (3 - 2*t)
 }
 
-// decalContrast: how far apart two colors look (OKLab distance, lightness counted twice: readability is mostly
-// lightness). Gold on gold 0, yellow on white 0.25, gold on white 0.39, white on grey 0.68, gold on dark purple 1.0.
-func decalContrast(a, b [3]float32) float64 {
-	x, y := oklab(a), oklab(b)
-	dl, da, db := 2*(x[0]-y[0]), x[1]-y[1], x[2]-y[2]
-	return math.Sqrt(dl*dl + da*da + db*db)
-}
-
-// minDecalContrast: colors at least this far apart read as apart (gold on white doesn't)
-const minDecalContrast = 0.45
+// decalLightMin, decalDarkMax: a decal's light parts at least this light, its dark parts at most this dark (OKLab
+// lightness): its artwork reads as the game drew it (a white emblem on its own black disk), in the theme's hues
+const decalLightMin, decalDarkMax = 0.72, 0.32
 
 func oklab(c [3]float32) [3]float64 {
 	lin := func(v float32) float64 {
@@ -69,86 +62,90 @@ func oklab(c [3]float32) [3]float64 {
 		0.0259040371*l + 0.7827717662*m - 0.8086757660*s}
 }
 
-// decalShade, decalTint: a color taken toward black / white (a decal's own color when none of the theme's reads)
-func decalShade(c [3]float32) [3]float32 { return [3]float32{c[0] * 0.2, c[1] * 0.2, c[2] * 0.2} }
-func decalTint(c [3]float32) [3]float32 {
-	return [3]float32{c[0] + (1-c[0])*0.8, c[1] + (1-c[1])*0.8, c[2] + (1-c[2])*0.8}
+func fromOklab(c [3]float64) [3]float32 {
+	l := math.Pow(c[0]+0.3963377774*c[1]+0.2158037573*c[2], 3)
+	m := math.Pow(c[0]-0.1055613458*c[1]-0.0638541728*c[2], 3)
+	s := math.Pow(c[0]-0.0894841775*c[1]-1.2914855480*c[2], 3)
+	gam := func(x float64) float32 {
+		x = math.Min(math.Max(x, 0), 1)
+		if x <= 0.0031308 {
+			return float32(12.92 * x)
+		}
+		return float32(1.055*math.Pow(x, 1/2.4) - 0.055)
+	}
+	return [3]float32{gam(4.0767416621*l - 3.3077115913*m + 0.2309699292*s), gam(-1.2684380046*l + 2.6097574011*m - 0.3413193965*s),
+		gam(-0.0041960863*l - 0.7034186147*m + 1.7076147010*s)}
 }
 
-// decalInks: a decal sheet's light and dark colors, from the looks of the LUTs drawing it (the first one's first). A
-// decal's artwork reads by its light parts against its dark ones (an emblem on its own dark disk) and by its outline
-// on what it's drawn on (surfaces: their primary look). The light color: the trim look's, else the looks' secondary
-// or primary, else the trim taken toward black or white; the dark one: the secondary's, else the primary's, else the
-// light one taken toward black or white, the first that reads on the light one. The first light color whose pair reads
-// apart and on every surface (the light or the dark color on it) is taken; none: the pair that comes closest. ok: the
-// looks have a color. web/decaltheme.js decalInks is the same.
-func decalInks(surfaces [][3]float32, looks []map[string][]float32) (light, dark [3]float32, ok bool) {
-	colorOf := func(l map[string][]float32, role string) ([3]float32, bool) {
-		if row := l[role]; len(row) >= 3 {
-			return [3]float32{row[0], row[1], row[2]}, true
-		}
-		return [3]float32{}, false
-	}
+// withLightness: c at OKLab lightness L (its hue kept; its chroma less as it nears white or black)
+func withLightness(c [3]float32, L float64) [3]float32 {
+	o := oklab(c)
+	k := math.Min(1, 4*math.Min(L, 1-L)) // (a light or dark color can't be as colorful)
+	return fromOklab([3]float64{L, o[1] * k, o[2] * k})
+}
+
+// decalInks: a decal sheet's light and dark colors, from the looks of the LUTs drawing it (the first one's first),
+// keeping its artwork's light and dark (an emblem on its own disk reads wherever it's drawn): light, the trim look's
+// color, lifted past decalLightMin if it isn't that light (its hue kept: the theme's, not a white); dark, the secondary's if it's dark enough (decalDarkMax), else the darkest of the
+// looks' colors that is, else the secondary (or the trim) lowered past it. ok: the looks have a color.
+// web/decaltheme.js decalInks is the same.
+func decalInks(looks []map[string][]float32) (light, dark [3]float32, ok bool) {
 	of := func(roles ...string) (cs [][3]float32) {
 		for _, l := range looks {
 			for _, r := range roles {
-				if c, has := colorOf(l, r); has {
-					cs = append(cs, c)
+				if row := l[r]; len(row) >= 3 {
+					cs = append(cs, [3]float32{row[0], row[1], row[2]})
 				}
 			}
 		}
 		return cs
 	}
-	lights := append(of("trim"), of("secondary", "primary")...)
-	if len(lights) == 0 {
+	all := of("trim", "primary", "secondary")
+	if len(all) == 0 {
 		return light, dark, false
 	}
-	lights = append(lights, decalShade(lights[0]), decalTint(lights[0]))
-	darksOf := func(light [3]float32) [3]float32 {
-		cs := append(of("secondary", "primary"), decalShade(light), decalTint(light))
-		best, bestC := cs[0], -1.0
-		for _, c := range cs {
-			if d := decalContrast(c, light); d >= minDecalContrast {
-				return c
-			} else if d > bestC {
-				best, bestC = c, d
+	pick := func(first [][3]float32, good func(float64) bool, better func(a, b float64) bool, base [3]float32, L float64) [3]float32 {
+		if len(first) > 0 && good(oklab(first[0])[0]) {
+			return first[0]
+		}
+		found, best := false, [3]float32{}
+		for _, c := range all {
+			if l := oklab(c)[0]; good(l) && (!found || better(l, oklab(best)[0])) {
+				found, best = true, c
 			}
 		}
-		return best
+		if found {
+			return best
+		}
+		return withLightness(base, L)
 	}
-	bestScore := -1.0
-	for _, l := range lights {
-		d := darksOf(l)
-		score := decalContrast(l, d)
-		for _, s := range surfaces {
-			score = math.Min(score, math.Max(decalContrast(l, s), decalContrast(d, s)))
-		}
-		if score >= minDecalContrast {
-			return l, d, true
-		}
-		if score > bestScore {
-			light, dark, bestScore = l, d, score
-		}
+	trims, secs := of("trim"), of("secondary")
+	base := all[0]
+	if len(trims) > 0 {
+		base = trims[0]
 	}
+	if light = base; oklab(base)[0] < decalLightMin {
+		light = withLightness(base, 0.8)
+	}
+	dbase := base
+	if len(secs) > 0 {
+		dbase = secs[0]
+	}
+	dark = pick(secs, func(l float64) bool { return l <= decalDarkMax }, func(a, b float64) bool { return a < b }, dbase, decalDarkMax*0.7)
 	return light, dark, true
 }
 
-// sheetInks: decalInks for a sheet drawn with these themed LUTs (each item group's looks, swapped as Apply does),
-// drawn on their primary look. web/decaltheme.js sheetInks gathers the same from the pieces on screen.
+// sheetInks: decalInks for a sheet drawn with these themed LUTs (each item group's looks, swapped as Apply does).
+// web/decaltheme.js sheetInks gathers the same from the pieces on screen.
 func sheetInks(luts []string, looks map[string][]float32, groupLooks map[string]map[string][]float32,
 	lutGroup map[string]string, swapped map[string]bool) (light, dark [3]float32, ok bool) {
 	slices.Sort(luts)
-	var surfaces [][3]float32
 	var all []map[string][]float32
 	for _, hs := range luts {
-		l := lookFor(looks, groupLooks, lutGroup[hs], swapped[hs])
-		all = append(all, l)
-		if row := l["primary"]; len(row) >= 3 {
-			surfaces = append(surfaces, [3]float32{row[0], row[1], row[2]})
-		}
+		all = append(all, lookFor(looks, groupLooks, lutGroup[hs], swapped[hs]))
 	}
 	if len(all) == 0 {
 		all = append(all, looks)
 	}
-	return decalInks(surfaces, all)
+	return decalInks(all)
 }

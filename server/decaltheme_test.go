@@ -24,35 +24,33 @@ func TestRecolorDecals(t *testing.T) {
 	}
 }
 
-// decalInks: the trim color where it reads on what the decal is drawn on; else another of the theme's colors, else
-// the trim color darkened or lightened; the dark color apart from the light one
+// decalInks: the artwork's light parts light and its dark parts dark, in the trim's hue (lightened) and the
+// secondary's (or another of the theme's dark colors; else the secondary darkened)
 func TestDecalInks(t *testing.T) {
 	row := func(r, g, b float32) []float32 { return []float32{r, g, b, 1} }
-	gold, white, purple := row(0.85, 0.65, 0.25), row(0.92, 0.92, 0.9), row(0.18, 0.08, 0.3)
+	gold, white, purple, red := row(0.85, 0.65, 0.25), row(0.92, 0.92, 0.9), row(0.18, 0.08, 0.3), row(0.5, 0.05, 0.05)
 	c3 := func(r []float32) [3]float32 { return [3]float32{r[0], r[1], r[2]} }
-	// gold on a dark purple cape: the gold
-	light, dark, ok := decalInks([][3]float32{c3(purple)}, []map[string][]float32{{"trim": gold, "primary": white, "secondary": purple}})
-	if !ok || light != c3(gold) {
-		t.Errorf("gold on purple: %v", light)
+	L := func(c [3]float32) float64 { return oklab(c)[0] }
+	// gold trim, purple secondary: as they are
+	light, dark, ok := decalInks([]map[string][]float32{{"trim": gold, "primary": white, "secondary": purple}})
+	if !ok || light != c3(gold) || dark != c3(purple) {
+		t.Errorf("gold and purple: %v %v", light, dark)
 	}
-	if decalContrast(light, dark) < minDecalContrast {
-		t.Errorf("dark too close to light: %v %v", light, dark)
+	// gold trim, white secondary (Precursor Vex Chrome): the dark parts a dark gold
+	light, dark, _ = decalInks([]map[string][]float32{{"trim": gold, "primary": white, "secondary": white}})
+	if light != c3(gold) || L(dark) > decalDarkMax || dark[0] <= dark[2] {
+		t.Errorf("gold and white: %v %v (L %.2f)", light, dark, L(dark))
 	}
-	// gold on a gold cape whose cloth is white too (Precursor Vex Chrome): neither, a dark gold
-	light, dark, _ = decalInks([][3]float32{c3(gold), c3(white)}, []map[string][]float32{{"trim": gold, "primary": white, "secondary": gold}})
-	for _, s := range [][]float32{gold, white} {
-		if max(decalContrast(light, c3(s)), decalContrast(dark, c3(s))) < minDecalContrast {
-			t.Errorf("on gold and white: %v / %v doesn't read on %v", light, dark, s)
-		}
+	// a dark red trim: the light parts a light red (not the white primary), the dark ones the purple
+	light, dark, _ = decalInks([]map[string][]float32{{"trim": red, "primary": white, "secondary": purple}})
+	if L(light) < decalLightMin || light[0] <= light[2] || dark != c3(purple) {
+		t.Errorf("red trim, white primary: %v %v", light, dark)
 	}
-	if decalContrast(light, dark) < minDecalContrast {
-		t.Errorf("dark too close to light: %v %v", light, dark)
+	light, dark, _ = decalInks([]map[string][]float32{{"trim": red, "primary": red, "secondary": red}})
+	if L(light) < decalLightMin || light[0] <= light[2] || L(dark) > decalDarkMax {
+		t.Errorf("all red: %v %v", light, dark)
 	}
-	// nothing known underneath: the trim color, as before
-	if light, _, _ = decalInks(nil, []map[string][]float32{{"trim": gold, "secondary": purple}}); light != c3(gold) {
-		t.Errorf("no surfaces: %v", light)
-	}
-	if _, _, ok = decalInks(nil, []map[string][]float32{{}}); ok {
+	if _, _, ok = decalInks([]map[string][]float32{{}}); ok {
 		t.Error("no colors: ok")
 	}
 }

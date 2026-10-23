@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { slotList, vehicleMount } from '../../server/web/helpers.js';
 import { extractPieces, materialSlot, nodeWorld, transformPrim, skeletonOf, poseSkeleton, avatarWorld, jointWorld, M4 } from '../../server/web/render.js';
 import { BUILTIN, applyPreset, importLooks } from '../../server/web/presets.js';
-import { recolorDecals, decalInks, decalContrast, MIN_DECAL_CONTRAST, sheetInks } from '../../server/web/decaltheme.js';
+import { recolorDecals, decalInks, sheetInks, oklab, DECAL_LIGHT_MIN, DECAL_DARK_MAX } from '../../server/web/decaltheme.js';
 
 test('slotList merges left/right and names single-body parts', () => {
   const p = (slot, body = 'any') => ({ slot, body });
@@ -177,22 +177,22 @@ test('decals in a theme: recolored as the server does', () => {
   assert.equal(two[11], 0);
   const one = recolorDecals(px(), 'one', [0.8, 0.8, 0.8], [0, 0, 0]);
   assert.ok(one[0] > one[4] && one[4] > 0 && one[3] === 200);
-  // decalInks (server/decaltheme_test.go TestDecalInks): the trim where it reads on what it's drawn on
-  const gold = [0.85, 0.65, 0.25, 1], white = [0.92, 0.92, 0.9, 1], purple = [0.18, 0.08, 0.3, 1], c3 = r => r.slice(0, 3);
-  let ink = decalInks([c3(purple)], [{ trim: gold, primary: white, secondary: purple }]);
+  // decalInks (server/decaltheme_test.go TestDecalInks): light parts light, dark parts dark, in the theme's hues
+  const gold = [0.85, 0.65, 0.25, 1], white = [0.92, 0.92, 0.9, 1], purple = [0.18, 0.08, 0.3, 1], red = [0.5, 0.05, 0.05, 1], c3 = r => r.slice(0, 3);
+  const L = c => oklab(c)[0];
+  assert.deepEqual(decalInks([{ trim: gold, primary: white, secondary: purple }]), { light: c3(gold), dark: c3(purple) });
+  let ink = decalInks([{ trim: gold, primary: white, secondary: white }]);
   assert.deepEqual(ink.light, c3(gold));
-  assert.ok(decalContrast(ink.light, ink.dark) >= MIN_DECAL_CONTRAST);
-  ink = decalInks([c3(gold), c3(white)], [{ trim: gold, primary: white, secondary: gold }]);
-  for (const s of [gold, white]) assert.ok(Math.max(decalContrast(ink.light, c3(s)), decalContrast(ink.dark, c3(s))) >= MIN_DECAL_CONTRAST, `reads on ${s}`);
-  assert.ok(decalContrast(ink.light, ink.dark) >= MIN_DECAL_CONTRAST);
-  assert.deepEqual(decalInks([], [{ trim: gold, secondary: purple }]).light, c3(gold));
-  assert.equal(decalInks([], [{}]), null);
-  // sheetInks: per sheet, from the themed LUTs drawing it, on their primary; a sheet no themed LUT draws left out
-  const looksAt = h => ({ a: { trim: gold, primary: purple, secondary: white }, c: { trim: gold, primary: gold, secondary: white } })[h] ?? null;
-  const inks = sheetInks([{ decalHash: 's1', info: { lut: 'a' } }, { decalHash: 's2', info: { lut: 'c' } }, { decalHash: 's3', info: { lut: 'x' } }],
-    looksAt);
-  assert.deepEqual(inks.get('s1').light, c3(gold));
-  assert.ok(decalContrast(inks.get('s2').dark, c3(gold)) >= MIN_DECAL_CONTRAST);
+  assert.ok(L(ink.dark) <= DECAL_DARK_MAX && ink.dark[0] > ink.dark[2]);
+  ink = decalInks([{ trim: red, primary: white, secondary: purple }]);
+  assert.ok(L(ink.light) >= DECAL_LIGHT_MIN && ink.light[0] > ink.light[2]);
+  assert.deepEqual(ink.dark, c3(purple));
+  assert.equal(decalInks([{}]), null);
+  // sheetInks: per sheet, from the themed LUTs drawing it; a sheet no themed LUT draws left out
+  const looksAt = h => ({ a: { trim: gold, primary: purple, secondary: purple }, c: { trim: red, primary: gold, secondary: white } })[h] ?? null;
+  const inks = sheetInks([{ decalHash: 's1', info: { lut: 'a' } }, { decalHash: 's2', info: { lut: 'c' } }, { decalHash: 's3', info: { lut: 'x' } }], looksAt);
+  assert.deepEqual(inks.get('s1'), { light: c3(gold), dark: c3(purple) });
+  assert.ok(L(inks.get('s2').light) >= DECAL_LIGHT_MIN);
   assert.equal(inks.has('s3'), false);
 });
 

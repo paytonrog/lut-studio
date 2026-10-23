@@ -17,13 +17,9 @@ export function recolorDecals(px, mode, light, dark) {
   return px;
 }
 
-// how far apart two colors look (server/decaltheme.go decalContrast: OKLab distance, lightness counted twice)
-export function decalContrast(a, b) {
-  const x = oklab(a), y = oklab(b), dl = 2 * (x[0] - y[0]), da = x[1] - y[1], db = x[2] - y[2];
-  return Math.sqrt(dl * dl + da * da + db * db);
-}
-export const MIN_DECAL_CONTRAST = 0.45;
-function oklab(c) {
+// a decal's light parts at least this light, its dark parts at most this dark (OKLab lightness; decaltheme.go's)
+export const DECAL_LIGHT_MIN = 0.72, DECAL_DARK_MAX = 0.32;
+export function oklab(c) {
   const lin = v => { const x = Math.min(Math.max(v, 0), 1); return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
   const [r, g, b] = c.map(lin);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b),
@@ -31,39 +27,37 @@ function oklab(c) {
   return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
     0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
 }
-const shade = c => c.map(v => v * 0.2), tint = c => c.map(v => v + (1 - v) * 0.8);
+function fromOklab([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  const gam = x => { x = Math.min(Math.max(x, 0), 1); return x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055; };
+  return [gam(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s), gam(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    gam(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)];
+}
+// c at OKLab lightness L, its hue kept (less colorful near white or black)
+function withLightness(c, L) { const o = oklab(c), k = Math.min(1, 4 * Math.min(L, 1 - L)); return fromOklab([L, o[1] * k, o[2] * k]); }
 
-// a decal sheet's {light, dark} colors (server/decaltheme.go decalInks): from the looks of the LUTs drawing it. The
-// light: the trim's, else the looks' secondary or primary, else the trim taken toward black or white; the dark: the
-// secondary's, else the primary's, else the light taken toward black or white, the first that reads on the light one;
-// the first pair that reads apart and on every surface (its light or dark color on it), else the closest. null: no colors.
-export function decalInks(surfaces, looksList) {
+// a decal sheet's {light, dark} colors (server/decaltheme.go decalInks), from the looks of the LUTs drawing it, keeping
+// its artwork's light and dark: light, the trim's color lifted past DECAL_LIGHT_MIN if it isn't that light; dark, the
+// secondary's if it's dark enough, else the darkest of the looks' colors that is, else the secondary (or the trim)
+// lowered past DECAL_DARK_MAX. null: no colors.
+export function decalInks(looksList) {
   const of = (...roles) => looksList.flatMap(l => roles.map(r => (l[r]?.length >= 3 ? l[r].slice(0, 3) : null))).filter(Boolean);
-  const lights = [...of('trim'), ...of('secondary', 'primary')];
-  if (!lights.length) return null;
-  lights.push(shade(lights[0]), tint(lights[0]));
-  const darkOf = light => {
-    let best = null, bestC = -1;
-    for (const c of [...of('secondary', 'primary'), shade(light), tint(light)]) {
-      const d = decalContrast(c, light);
-      if (d >= MIN_DECAL_CONTRAST) return c;
-      if (d > bestC) { best = c; bestC = d; }
-    }
-    return best;
-  };
-  let out = null, bestScore = -1;
-  for (const light of lights) {
-    const dark = darkOf(light);
-    const score = Math.min(decalContrast(light, dark), ...surfaces.map(s => Math.max(decalContrast(light, s), decalContrast(dark, s))));
-    if (score >= MIN_DECAL_CONTRAST) return { light, dark };
-    if (score > bestScore) { out = { light, dark }; bestScore = score; }
+  const all = of('trim', 'primary', 'secondary');
+  if (!all.length) return null;
+  const base = of('trim')[0] ?? all[0], sec = of('secondary')[0];
+  const light = oklab(base)[0] < DECAL_LIGHT_MIN ? withLightness(base, 0.8) : base;
+  let dark;
+  if (sec && oklab(sec)[0] <= DECAL_DARK_MAX) dark = sec;
+  else {
+    for (const c of all) if (oklab(c)[0] <= DECAL_DARK_MAX && (!dark || oklab(c)[0] < oklab(dark)[0])) dark = c;
+    dark ??= withLightness(sec ?? base, DECAL_DARK_MAX * 0.7);
   }
-  return out;
+  return { light, dark };
 }
 
 // each sheet's {light, dark} for the pieces shown (server/decaltheme.go sheetInks): the looks of the themed LUTs
-// drawing it (looksAt(lut): its group's, swapped as Apply does; null: not themed), on their primary color. A sheet no
-// themed LUT draws isn't in it (Apply leaves it). A Map.
+// drawing it (looksAt(lut): its group's, swapped as Apply does; null: not themed). A sheet no themed LUT draws isn't
+// in it (Apply leaves it). A Map.
 export function sheetInks(pieces, looksAt) {
   const by = new Map();
   for (const p of pieces) {
@@ -74,13 +68,8 @@ export function sheetInks(pieces, looksAt) {
   }
   const out = new Map();
   for (const [sheet, luts] of by) {
-    const surfaces = [], all = [];
-    for (const h of [...luts.keys()].sort()) {
-      const L = luts.get(h);
-      all.push(L);
-      if (L.primary?.length >= 3) surfaces.push(L.primary.slice(0, 3));
-    }
-    const ink = all.length && decalInks(surfaces, all);
+    const all = [...luts.keys()].sort().map(h => luts.get(h));
+    const ink = all.length && decalInks(all);
     if (ink) out.set(sheet, ink);
   }
   return out;
