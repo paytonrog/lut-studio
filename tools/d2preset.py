@@ -18,6 +18,7 @@ HD2 paint color and metalness nearest D2's diffuse and reflection. Colors writte
 import gzip
 import json
 import os
+import re
 import sys
 
 DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'destiny2', 'shaders.json.gz')
@@ -99,6 +100,35 @@ def region(mp, k):
 
 
 DETAIL_MAP = json.load(open(os.path.join(os.path.dirname(DATA), 'detail_map.json')))['map']
+# HD2 tiles 14 and 21 read as crumpled / crushed foil on armor whatever the dye; the nearest-tile match sent dozens of
+# unlike D2 surfaces there (carbon fiber, plastic, glitter, cloth...). Those surfaces go by what they are instead (the
+# first rule matching the D2 texture's name), and carbon fiber to HD2's own carbon fiber (8) wherever it was matched.
+FOIL = {14, 21}
+SURFACE_RULES = [
+    (r'carbon|kevlar', 8),                                              # carbon fiber
+    (r'sparkle|discoball', 19),                                         # glitter: HD2 has none, clean
+    (r'plastic', 20),                                                   # plain plastic: clean
+    (r'chainmail', 12),                                                 # chainmail knit
+    (r'studded|_hex_', 23),                                             # hex studs
+    (r'mokume|coins', 2),                                               # layered metal: Damascus grain
+    (r'leather', 17),                                                   # leather: pebbled, as D2's other leathers
+    (r'wave|water_foam', 24),                                           # flag and fabric waves: flow lines
+    (r'cloth|fabric|gauze|burlap|techweave|shoe_mesh', 13),             # fabric: fine weave
+    (r'lattice|clockwork|ada_pattern|plating|veil_pattern_metal', 22),  # tech patterns: panel lines
+    (r'geopattern|crosshatch|tendril|veil_pattern|ice_runes', 16),      # suit prints: fine grid weave
+    (r'rock|crystal|lava|fractal|glass|splatter|oil|mosaic|sandstone|prism|perlin|glutt|worms|paint', 3),  # coarse grain
+]
+# every surface as picked on armor (the Detail Layer Picker): a third of the matched bump, repeated 4 times
+FAINT, TILING = 0.3, 4
+
+
+def surface(name, layer):
+    """The HD2 detail tile for D2 detail normal map `name` (matched to `layer`): by SURFACE_RULES for the foil tiles
+    and carbon fiber, else the match; a foil surface no rule names is clean (19)."""
+    for pat, to in SURFACE_RULES:
+        if re.search(pat, name, re.I) and (layer in FOIL or to == 8):
+            return to
+    return 19 if layer in FOIL else layer
 
 
 def finish(mp, k):
@@ -106,14 +136,15 @@ def finish(mp, k):
     f = [[6, 3, r['metal'] if r['metal'] >= 0.05 else -1], [10, 0, r['rough']]]
     if r['rough'] < 0.3:
         f.append([8, 3, round(0.9 - r['rough'], 2)])   # (a glossy coat: its highlight)
-    # the surface: the D2 dye's detail normal map as the nearest HD2 detail tile (data/destiny2/detail_map.json), its
-    # bump by D2's normal blend, its repeats by D2's detail scale
-    dm = DETAIL_MAP.get((mp.get('_tex') or {}).get('normal') or '')
+    # the surface: the D2 dye's detail normal map as the nearest HD2 detail tile (data/destiny2/detail_map.json; the foil
+    # tiles by surface()), its bump by D2's normal blend, faint, repeated TILING times
+    name = (mp.get('_tex') or {}).get('normal') or ''
+    dm = DETAIL_MAP.get(name)
     if dm:
         wear = remap(GEAR_WEAR, mp[f'{k}_wear_remap'])
         nb = mp[f'{k}_worn_material_parameters'][1] + (mp[f'{k}_material_params'][1] - mp[f'{k}_worn_material_parameters'][1]) * wear
-        f += [[1, 0, dm['layer']], [1, 1, round(min(1.5, max(0.15, dm['bump'] * max(nb, 0.3))), 2)],
-              [22, 0, round(min(8, max(1, mp['detail_normal_transform'][0])), 2)]]
+        f += [[1, 0, surface(name, dm['layer'])], [1, 1, round(FAINT * min(1.5, max(0.15, dm['bump'] * max(nb, 0.3))), 3)],
+              [22, 0, TILING]]
     if r.get('film'):   # (HD2's iridescence: the thin film's step, its mask all over, its strength D2's)
         th, st = r['film']
         f += [[13, 2, th], [13, 3, 0], [14, 0, 0], [14, 1, 0], [14, 2, 0], [14, 3, 1], [15, 0, 0], [15, 1, 0], [15, 2, 0], [15, 3, st]]

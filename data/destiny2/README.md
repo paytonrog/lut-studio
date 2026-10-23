@@ -20,7 +20,10 @@ the cloth regions on capes (a preset's own capes looks). Weapons take the shader
 on 40 Destiny 2 weapons: weapon 1 45% / 24%, weapon 2 16% / 11%, weapon 3 3% / 2%; Helldivers 2's weapons: primary
 45%, secondary 27%, hardware 22%, trim 5%): weapon 1 on primary and secondary, weapon 2's primary on the metal parts,
 the accent on the trim. Each dye's detail normal map becomes the nearest Helldivers 2 detail tile
-(`detail_map.json`: by bump spread, fineness, direction and regularity of the two textures), its worn color goes to the
+(`detail_map.json`: by bump spread, fineness, direction and regularity of the two textures; tiles 14 and 21 read as
+crumpled foil on armor, so the surfaces matched to them go by what they are instead: carbon fiber to HD2's carbon fiber
+tile 8, plastic and glitter clean, cloth a fine weave and so on, `SURFACE_RULES` in tools/d2preset.py), at a third of
+its bump, repeated 4 times (picked on armor), its worn color goes to the
 wear colors, and a dye's emissive color (when it is a color of its own) to the glow role. Vehicles take the sparrow
 dyes (measured on 30 sparrows: upper 59% / 11%, lower 24% / 1%, engine 5% / 1%; Helldivers 2's vehicles: primary 66%,
 trim 13%, secondary 12%, hardware 4%): the upper on primary, the lower on secondary, the accent on trim, the engine's
