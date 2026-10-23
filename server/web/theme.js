@@ -6,7 +6,7 @@
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { D2_PRESETS } from './d2presets.js';
 import { ROLE_INFO } from './roles.js';
-import { decalColors, previewDecals, unpreviewDecals } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals } from './decaltheme.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft',
   'SEAF', 'Super Destroyer', 'Ship interior', 'Ship crew'];
@@ -773,9 +773,8 @@ export async function themeDialog(app, opts = {}) {
       if (plan.materials[p.info.lut] && app.lut(p.info.lut)?.w === W) p.lutKeys.edited = 'pv:' + p.info.lut;
       for (const key of ['pattern', 'cape']) if (trimmed[key].has(p.info[key])) p.lutKeys[key] = 'pv' + key + ':' + p.info[key];
     }
-    // decals: the sheets on screen recolored in the theme's colors
-    const dc = $('thDecals').checked && decalColors(looks);
-    if (dc) previewDecals(R, R.pieces, $('thDecalMode').value, dc).then(h => { if (previewing && seq === previewSeq && $('thDecals').checked) decalShown = h; else unpreviewDecals(R, h); });
+    // decals: the sheets on screen recolored as Apply does: in colors that read on what each is drawn on
+    if ($('thDecals').checked) previewDecals(R, $('thDecalMode').value, sheetInks(R.pieces, h => (plan.materials[h] ? looksAt(h) : null))).then(h => { if (previewing && seq === previewSeq && $('thDecals').checked) decalShown = h; else unpreviewDecals(R, h); });
     $('thPreview').textContent = 'End preview';
     info('Preview: the theme on the item on screen (nothing saved). Apply theme to keep it.');
   }

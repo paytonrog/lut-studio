@@ -17,13 +17,73 @@ export function recolorDecals(px, mode, light, dark) {
   return px;
 }
 
-// the light and dark colors of a theme's looks ({role: LUT row}): the trim look's (else the primary's), the
-// secondary's (else the light one darkened)
-export function decalColors(looks) {
-  const c = (...roles) => { for (const r of roles) if (looks[r]?.length >= 3) return looks[r].slice(0, 3); return null; };
-  const light = c('trim', 'primary', 'secondary');
-  if (!light) return null;
-  return { light, dark: c('secondary', 'primary') ?? light.map(v => v * 0.35) };
+// how far apart two colors look (server/decaltheme.go decalContrast: OKLab distance, lightness counted twice)
+export function decalContrast(a, b) {
+  const x = oklab(a), y = oklab(b), dl = 2 * (x[0] - y[0]), da = x[1] - y[1], db = x[2] - y[2];
+  return Math.sqrt(dl * dl + da * da + db * db);
+}
+export const MIN_DECAL_CONTRAST = 0.45;
+function oklab(c) {
+  const lin = v => { const x = Math.min(Math.max(v, 0), 1); return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  const [r, g, b] = c.map(lin);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b),
+    s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+const shade = c => c.map(v => v * 0.2), tint = c => c.map(v => v + (1 - v) * 0.8);
+
+// a decal sheet's {light, dark} colors (server/decaltheme.go decalInks): from the looks of the LUTs drawing it. The
+// light: the trim's, else the looks' secondary or primary, else the trim taken toward black or white; the dark: the
+// secondary's, else the primary's, else the light taken toward black or white, the first that reads on the light one;
+// the first pair that reads apart and on every surface (its light or dark color on it), else the closest. null: no colors.
+export function decalInks(surfaces, looksList) {
+  const of = (...roles) => looksList.flatMap(l => roles.map(r => (l[r]?.length >= 3 ? l[r].slice(0, 3) : null))).filter(Boolean);
+  const lights = [...of('trim'), ...of('secondary', 'primary')];
+  if (!lights.length) return null;
+  lights.push(shade(lights[0]), tint(lights[0]));
+  const darkOf = light => {
+    let best = null, bestC = -1;
+    for (const c of [...of('secondary', 'primary'), shade(light), tint(light)]) {
+      const d = decalContrast(c, light);
+      if (d >= MIN_DECAL_CONTRAST) return c;
+      if (d > bestC) { best = c; bestC = d; }
+    }
+    return best;
+  };
+  let out = null, bestScore = -1;
+  for (const light of lights) {
+    const dark = darkOf(light);
+    const score = Math.min(decalContrast(light, dark), ...surfaces.map(s => Math.max(decalContrast(light, s), decalContrast(dark, s))));
+    if (score >= MIN_DECAL_CONTRAST) return { light, dark };
+    if (score > bestScore) { out = { light, dark }; bestScore = score; }
+  }
+  return out;
+}
+
+// each sheet's {light, dark} for the pieces shown (server/decaltheme.go sheetInks): the looks of the themed LUTs
+// drawing it (looksAt(lut): its group's, swapped as Apply does; null: not themed), on their primary color. A sheet no
+// themed LUT draws isn't in it (Apply leaves it). A Map.
+export function sheetInks(pieces, looksAt) {
+  const by = new Map();
+  for (const p of pieces) {
+    if (!p.decalHash) continue;
+    const h = p.info?.lut, L = h && looksAt(h);
+    if (!by.has(p.decalHash)) by.set(p.decalHash, new Map());
+    if (L) by.get(p.decalHash).set(h, L);
+  }
+  const out = new Map();
+  for (const [sheet, luts] of by) {
+    const surfaces = [], all = [];
+    for (const h of [...luts.keys()].sort()) {
+      const L = luts.get(h);
+      all.push(L);
+      if (L.primary?.length >= 3) surfaces.push(L.primary.slice(0, 3));
+    }
+    const ink = all.length && decalInks(surfaces, all);
+    if (ink) out.set(sheet, ink);
+  }
+  return out;
 }
 
 const cache = new Map();   // sheet hash -> {w, h, px} (the game's pixels, RGBA8)
@@ -42,12 +102,12 @@ async function sheetPixels(hash) {
   return out;
 }
 
-// pieces' decal sheets shown recolored (the theme's colors {light, dark}, mode); returns the hashes shown (for undo)
 let pending = Promise.resolve();   // (sheets going back to the saved ones: done before new ones show)
-export async function previewDecals(R, pieces, mode, colors) {
+// decal sheets shown recolored (inks: sheetInks' Map, sheet -> {light, dark}; mode); returns the hashes shown (for undo)
+export async function previewDecals(R, mode, inks) {
   await pending;
-  const hashes = [...new Set(pieces.map(p => p.decalHash).filter(Boolean))], shown = [];
-  for (const h of hashes) {
+  const shown = [];
+  for (const [h, colors] of inks) {
     const s = await sheetPixels(h);
     if (!s) continue;
     R.previewTexture(h, s.w, s.h, recolorDecals(s.px.slice(), mode, colors.light, colors.dark));

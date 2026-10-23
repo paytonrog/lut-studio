@@ -837,29 +837,19 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// decals: every decal sheet drawn with the themed LUTs, recolored from the game's artwork in the trim look's color
-	// (light parts) and the secondary's (dark parts); a sheet edited by hand since is kept (unless Overwrite)
+	// decals: every decal sheet drawn with the themed LUTs, recolored from the game's artwork in colors that read on
+	// what it's drawn on (decalInks: the trim look's color where it does, light parts; the secondary's, dark parts);
+	// a sheet edited by hand since is kept (unless Overwrite)
 	decalSheets, outside := 0, 0
 	if in.Decals != "" {
-		color := func(roles ...string) ([3]float32, bool) {
-			for _, r := range roles {
-				if l := in.Looks[r]; len(l) >= 3 {
-					return [3]float32{l[0], l[1], l[2]}, true
-				}
-			}
-			return [3]float32{}, false
-		}
-		light, ok := color("trim", "primary", "secondary")
-		dark, okd := color("secondary", "primary")
-		if !okd {
-			dark = [3]float32{light[0] * 0.35, light[1] * 0.35, light[2] * 0.35}
-		}
 		byLUT := s.game().DecalSheetsByLUT(idx)
 		set := map[uint64]bool{}
+		drawnBy := map[uint64][]string{} // (a sheet's themed LUTs)
 		for hs := range seen {
 			if h, err := lut.ParseHash(hs); err == nil {
 				for _, sh := range byLUT[h] {
 					set[sh] = true
+					drawnBy[sh] = append(drawnBy[sh], hs)
 				}
 			}
 		}
@@ -869,8 +859,9 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		slices.Sort(order)
 		for _, sh := range order {
+			light, dark, ok := sheetInks(drawnBy[sh], in.Looks, in.GroupLooks, lutGroup, swapped)
 			if !ok {
-				break
+				continue
 			}
 			blob, err := s.assetsOf().TextureBlob(sh)
 			if err != nil || len(blob) < 20 || binary.LittleEndian.Uint32(blob[16:]) != 0 {

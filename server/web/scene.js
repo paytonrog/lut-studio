@@ -12,7 +12,7 @@
 // previous, snapshot() -> state, restore(state) }.
 import { poseSkeleton, M4 } from './render.js';
 import { Showcase, LOOK, tone8 } from './showcase.js';
-import { decalColors, previewDecals, unpreviewDecals } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals } from './decaltheme.js';
 import { swapLooks } from './theme.js';
 
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
@@ -356,7 +356,7 @@ async function themeItems(app, items, theme, tag) {
   const { R, api } = app, S = window.lutstudio.S, roles = await api('/api/roles'), done = new Set(), worn = [];
   let groupOf = null;
   const vanilla = theme.base === 'vanilla', baseOf = l => (vanilla ? l.vanilla : l.edited ?? l.vanilla);
-  let decals = null;
+  const inksFrom = [];   // ([pieces, looksAt] per item: each decal sheet's colors from what it's drawn on)
   for (const it of items) for (const p of it.pieces) { p.sceneKeys ??= { ...p.lutKeys }; Object.assign(p.lutKeys, p.sceneKeys); }
   for (const it of items) {
     const luts = [...new Set(it.pieces.map(p => p.info.lut))].filter(h => S.luts.get(h)?.kind === 'material');
@@ -379,7 +379,7 @@ async function themeItems(app, items, theme, tag) {
       // (a bySize theme: the main look on what's biggest on the item this LUT is of)
       return theme.bySize && sizes[h] ? swapLooks(byGroup.get(g)) : byGroup.get(g);
     };
-    if (it.kind === 'diver' && !decals) decals = decalColors(looks);   // (the decals' colors: the first Helldiver's looks)
+    inksFrom.push([it.pieces, looksAt]);
     for (const h of luts) {
       if (done.has(h)) continue;
       done.add(h);
@@ -404,7 +404,11 @@ async function themeItems(app, items, theme, tag) {
   }
   // decals (theme.decals: 'one', 'two'): the scene's decal sheets shown recolored in the theme's colors; else as saved
   unpreviewDecals(R, themeItems.shown); themeItems.shown = [];
-  if (theme.decals && decals) themeItems.shown = await previewDecals(R, items.flatMap(it => it.pieces), theme.decals, decals);
+  if (theme.decals) {
+    const inks = new Map();
+    for (const [pieces, looksAt] of inksFrom) for (const [h, c] of sheetInks(pieces, looksAt)) if (!inks.has(h)) inks.set(h, c);
+    themeItems.shown = await previewDecals(R, theme.decals, inks);
+  }
   return worn;
 }
 // (theme.js's, without importing it: theme.js imports this module)
