@@ -135,10 +135,11 @@ export function capeFade(px, base, fade, game) {
 // lights) in the trim, whatever glow the theme has (server/theme_core.go lookFor)
 export const withCapeGlow = (L, group, trim) => (group === 'Capes' && (L.trim ?? trim) ? { ...L, glow: L.trim ?? trim } : L);
 
-// a glass zone's color (game: the game's; a visor, a lens) in look's hue at the game's lightness and colorfulness;
-// a gray look: smoked glass (server/decaltheme.go glassTint)
+// a glass zone's color (game: the game's; a visor, a lens) in look's hue at the game's lightness and colorfulness (at
+// least GLASS_MIN_CHROMA: dark glass tinted too); a gray look: smoked glass (server/decaltheme.go glassTint)
+export const GLASS_MIN_CHROMA = 0.07;   // (black or gray glass still takes a little of the hue)
 export function glassTint(look, game) {
-  const g = oklab(game), l = oklab(look.slice(0, 3)), lc = Math.hypot(l[1], l[2]), gc = Math.hypot(g[1], g[2]);
+  const g = oklab(game), l = oklab(look.slice(0, 3)), lc = Math.hypot(l[1], l[2]), gc = Math.max(Math.hypot(g[1], g[2]), GLASS_MIN_CHROMA);
   if (lc < 0.02) return fromOklab([g[0], 0, 0]);
   return fromOklab([g[0], l[1] * gc / lc, l[2] * gc / lc]);
 }

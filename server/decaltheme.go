@@ -180,12 +180,15 @@ func fadeColor(primary, game [3]float32) [3]float32 {
 	return withLightness(primary, oklab(game)[0])
 }
 
+// glassMinChroma: black or gray glass still takes a little of the theme's hue
+const glassMinChroma = 0.07
+
 // glassTint: a glass zone's color (game: the game's; a visor, a lens) in look's hue at the game's lightness and
-// colorfulness: it stays glass, as dark and as tinted as the game made it; a gray look: smoked glass.
+// colorfulness (at least glassMinChroma): it stays glass, as dark as the game made it; a gray look: smoked glass.
 // web/decaltheme.js glassTint is the same.
 func glassTint(look, game [3]float32) [3]float32 {
 	g, l := oklab(game), oklab(look)
-	lc, gc := math.Hypot(l[1], l[2]), math.Hypot(g[1], g[2])
+	lc, gc := math.Hypot(l[1], l[2]), math.Max(math.Hypot(g[1], g[2]), glassMinChroma)
 	if lc < 0.02 {
 		return fromOklab([3]float64{g[0], 0, 0})
 	}
