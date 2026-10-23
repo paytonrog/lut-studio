@@ -6,7 +6,7 @@
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { D2_PRESETS } from './d2presets.js';
 import { ROLE_INFO } from './roles.js';
-import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade, withCapeGlow } from './decaltheme.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft',
   'SEAF', 'Super Destroyer', 'Ship interior', 'Ship crew'];
@@ -744,7 +744,7 @@ export async function themeDialog(app, opts = {}) {
     } catch (e) { return info(e.message); }
     if (seq !== previewSeq) return;   // (another preview, or the preview ended, meanwhile)
     const looksAt = h => {
-      const L = groupLooks?.[groupOf.get(h)] ?? looks;
+      const L = withCapeGlow(groupLooks?.[groupOf.get(h)] ?? looks, groupOf.get(h), looks.trim);
       return P?.bySize && plan.materials[h]?.swap ? swapLooks(L) : L;
     };
     previewing = new Map(R.pieces.map(p => [p, { ...p.lutKeys }]));

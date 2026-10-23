@@ -191,10 +191,20 @@ func (tg *themeTargetSet) trimTargets(idx *game.Index) (capeLUTs, patterns map[s
 }
 
 // lookFor: the looks a LUT gets: its group's own when the theme has them, primary and secondary swapped for a bySize
-// swap
+// swap; a cape's glow panels the trim when the theme has no glow
 func lookFor(looks map[string][]float32, groupLooks map[string]map[string][]float32, group string, swap bool) map[string][]float32 {
+	trim := looks["trim"]
 	if gl, ok := groupLooks[group]; ok {
 		looks = gl
+		if gl["trim"] != nil {
+			trim = gl["trim"]
+		}
+	}
+	// a cape's glow zones are cloth panels with a faint glow (Rightful Occupier's, Tyranny's Bane's cyan): without a
+	// glow look of the theme's they take the trim's colors (a cloth zone keeps its finish and glow: copyColors)
+	if group == "Capes" && looks["glow"] == nil && trim != nil {
+		looks = maps.Clone(looks)
+		looks["glow"] = trim
 	}
 	if swap {
 		sw := maps.Clone(looks)

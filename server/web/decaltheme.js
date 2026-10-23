@@ -131,3 +131,6 @@ export function capeFade(px, base, fade, game) {
   const c = fadeColor(fade, Array.from(game.slice(base + 12, base + 15)));
   for (let k = 0; k < 3; k++) px[base + 12 + k] = c[k];
 }
+// a cape's looks (group: the LUT's item group; trim: the theme's): its glow panels in the trim when the theme has no
+// glow look (server/theme_core.go lookFor)
+export const withCapeGlow = (L, group, trim) => (group === 'Capes' && !L.glow && (L.trim ?? trim) ? { ...L, glow: L.trim ?? trim } : L);

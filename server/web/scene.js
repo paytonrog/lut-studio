@@ -12,7 +12,7 @@
 // previous, snapshot() -> state, restore(state) }.
 import { poseSkeleton, M4 } from './render.js';
 import { Showcase, LOOK, tone8 } from './showcase.js';
-import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade, withCapeGlow } from './decaltheme.js';
 import { swapLooks } from './theme.js';
 
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
@@ -375,7 +375,7 @@ async function themeItems(app, items, theme, tag) {
     if (theme.bySize) try { sizes = await api('/api/theme/sizes?variant=' + encodeURIComponent(S.variant) + '&luts=' + luts.join(',')); } catch { }
     const byGroup = new Map(), looksAt = h => {   // (an item group's own looks: a theme's capes / weapons looks)
       const g = groupOf.get(h) ?? '';
-      if (!byGroup.has(g)) byGroup.set(g, g ? theme.looksFor?.(zones, rowOf, g) ?? looks : looks);
+      if (!byGroup.has(g)) byGroup.set(g, withCapeGlow(g ? theme.looksFor?.(zones, rowOf, g) ?? looks : looks, g, looks.trim));
       // (a bySize theme: the main look on what's biggest on the item this LUT is of)
       return theme.bySize && sizes[h] ? swapLooks(byGroup.get(g)) : byGroup.get(g);
     };
