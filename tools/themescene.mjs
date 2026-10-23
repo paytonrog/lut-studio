@@ -13,6 +13,7 @@
 //   --cutout: the items alone on a transparent background (no backdrop, floor, glow, aura, title)
 //   --extra=file.json: presets to try out, [{name, args: [primary, secondary, trim, cloth, options]}] (theme.js T)
 //   --look=vignette=0,grain=0.5: the showcase look's settings (showcase.js LOOK: bg, glow, rim, exposure, vignette...)
+//   --decals=two|one: the decal sheets shown recolored too (the Theme panel's "also theme decals" and its mode)
 // Writes <preset>.png per preset. Needs Chrome or Edge.
 import { spawn } from 'node:child_process';
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -107,7 +108,7 @@ for (const name of presets) {
       if (pl) await window.themeScene.setEnv('planet:' + pl.id);
       else if (window.lutstudio.R.env.planet) await window.themeScene.setEnv('game:Armory (menu)');
     }
-    const c = await window.themeScene.render({ ...theme, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)}, { cutout: ${process.argv.includes('--cutout')} });
+    const c = await window.themeScene.render({ ...theme, decals: ${JSON.stringify(flag('decals') ?? '')}, title: ${TITLE} ? name : '', line: ${JSON.stringify(flag('line') ?? 'LUT Studio theme')} }, ${JSON.stringify(size)}, { cutout: ${process.argv.includes('--cutout')} });
     return c.toDataURL('image/png');
   })()`);
   if (!url) { console.log(name, ': no such preset'); continue; }
