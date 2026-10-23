@@ -34,7 +34,7 @@ function fromOklab([L, a, b]) {
     gam(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)];
 }
 // c at OKLab lightness L, its hue kept (less colorful near white or black)
-function withLightness(c, L) { const o = oklab(c), k = Math.min(1, 4 * Math.min(L, 1 - L)); return fromOklab([L, o[1] * k, o[2] * k]); }
+export function withLightness(c, L) { const o = oklab(c), k = Math.min(1, 4 * Math.min(L, 1 - L)); return fromOklab([L, o[1] * k, o[2] * k]); }
 
 // a decal sheet's {light, dark} colors (server/decaltheme.go decalInks), from the looks of the LUTs drawing it, keeping
 // its artwork's light and dark: light, the trim's color lifted past DECAL_LIGHT_MIN if it isn't that light; dark, the
@@ -107,4 +107,27 @@ export async function previewDecals(R, mode, inks) {
 export function unpreviewDecals(R, hashes) {
   if (hashes?.length) pending = Promise.all([pending, ...hashes.map(h => R.refreshDecals(h))]).catch(() => { });
   return pending;
+}
+
+// a camo's four colors (game: the game's, [[r, g, b] x 4]) in shades of paint: paint's lightness moved as far as each
+// game color is from their mean (spread to at least 0.1), paint's hue (server/decaltheme.go camoShades)
+export function camoShades(paint, game) {
+  const ls = game.map(c => oklab(c)[0]), mean = ls.reduce((a, b) => a + b, 0) / ls.length;
+  const dev = Math.max(...ls.map(l => Math.abs(l - mean))), k = dev > 0 && dev < 0.1 ? 0.1 / dev : 1, lp = oklab(paint)[0];
+  return ls.map(l => withLightness(paint, Math.min(Math.max(lp + (l - mean) * k, 0.05), 0.97)));
+}
+// a cape's gradient color in primary's hue at the game color's lightness (server/decaltheme.go fadeColor)
+export const fadeColor = (primary, game) => withLightness(primary.slice(0, 3), oklab(game)[0]);
+// a look on a cloth row the game gives camo, the look without: the game's camo in shades of the look's paint (Apply's
+// copyColors); game: the game's row
+export function tonalCamo(px, base, look, game) {
+  if (look[21 * 4 + 3] !== -1 || !game || game[base + 21 * 4 + 3] === -1) return;
+  const cs = camoShades(look.slice(0, 3), [0, 1, 2, 3].map(i => Array.from(game.slice(base + (16 + i) * 4, base + (16 + i) * 4 + 3))));
+  cs.forEach((c, i) => { for (let k = 0; k < 3; k++) px[base + (16 + i) * 4 + k] = c[k]; });
+}
+// a cape design row: its gradient color (column 3) from fade's hue, the game's lightness (Apply's trimZones)
+export function capeFade(px, base, fade, game) {
+  if (!fade || fade.length < 3 || !game) return;
+  const c = fadeColor(fade, Array.from(game.slice(base + 12, base + 15)));
+  for (let k = 0; k < 3; k++) px[base + 12 + k] = c[k];
 }

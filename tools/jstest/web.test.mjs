@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { slotList, vehicleMount } from '../../server/web/helpers.js';
 import { extractPieces, materialSlot, nodeWorld, transformPrim, skeletonOf, poseSkeleton, avatarWorld, jointWorld, M4 } from '../../server/web/render.js';
 import { BUILTIN, applyPreset, importLooks } from '../../server/web/presets.js';
-import { recolorDecals, decalInks, sheetInks, oklab, DECAL_LIGHT_MIN, DECAL_DARK_MAX } from '../../server/web/decaltheme.js';
+import { recolorDecals, decalInks, sheetInks, oklab, DECAL_LIGHT_MIN, DECAL_DARK_MAX, camoShades, fadeColor } from '../../server/web/decaltheme.js';
 
 test('slotList merges left/right and names single-body parts', () => {
   const p = (slot, body = 'any') => ({ slot, body });
@@ -215,4 +215,14 @@ test('pngBlob writes the pixels as they are: colors under zero alpha kept', asyn
   const back = [];
   for (let y = 0; y < h; y++) { assert.equal(rows[y * (w * 4 + 1)], 0); back.push(...rows.subarray(y * (w * 4 + 1) + 1, (y + 1) * (w * 4 + 1))); }
   assert.deepEqual(back, [...px]);
+});
+
+// the same cases as server/decaltheme_test.go TestCamoShadesAndFades: tonal camo in the look's hue, a dark fade stays dark
+test('cape camo and fades take the theme colors as Apply does', () => {
+  const olive = [[0.1836, 0.1992, 0.1641], [0.2266, 0.25, 0.2148], [0.2188, 0.2188, 0.1875], [0.2969, 0.2969, 0.2188]];
+  const sh = camoShades([0.7, 0.1, 0.1], olive), ls = sh.map(c => oklab(c)[0]);
+  for (const c of sh) assert.ok(c[0] > c[1] && c[0] > c[2], `red: ${c}`);
+  assert.ok(Math.max(...ls) - Math.min(...ls) >= 0.15);
+  const f = fadeColor([0.2, 0.4, 0.9], [0.14, 0.11, 0.05]);
+  assert.ok(oklab(f)[0] <= 0.45 && f[2] > f[0]);
 });

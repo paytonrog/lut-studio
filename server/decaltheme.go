@@ -149,3 +149,33 @@ func sheetInks(luts []string, looks map[string][]float32, groupLooks map[string]
 	}
 	return decalInks(all)
 }
+
+// camoShades: a camo's four colors (game: the game's) in shades of paint: each at paint's lightness moved as far as the
+// game's color is from their mean (spread to at least 0.1, so the pattern still reads), paint's hue. A tonal camo: the
+// game's pattern, the theme's color. web/decaltheme.js camoShades is the same.
+func camoShades(paint [3]float32, game [4][3]float32) (out [4][3]float32) {
+	var ls [4]float64
+	mean, dev := 0.0, 0.0
+	for i, c := range game {
+		ls[i] = oklab(c)[0]
+		mean += ls[i] / 4
+	}
+	for _, l := range ls {
+		dev = math.Max(dev, math.Abs(l-mean))
+	}
+	k := 1.0
+	if dev > 0 && dev < 0.1 {
+		k = 0.1 / dev
+	}
+	lp := oklab(paint)[0]
+	for i, l := range ls {
+		out[i] = withLightness(paint, math.Min(math.Max(lp+(l-mean)*k, 0.05), 0.97))
+	}
+	return out
+}
+
+// fadeColor: a cape's gradient color (game: the game's) in primary's hue at the game's lightness: a dark fade toward
+// the hem stays dark, a light one light. web/decaltheme.js fadeColor is the same.
+func fadeColor(primary, game [3]float32) [3]float32 {
+	return withLightness(primary, oklab(game)[0])
+}

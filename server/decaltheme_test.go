@@ -54,3 +54,37 @@ func TestDecalInks(t *testing.T) {
 		t.Error("no colors: ok")
 	}
 }
+
+// camoShades / copyColors: a look without camo on a row the game gives camo keeps the pattern in shades of the
+// look's paint (the hue the paint's, the blobs apart in lightness); fadeColor: a dark fade stays dark, in the hue given
+func TestCamoShadesAndFades(t *testing.T) {
+	olive := [4][3]float32{{0.1836, 0.1992, 0.1641}, {0.2266, 0.25, 0.2148}, {0.2188, 0.2188, 0.1875}, {0.2969, 0.2969, 0.2188}}
+	red := [3]float32{0.7, 0.1, 0.1}
+	sh := camoShades(red, olive)
+	lo, hi := 1.0, 0.0
+	for _, c := range sh {
+		if c[0] <= c[1] || c[0] <= c[2] {
+			t.Errorf("not red: %v", c)
+		}
+		lo, hi = min(lo, oklab(c)[0]), max(hi, oklab(c)[0])
+	}
+	if hi-lo < 0.15 {
+		t.Errorf("blobs too close: %.2f", hi-lo)
+	}
+	row := func() []float32 { return make([]float32, 23*4) }
+	game, look, cur := row(), row(), row()
+	for i, c := range olive {
+		copy(game[(16+i)*4:], c[:])
+	}
+	game[21*4+3], look[21*4+3] = 3, -1
+	copy(look, red[:])
+	copy(cur, game)
+	copyColors(cur, look, game)
+	if cur[21*4+3] != 3 || cur[16*4] <= cur[16*4+1] {
+		t.Errorf("camo: layer %v, color1 %v", cur[21*4+3], cur[16*4:16*4+3])
+	}
+	f := fadeColor([3]float32{0.2, 0.4, 0.9}, [3]float32{0.14, 0.11, 0.05})
+	if oklab(f)[0] > 0.45 || f[2] <= f[0] {
+		t.Errorf("fade: %v", f)
+	}
+}

@@ -6,7 +6,7 @@
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { D2_PRESETS } from './d2presets.js';
 import { ROLE_INFO } from './roles.js';
-import { sheetInks, previewDecals, unpreviewDecals } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade } from './decaltheme.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft',
   'SEAF', 'Super Destroyer', 'Ship interior', 'Ship crew'];
@@ -492,6 +492,7 @@ export function putLook(px, l, z, look, role) {
   if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) if (i >> 2 !== 20 || (i & 3) === 3) px[base + i] = look[i]; return; }
   for (const col of [0, 2, 5, 6]) for (let k = 0; k < 3; k++) px[base + col * 4 + k] = look[col * 4 + k];
   if (look[21 * 4 + 3] !== -1) for (let col = 16; col <= 21; col++) for (let k = 0; k < 4; k++) if ((col !== 16 || k < 3) && (col !== 20 || k === 3)) px[base + col * 4 + k] = look[col * 4 + k];
+  else tonalCamo(px, base, look, l.vanilla);
 }
 
 // app: { R, api, variant, lut(hash), lutLabel(hash), showItem(value), current() -> item values on screen, saveAll(),
@@ -757,6 +758,7 @@ export async function themeDialog(app, opts = {}) {
     // the trim color, as Apply's: the theme's on the patterned rows (of the game's LUT) of patterns, the capes' own
     // (else the theme's) on every row of cape designs; none without a trim look
     const trimOf = { pattern: looks.trim, cape: groupLooks?.Capes?.trim ?? looks.trim };
+    const capePrimary = groupLooks?.Capes?.primary ?? looks.primary;   // (a cape design's gradient: as Apply)
     const trimmed = { pattern: new Set(plan.patterns), cape: new Set(plan.capes) };
     for (const key of ['pattern', 'cape']) {
       const trim = trimOf[key];
@@ -766,6 +768,7 @@ export async function themeDialog(app, opts = {}) {
         if (!l) { trimmed[key].delete(h); continue; }
         const px = (l.edited ?? l.vanilla).slice();
         for (let z = 0; z < l.h; z++) if (key === 'cape' || l.vanilla[z * l.w * 4 + 3] !== -1) for (let k = 0; k < 3; k++) px[z * l.w * 4 + k] = trim[k];
+        if (key === 'cape') for (let z = 0; z < l.h; z++) capeFade(px, z * l.w * 4, capePrimary, l.vanilla);
         R.setLut('pv' + key + ':' + h, l.w, l.h, px);
       }
     }

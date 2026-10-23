@@ -232,7 +232,7 @@ func themeZones(d *lut.Document, van *lut.Texture, roles []string, looks map[str
 		if z < van.Height && math.Round(float64(van.At(0, z, 3))) == 1 && roles[z] != "cloth" {
 			// cloth in the game with a paint role (a cape's panels, padded armor): the look's colors only, the
 			// zone keeps its cloth finish
-			copyColors(cur, look)
+			copyColors(cur, look, row(van, z))
 		} else {
 			for i, x := range look {
 				if !lut.MarkChannel(lut.MaterialWidth, i) {
@@ -254,8 +254,10 @@ func themeZones(d *lut.Document, van *lut.Texture, roles []string, looks map[str
 func patternedRow(t *lut.Texture, z int) bool { return t.At(0, z, 3) != -1 }
 
 // trimZones: the trim color in the rows of d (patterned: only the rows it accepts on van, the game's LUT; nil: every
-// row). wr and overwrite as themeZones. Returns wr, whether d changed, rows themed, rows kept.
-func trimZones(d *lut.Document, van *lut.Texture, patterned func(*lut.Texture, int) bool, trim []float32, wr []string, overwrite bool) ([]string, bool, int, int) {
+// row); fade (a cape design's): its gradient color in fade's hue at the game's lightness (fadeColor: a dark fade
+// stays dark), its strength and reach kept. wr and overwrite as themeZones. Returns wr, whether d changed, rows
+// themed, rows kept.
+func trimZones(d *lut.Document, van *lut.Texture, patterned func(*lut.Texture, int) bool, trim, fade []float32, wr []string, overwrite bool) ([]string, bool, int, int) {
 	for len(wr) < d.Tex.Height {
 		wr = append(wr, "")
 	}
@@ -272,6 +274,13 @@ func trimZones(d *lut.Document, van *lut.Texture, patterned func(*lut.Texture, i
 		}
 		for ch := 0; ch < 3; ch++ {
 			cur[ch] = lut.Round(trim[ch])
+		}
+		if len(fade) >= 3 && z < van.Height && van.Width > 3 {
+			g := van.Px[z*van.Width*4+3*4:]
+			c := fadeColor([3]float32{fade[0], fade[1], fade[2]}, [3]float32{g[0], g[1], g[2]})
+			for ch := 0; ch < 3; ch++ {
+				cur[3*4+ch] = lut.Round(c[ch])
+			}
 		}
 		wr[z] = rowHash(cur)
 		zones++
@@ -480,9 +489,16 @@ func (pl *ThemePlan) Apply(t ThemeLooks) ([]*lut.Document, []*lut.Texture, error
 			if gl, ok := t.GroupLooks[set.group]; ok && len(gl["trim"]) >= 3 {
 				tr = gl["trim"]
 			}
+			var fade []float32 // (capes: their gradient in the capes' primary, else the theme's: as Apply)
+			if set.group == "Capes" {
+				fade = t.Looks["primary"]
+				if gl, ok := t.GroupLooks["Capes"]; ok && len(gl["primary"]) >= 3 {
+					fade = gl["primary"]
+				}
+			}
 			for _, L := range set.list {
 				d := cloneDoc(L.base)
-				if _, changed, _, _ := trimZones(d, L.van, set.patterned, tr, nil, true); changed {
+				if _, changed, _, _ := trimZones(d, L.van, set.patterned, tr, fade, nil, true); changed {
 					if err := keep(L, d); err != nil {
 						return nil, nil, err
 					}

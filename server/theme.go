@@ -603,8 +603,9 @@ func CopyThemeRecord(p *project.Project, from, to string) {
 }
 
 // copyColors: a look's colors into a material row: paint, secondary, wear and heavy wear colors, and its camo when it
-// has one (colors, pattern, size, where the paint shows through)
-func copyColors(cur, look []float32) {
+// has one (colors, pattern, size, where the paint shows through); a look without camo on a row the game gives one
+// (game: its row; the Camo Cloak's olive blobs) keeps the game's pattern in shades of the look's paint (camoShades)
+func copyColors(cur, look, game []float32) {
 	set := func(col, ch int) {
 		if i := col*4 + ch; i < len(cur) && i < len(look) && !lut.MarkChannel(lut.MaterialWidth, i) {
 			cur[i] = lut.Round(look[i])
@@ -626,6 +627,18 @@ func copyColors(cur, look []float32) {
 		}
 		for ch := 0; ch < 4; ch++ {
 			set(21, ch)
+		}
+	} else if len(look) >= 3 && len(game) > 21*4+3 && game[21*4+3] != -1 && len(cur) > 21*4+3 {
+		var g [4][3]float32
+		for i := range g {
+			copy(g[i][:], game[(16+i)*4:(16+i)*4+3])
+		}
+		for i, c := range camoShades([3]float32{look[0], look[1], look[2]}, g) {
+			for ch := 0; ch < 3; ch++ {
+				if j := (16+i)*4 + ch; !lut.MarkChannel(lut.MaterialWidth, j) {
+					cur[j] = lut.Round(c[ch])
+				}
+			}
 		}
 	}
 }
@@ -806,8 +819,15 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				continue
 			}
+			var fade []float32 // (a cape design's gradient: the capes' primary, else the theme's)
+			if width == lut.CapeWidth {
+				fade = in.Looks["primary"]
+				if gl, ok := in.GroupLooks[group]; ok && len(gl["primary"]) >= 3 {
+					fade = gl["primary"]
+				}
+			}
 			wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
-			wr, changed, nz, nk := trimZones(d, van, patterned, trim, wr, in.Overwrite)
+			wr, changed, nz, nk := trimZones(d, van, patterned, trim, fade, wr, in.Overwrite)
 			zones += nz
 			kept += nk
 			if nz > 0 {

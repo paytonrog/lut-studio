@@ -12,7 +12,7 @@
 // previous, snapshot() -> state, restore(state) }.
 import { poseSkeleton, M4 } from './render.js';
 import { Showcase, LOOK, tone8 } from './showcase.js';
-import { sheetInks, previewDecals, unpreviewDecals } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade } from './decaltheme.js';
 import { swapLooks } from './theme.js';
 
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
@@ -392,11 +392,13 @@ async function themeItems(app, items, theme, tag) {
     for (const p of it.pieces) {
       if (luts.includes(p.info.lut)) p.lutKeys.edited = tag + p.info.lut;
       const trim = looksAt(p.info.lut).trim;   // (a cape's trim lines: the capes' trim)
+      const fade = looksAt(p.info.lut).primary;   // (a cape design's gradient: the capes' primary, as Apply)
       for (const [key, h, rows] of [['pattern', p.info.pattern, true], ['cape', p.info.cape, false]]) {
         const l = h && S.luts.get(h);
         if (!l || (!trim && !vanilla)) continue;
         const px = baseOf(l).slice();
         if (trim) for (let z = 0; z < l.h; z++) if (!rows || px[z * l.w * 4 + 3] !== -1) for (let k = 0; k < 3; k++) px[z * l.w * 4 + k] = trim[k];
+        if (trim && key === 'cape') for (let z = 0; z < l.h; z++) capeFade(px, z * l.w * 4, fade, l.vanilla);
         R.setLut(tag + key + ':' + h, l.w, l.h, px);
         p.lutKeys[key] = tag + key + ':' + h;
       }
@@ -417,6 +419,7 @@ function putLook(px, l, z, look, role) {
   if (!cloth) { for (let i = 0; i < look.length && i < l.w * 4; i++) px[base + i] = look[i]; return; }
   for (const col of [0, 2, 5, 6]) for (let k = 0; k < 3; k++) px[base + col * 4 + k] = look[col * 4 + k];
   if (look[21 * 4 + 3] !== -1) for (let col = 16; col <= 21; col++) for (let k = 0; k < 4; k++) if (col !== 16 || k < 3) px[base + col * 4 + k] = look[col * 4 + k];
+  else tonalCamo(px, base, look, l.vanilla);
 }
 
 // ---- the light: a theme's most vivid color (a glow or trim first) at full strength (no washed-out or near-black

@@ -292,7 +292,7 @@ func TestCopyColors(t *testing.T) {
 	}
 	cur[3], cur[40] = 1, 0.9 // mode cloth; a roughness value
 	look[21*4+3] = -1        // no camo
-	copyColors(cur, look)
+	copyColors(cur, look, nil)
 	if cur[0] != lut.Round(0.5) || cur[2*4] != lut.Round(0.5) || cur[3] != 1 || cur[40] != 0.9 || cur[16*4] != 0 {
 		t.Errorf("copyColors: %v", cur[:24])
 	}
