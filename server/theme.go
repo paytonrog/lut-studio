@@ -46,7 +46,7 @@ func suggestRoles(van *lut.Texture, cov []float64) []string {
 			roles[z] = "unused"
 		case mode == 1:
 			roles[z] = "cloth"
-		case at(z, 10, 2) >= 0.9: // (full clearcoat: glass, visors and lenses)
+		case mode == 3 && at(z, 10, 2) >= 0.9: // (glass: visors and lenses; a theme tints it, isGlass)
 			roles[z] = "keep"
 		case at(z, 13, 0) > 0.005:
 			roles[z] = "glow"
@@ -168,7 +168,8 @@ func suggestItem(luts []itemLUT) map[string][]string {
 				roles[z] = "unused"
 			case mode == 1 && !L.cape:
 				roles[z] = "cloth"
-			case at(z, 10, 2) >= 0.9: // (full clearcoat: glass, a helmet's visor, lenses: a theme leaves it)
+			case mode == 3 && at(z, 10, 2) >= 0.9: // (glass: a helmet's visor, lenses: a theme tints it, isGlass;
+				// a fully coated composite or coated paint, the Yellow Jacket skins' gloss, is paint)
 				roles[z] = "keep"
 			case at(z, 13, 0) > 0.005:
 				roles[z] = "glow"

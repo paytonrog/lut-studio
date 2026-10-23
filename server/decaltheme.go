@@ -207,5 +207,8 @@ func glassLook(looks map[string][]float32) (c [3]float32, ok bool) {
 	return c, ok
 }
 
-// isGlass: a material row with a full clearcoat (a visor, a lens, a cockpit's glass: the roles keep it)
-func isGlass(row []float32) bool { return len(row) > 10*4+2 && row[10*4+2] >= 0.9 }
+// isGlass: a material row of glass: coated, never patterned (mode 3), a full clearcoat (a visor, a lens: the roles
+// keep it; a fully coated composite, the Yellow Jacket skins' gloss, is paint)
+func isGlass(row []float32) bool {
+	return len(row) > 10*4+2 && math.Round(float64(row[3])) == 3 && row[10*4+2] >= 0.9
+}

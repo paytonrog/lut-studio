@@ -127,7 +127,10 @@ func TestGlassTint(t *testing.T) {
 	}
 	van := &lut.Texture{Width: 23, Height: 2, Px: make([]float32, 23*4*2)}
 	copy(van.Px, red[:])
-	van.Px[10*4+2] = 1 // (row 0: a visor; row 1 not glass)
+	van.Px[3], van.Px[10*4+2] = 3, 1 // (row 0: a visor: coated, never patterned, a full clearcoat; row 1 not glass)
+	if isGlass(append([]float32{0.2, 0.2, 0.2, 4}, van.Px[4:23*4]...)) {
+		t.Error("a fully coated composite (the Yellow Jacket skins' gloss) taken for glass")
+	}
 	van.Px[23*4] = 0.3
 	d := &lut.Document{Tex: &lut.Texture{Width: 23, Height: 2, Px: append([]float32(nil), van.Px...)}}
 	_, changed, n, _ := themeZones(d, van, []string{"keep", "keep"}, looks, nil, true, nil)

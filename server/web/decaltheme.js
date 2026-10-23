@@ -153,7 +153,7 @@ export function glassLook(looks) {
 }
 // a zone the roles keep that is glass in the game (a full clearcoat: a visor, a lens): tinted as Apply does (themeZones)
 export function tintGlass(px, base, looks, game) {
-  if (!game || game[base + 10 * 4 + 2] < 0.9) return false;
+  if (!game || Math.round(game[base + 3]) !== 3 || game[base + 10 * 4 + 2] < 0.9) return false;   // (glass: mode 3, fully coated)
   const c = glassLook(looks);
   if (!c) return false;
   const t = glassTint(c, Array.from(game.slice(base, base + 3)));

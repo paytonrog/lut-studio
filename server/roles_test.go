@@ -250,18 +250,26 @@ func TestWithSet(t *testing.T) {
 	}
 }
 
-// glass (full clearcoat: a helmet's visor) is kept by themes, even as big metal
+// glass (coated, never patterned, a full clearcoat: a helmet's visor) is kept by the roles (a theme tints it), even
+// as big metal; a fully coated composite (the Yellow Jacket skins' gloss) is paint
 func TestSuggestGlass(t *testing.T) {
 	tx := lut.New(lut.MaterialWidth, 2)
 	for ch := 0; ch < 3; ch++ {
 		tx.Set(0, 0, ch, 0.4)
 		tx.Set(0, 1, ch, 0.7)
 	}
+	tx.Set(0, 1, 3, 3)  // coated, never patterned
 	tx.Set(6, 1, 3, 1)  // metal
 	tx.Set(10, 1, 2, 1) // full clearcoat
 	got := suggestItem([]itemLUT{{"helmet", tx, []float64{0.6, 0.4}, false, 1, false}})
 	if fmt.Sprint(got["helmet"]) != "[primary keep]" {
 		t.Errorf("visor: %v", got["helmet"])
+	}
+	tx.Set(0, 1, 3, 4) // composite
+	tx.Set(6, 1, 3, 0)
+	got = suggestItem([]itemLUT{{"tank", tx, []float64{0.3, 0.7}, false, 1, false}})
+	if got["tank"][1] == "keep" {
+		t.Errorf("coated composite kept: %v", got["tank"])
 	}
 }
 
