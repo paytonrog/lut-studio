@@ -228,15 +228,32 @@ func themeZones(d *lut.Document, van *lut.Texture, roles []string, looks map[str
 	}
 	row := func(t *lut.Texture, z int) []float32 { return t.Px[z*t.Width*4 : (z+1)*t.Width*4] }
 	changed, zones, kept := false, 0, 0
+	glass, hasGlass := glassLook(looks)
 	for z := 0; z < d.Tex.Height && z < len(roles); z++ {
 		look, ok := looks[roles[z]]
-		if !ok || roles[z] == "keep" || roles[z] == "unused" {
+		// glass the roles keep (a visor, a lens): tinted in the theme's most colorful hue, as dark as the game's
+		tint := roles[z] == "keep" && hasGlass && z < van.Height && isGlass(row(van, z))
+		if !tint && (!ok || roles[z] == "keep" || roles[z] == "unused") {
 			continue
 		}
 		cur := row(d.Tex, z)
 		game := z < van.Height && rowHash(cur) == rowHash(row(van, z))
 		if !overwrite && !game && rowHash(cur) != wr[z] {
 			kept++ // changed by hand since
+			continue
+		}
+		if tint {
+			g := row(van, z)
+			c := glassTint(glass, [3]float32{g[0], g[1], g[2]})
+			for ch := 0; ch < 3; ch++ {
+				cur[ch] = lut.Round(c[ch])
+			}
+			wr[z] = rowHash(cur)
+			zones++
+			if byRole != nil {
+				byRole["glass"]++
+			}
+			changed = true
 			continue
 		}
 		if z < van.Height && math.Round(float64(van.At(0, z, 3))) == 1 && roles[z] != "cloth" {

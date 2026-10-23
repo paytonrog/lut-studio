@@ -134,3 +134,29 @@ export function capeFade(px, base, fade, game) {
 // a cape's looks (group: the LUT's item group; trim: the theme's): its glow panels (cloth with a faint glow, not
 // lights) in the trim, whatever glow the theme has (server/theme_core.go lookFor)
 export const withCapeGlow = (L, group, trim) => (group === 'Capes' && (L.trim ?? trim) ? { ...L, glow: L.trim ?? trim } : L);
+
+// a glass zone's color (game: the game's; a visor, a lens) in look's hue at the game's lightness and colorfulness;
+// a gray look: smoked glass (server/decaltheme.go glassTint)
+export function glassTint(look, game) {
+  const g = oklab(game), l = oklab(look.slice(0, 3)), lc = Math.hypot(l[1], l[2]), gc = Math.hypot(g[1], g[2]);
+  if (lc < 0.02) return fromOklab([g[0], 0, 0]);
+  return fromOklab([g[0], l[1] * gc / lc, l[2] * gc / lc]);
+}
+// the color glass takes in a theme: the most colorful of its trim, secondary and primary looks' (null: none)
+export function glassLook(looks) {
+  let best = null, bc = -1;
+  for (const r of ['trim', 'secondary', 'primary']) {
+    const row = looks?.[r];
+    if (row?.length >= 3) { const o = oklab(row.slice(0, 3)), c = Math.hypot(o[1], o[2]); if (c > bc) { best = row.slice(0, 3); bc = c; } }
+  }
+  return best;
+}
+// a zone the roles keep that is glass in the game (a full clearcoat: a visor, a lens): tinted as Apply does (themeZones)
+export function tintGlass(px, base, looks, game) {
+  if (!game || game[base + 10 * 4 + 2] < 0.9) return false;
+  const c = glassLook(looks);
+  if (!c) return false;
+  const t = glassTint(c, Array.from(game.slice(base, base + 3)));
+  for (let k = 0; k < 3; k++) px[base + k] = t[k];
+  return true;
+}

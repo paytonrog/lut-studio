@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { slotList, vehicleMount } from '../../server/web/helpers.js';
 import { extractPieces, materialSlot, nodeWorld, transformPrim, skeletonOf, poseSkeleton, avatarWorld, jointWorld, M4 } from '../../server/web/render.js';
 import { BUILTIN, applyPreset, importLooks } from '../../server/web/presets.js';
-import { recolorDecals, decalInks, sheetInks, oklab, DECAL_LIGHT_MIN, DECAL_DARK_MAX, camoShades, fadeColor } from '../../server/web/decaltheme.js';
+import { recolorDecals, decalInks, sheetInks, oklab, DECAL_LIGHT_MIN, DECAL_DARK_MAX, camoShades, fadeColor, glassLook, glassTint } from '../../server/web/decaltheme.js';
 
 test('slotList merges left/right and names single-body parts', () => {
   const p = (slot, body = 'any') => ({ slot, body });
@@ -225,4 +225,14 @@ test('cape camo and fades take the theme colors as Apply does', () => {
   assert.ok(Math.max(...ls) - Math.min(...ls) >= 0.15);
   const f = fadeColor([0.2, 0.4, 0.9], [0.14, 0.11, 0.05]);
   assert.ok(oklab(f)[0] <= 0.45 && f[2] > f[0]);
+});
+
+// the same cases as server/decaltheme_test.go TestGlassTint
+test('glass takes the theme most colorful hue at the game lightness', () => {
+  const red = [0.81, 0.25, 0], c = glassLook({ trim: [0.4, 0.4, 0.4], secondary: [0.2, 0.2, 0.2], primary: [0.8, 0.1, 0.5] });
+  assert.deepEqual(c, [0.8, 0.1, 0.5]);
+  const g = glassTint(c, red);
+  assert.ok(Math.abs(oklab(g)[0] - oklab(red)[0]) < 0.02 && g[2] > g[1]);
+  const s = glassTint([0.5, 0.5, 0.5], red);
+  assert.ok(Math.abs(s[0] - s[2]) < 0.02);
 });

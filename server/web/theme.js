@@ -6,7 +6,7 @@
 import { $, esc, openSide, closeSide } from './texedit.js';
 import { D2_PRESETS } from './d2presets.js';
 import { ROLE_INFO } from './roles.js';
-import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade, withCapeGlow } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade, withCapeGlow, tintGlass } from './decaltheme.js';
 
 const GROUPS = ['Armor', 'Helmets', 'Capes', 'Backpacks', 'Weapons', 'Vehicles', 'Equipment', 'Stratagems', 'Eagle & craft',
   'SEAF', 'Super Destroyer', 'Ship interior', 'Ship crew'];
@@ -752,7 +752,11 @@ export async function themeDialog(app, opts = {}) {
       const l = app.lut(h);
       if (!l || l.w !== W) continue;
       const px = (l.edited ?? l.vanilla).slice();
-      for (let z = 0; z < l.h; z++) { const n = m.roles[z], look = looksAt(h)[n]; if (look && n !== 'keep' && n !== 'unused') putLook(px, l, z, look, n); }
+      for (let z = 0; z < l.h; z++) {
+        const n = m.roles[z], look = looksAt(h)[n];
+        if (look && n !== 'keep' && n !== 'unused') putLook(px, l, z, look, n);
+        else if (n === 'keep') tintGlass(px, z * l.w * 4, looksAt(h), l.vanilla);   // (visors, lenses: Apply's)
+      }
       R.setLut('pv:' + h, l.w, l.h, px);
     }
     // the trim color, as Apply's: the theme's on the patterned rows (of the game's LUT) of patterns, the capes' own

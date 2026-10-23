@@ -1,6 +1,11 @@
 package server
 
-import "testing"
+import (
+	"math"
+	"testing"
+
+	"lutstudio/lut"
+)
 
 // recolorDecals: alpha kept; "two": light parts take the light color, dark parts the dark one; "one": the light
 // color, the artwork's shading a little
@@ -101,5 +106,32 @@ func TestCapeGlowTakesTrim(t *testing.T) {
 	}
 	if l := lookFor(map[string][]float32{"trim": trim}, nil, "Armor", false); l["glow"] != nil {
 		t.Errorf("armor glow: %v", l["glow"])
+	}
+}
+
+// glass: a visor the roles keep takes the most colorful of the theme's trim, secondary and primary in its hue, as dark
+// and as tinted as the game's; a gray theme gives smoked glass; a zone that isn't glass stays kept
+func TestGlassTint(t *testing.T) {
+	red := [3]float32{0.81, 0.25, 0}
+	looks := map[string][]float32{"trim": {0.4, 0.4, 0.4}, "secondary": {0.2, 0.2, 0.2}, "primary": {0.8, 0.1, 0.5}}
+	c, ok := glassLook(looks)
+	if !ok || c[0] != 0.8 {
+		t.Errorf("most colorful: %v", c)
+	}
+	g := glassTint(c, red)
+	if math.Abs(oklab(g)[0]-oklab(red)[0]) > 0.02 || g[2] <= g[1] {
+		t.Errorf("magenta glass: %v", g)
+	}
+	if s := glassTint([3]float32{0.5, 0.5, 0.5}, red); math.Abs(float64(s[0]-s[2])) > 0.02 {
+		t.Errorf("smoked: %v", s)
+	}
+	van := &lut.Texture{Width: 23, Height: 2, Px: make([]float32, 23*4*2)}
+	copy(van.Px, red[:])
+	van.Px[10*4+2] = 1 // (row 0: a visor; row 1 not glass)
+	van.Px[23*4] = 0.3
+	d := &lut.Document{Tex: &lut.Texture{Width: 23, Height: 2, Px: append([]float32(nil), van.Px...)}}
+	_, changed, n, _ := themeZones(d, van, []string{"keep", "keep"}, looks, nil, true, nil)
+	if !changed || n != 1 || d.Tex.Px[2] <= d.Tex.Px[1] || d.Tex.Px[23*4] != 0.3 {
+		t.Errorf("themeZones glass: changed %v, %d zones, row 0 %v, row 1 %v", changed, n, d.Tex.Px[:3], d.Tex.Px[23*4])
 	}
 }

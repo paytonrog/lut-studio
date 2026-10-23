@@ -179,3 +179,33 @@ func camoShades(paint [3]float32, game [4][3]float32) (out [4][3]float32) {
 func fadeColor(primary, game [3]float32) [3]float32 {
 	return withLightness(primary, oklab(game)[0])
 }
+
+// glassTint: a glass zone's color (game: the game's; a visor, a lens) in look's hue at the game's lightness and
+// colorfulness: it stays glass, as dark and as tinted as the game made it; a gray look: smoked glass.
+// web/decaltheme.js glassTint is the same.
+func glassTint(look, game [3]float32) [3]float32 {
+	g, l := oklab(game), oklab(look)
+	lc, gc := math.Hypot(l[1], l[2]), math.Hypot(g[1], g[2])
+	if lc < 0.02 {
+		return fromOklab([3]float64{g[0], 0, 0})
+	}
+	return fromOklab([3]float64{g[0], l[1] * gc / lc, l[2] * gc / lc})
+}
+
+// glassLook: the color glass takes in a theme: the most colorful of its trim, secondary and primary looks' (ok: one)
+func glassLook(looks map[string][]float32) (c [3]float32, ok bool) {
+	best := -1.0
+	for _, r := range []string{"trim", "secondary", "primary"} {
+		if row := looks[r]; len(row) >= 3 {
+			x := [3]float32{row[0], row[1], row[2]}
+			o := oklab(x)
+			if ch := math.Hypot(o[1], o[2]); ch > best {
+				c, best, ok = x, ch, true
+			}
+		}
+	}
+	return c, ok
+}
+
+// isGlass: a material row with a full clearcoat (a visor, a lens, a cockpit's glass: the roles keep it)
+func isGlass(row []float32) bool { return len(row) > 10*4+2 && row[10*4+2] >= 0.9 }

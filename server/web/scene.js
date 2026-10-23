@@ -12,7 +12,7 @@
 // previous, snapshot() -> state, restore(state) }.
 import { poseSkeleton, M4 } from './render.js';
 import { Showcase, LOOK, tone8 } from './showcase.js';
-import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade, withCapeGlow } from './decaltheme.js';
+import { sheetInks, previewDecals, unpreviewDecals, tonalCamo, capeFade, withCapeGlow, tintGlass } from './decaltheme.js';
 import { swapLooks } from './theme.js';
 
 // The scene: x right (as the camera sees it), z away from the camera (meters); the item's footprint center goes to
@@ -385,6 +385,7 @@ async function themeItems(app, items, theme, tag) {
       done.add(h);
       const l = S.luts.get(h), px = baseOf(l).slice();
       for (const x of zones) if (x.h === h && looksAt(h)[x.role] && l.w === W23) putLook(px, l, x.z, looksAt(h)[x.role], x.role);
+      if (l.w === W23) for (const x of zones) if (x.h === h && x.role === 'keep') tintGlass(px, x.z * l.w * 4, looksAt(h), l.vanilla);   // (visors, lenses: Apply's)
       R.setLut(tag + h, l.w, l.h, px);
       if (it.kind === 'diver') for (const x of zones) if (x.h === h && ['glow', 'trim', 'primary', 'secondary'].includes(x.role) && x.cov > 0.02)
         worn.push([x.role, '#' + [0, 1, 2].map(k => Math.round(Math.min(1, Math.max(0, px[x.z * l.w * 4 + k])) * 255).toString(16).padStart(2, '0')).join('')]);
