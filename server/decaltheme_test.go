@@ -89,11 +89,15 @@ func TestCamoShadesAndFades(t *testing.T) {
 	}
 }
 
-// lookFor: a cape's glow panels take the trim when the theme has no glow look; elsewhere a glow stays the theme's
+// lookFor: a cape's glow panels take the trim, whatever glow the theme has; elsewhere a glow stays the theme's
 func TestCapeGlowTakesTrim(t *testing.T) {
 	trim := []float32{0.7, 0.6, 0.4}
 	if l := lookFor(map[string][]float32{"trim": trim}, nil, "Capes", false); len(l["glow"]) == 0 || l["glow"][0] != trim[0] {
 		t.Errorf("cape glow: %v", l["glow"])
+	}
+	cyan := []float32{0.25, 1, 1}
+	if l := lookFor(map[string][]float32{"trim": trim, "glow": cyan}, nil, "Capes", false); l["glow"][0] != trim[0] {
+		t.Errorf("cape glow with a theme glow: %v", l["glow"])
 	}
 	if l := lookFor(map[string][]float32{"trim": trim}, nil, "Armor", false); l["glow"] != nil {
 		t.Errorf("armor glow: %v", l["glow"])
