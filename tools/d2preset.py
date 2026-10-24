@@ -120,17 +120,27 @@ SURFACE_RULES = [
     (r'geopattern|crosshatch|tendril|veil_pattern|ice_runes', 16),      # suit prints: fine grid weave
     (r'rock|crystal|lava|fractal|glass|splatter|oil|mosaic|sandstone|prism|perlin|glutt|worms|paint', 3),  # coarse grain
 ]
+# the tiles Helldivers 2's own armor, helmets and capes use (each on 90+ of its armors, about 95% of their zones: 19, 1,
+# 16, 13, 3, 0), and its carbon fiber (8); the others (streaks, grime, rust, studs, near-black plates) go to the nearest
+# of these by what the D2 surfaces matched to them were: grain and scuffs fine scratched metal (1), paint clean (19),
+# cloth and knit the fine weave (13), netting, scales and panel lines the fine grid (16), rubber, leather and grunge
+# coarse grain (3)
+TILES = {0, 1, 3, 8, 13, 16, 19}
+TILE_REMAP = {2: 1, 4: 1, 5: 1, 7: 1, 25: 1, 6: 19, 9: 19, 14: 19, 21: 19, 10: 13, 12: 13, 15: 13, 18: 16, 22: 16, 23: 16,
+              11: 3, 17: 3, 20: 3, 24: 3}
+# carbon fiber's own dark gloss blacks out a plate at the bump the other tiles take: at most the game's (0.01 on armor)
+CARBON_BUMP = 0.02
 # every surface as picked on armor (the Detail Layer Picker): a third of the matched bump, repeated 4 times
 FAINT, TILING = 0.3, 4
 
 
 def surface(name, layer):
     """The HD2 detail tile for D2 detail normal map `name` (matched to `layer`): by SURFACE_RULES for the foil tiles
-    and carbon fiber, else the match; a foil surface no rule names is clean (19)."""
+    and carbon fiber, else the match; a foil surface no rule names is clean (19); one of TILES (TILE_REMAP)."""
     for pat, to in SURFACE_RULES:
         if re.search(pat, name, re.I) and (layer in FOIL or to == 8):
-            return to
-    return 19 if layer in FOIL else layer
+            return TILE_REMAP.get(to, to)
+    return 19 if layer in FOIL else TILE_REMAP.get(layer, layer)
 
 
 def finish(mp, k):
@@ -145,8 +155,9 @@ def finish(mp, k):
     if dm:
         wear = remap(GEAR_WEAR, mp[f'{k}_wear_remap'])
         nb = mp[f'{k}_worn_material_parameters'][1] + (mp[f'{k}_material_params'][1] - mp[f'{k}_worn_material_parameters'][1]) * wear
-        f += [[1, 0, surface(name, dm['layer'])], [1, 1, round(FAINT * min(1.5, max(0.15, dm['bump'] * max(nb, 0.3))), 3)],
-              [22, 0, TILING]]
+        tile = surface(name, dm['layer'])
+        bump = round(FAINT * min(1.5, max(0.15, dm['bump'] * max(nb, 0.3))), 3)
+        f += [[1, 0, tile], [1, 1, min(bump, CARBON_BUMP) if tile == 8 else bump], [22, 0, TILING]]
     if r.get('film'):   # (HD2's iridescence: the thin film's step, its mask all over, its strength D2's)
         th, st = r['film']
         f += [[13, 2, th], [13, 3, 0], [14, 0, 0], [14, 1, 0], [14, 2, 0], [14, 3, 1], [15, 0, 0], [15, 1, 0], [15, 2, 0], [15, 3, st]]
