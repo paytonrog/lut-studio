@@ -50,7 +50,9 @@ def blend(base, b, f):   # (the template's Overlay / HardLight: b * sat(4 base) 
 
 def region(mp, k):
     """A dye region as the D2 template shades it (wear, the gear's diffuse and detail, roughness, iridescence), then
-    the HD2 paint color and metalness whose diffuse and reflection come closest to D2's: {hex, metal, rough}."""
+    the HD2 paint color and metalness whose diffuse and reflection come closest to D2's: {hex, metal, rough}. Cloth
+    (mp['_part'] armor_cloth) without its iridescence: D2's view-dependent sheen on cloth baked into a fixed paint
+    tinted it (New Age Black Armory's charcoal cloth olive green on every cape)."""
     p = lambda n: mp[f'{k}_{n}']
     wear = remap(GEAR_WEAR, p('wear_remap'))
     lerp = lambda a, b, t: a + (b - a) * t
@@ -69,7 +71,7 @@ def region(mp, k):
     # D2's diffuse and reflection (F0)
     D = [c * (1 - metal) for c in diffuse]
     F = [0.04 + (c - 0.04) * metal for c in diffuse]
-    rid = int(p('material_advanced_params')[0])
+    rid = -1 if mp.get('_part') == 'armor_cloth' else int(p('material_advanced_params')[0])
     film = None
     if 0 <= rid < len(IRID_ROWS):
         st = 1 - (0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2])   # (the raw (linear) dye's luminance)
@@ -177,7 +179,7 @@ REGIONS = {'A': ('armor_plate', 'primary'), 'B': ('armor_plate', 'secondary'), '
 # the trim the accent (the more saturated of D and F). Capes: D2's cloth (E primary and cloth, F secondary, the same
 # trim). The metal parts: B when it is metal (unless it is a paint)
 def args(s, mapping=None):
-    d = {k: {**v['material_properties'], '_tex': v.get('textures') or {}} for k, v in s['dyes'].items()}
+    d = {k: {**v['material_properties'], '_tex': v.get('textures') or {}, '_part': k} for k, v in s['dyes'].items()}
     reg = lambda c: (d[REGIONS[c][0]], REGIONS[c][1])
     def sat(c):
         h = region(*reg(c))['hex']

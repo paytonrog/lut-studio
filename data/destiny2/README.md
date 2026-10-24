@@ -11,7 +11,8 @@ mean linear color, from `Iridescence Lookup.png` in TiredHobgoblin's Destiny-Col
 `tools/d2preset.py` turns a shader into a LUT Studio preset: each dye region shaded as the community's template shader
 (Destiny-Collada-Generator `Resources/template.shader`) does it, on Destiny 2 gear measured from Bungie's CDN (four
 armors' dyed areas: the gear's own diffuse 0.164 linear under the dye, its gloss 0.39, its wear mask 0.59), then fit
-to the nearest Helldivers 2 paint color and metalness. Its regions go to LUT Studio's roles by how much of an armor
+to the nearest Helldivers 2 paint color and metalness (cloth without its iridescence: a view-dependent sheen
+baked into a fixed paint tints it, New Age Black Armory's charcoal cloth olive). Its regions go to LUT Studio's roles by how much of an armor
 each covers (measured: Destiny 2's plate 1 39%, suit 1 26%, plate 2 17%, suit 2 7%, cloth 1 6.5%, cloth 2 5% of 60
 armor pieces' surface, by the dye slot in each vertex: the low 3 bits of its normal's w, 0-5 = plate, cloth, suit,
 each primary then secondary; Helldivers 2's cloth role, mostly the undersuit, about half of an armor): the plates on
