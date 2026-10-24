@@ -147,8 +147,11 @@ func (s *Server) SetNotices(n []Notice) {
 	s.notices = n
 }
 
-func decode(r *http.Request, v any) error {
-	return json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(v)
+func decode(r *http.Request, v any) error { return decodeMax(r, v, 1<<20) }
+
+// decodeMax: decode with a body of up to max bytes (a theme's LUTLooks: a look per LUT, a few MB)
+func decodeMax(r *http.Request, v any, max int64) error {
+	return json.NewDecoder(io.LimitReader(r.Body, max)).Decode(v)
 }
 
 func (s *Server) open(w http.ResponseWriter, r *http.Request) {

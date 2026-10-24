@@ -665,6 +665,9 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		Items   []string
 		// GroupLooks: an item group's own looks (e.g. "Capes"), for the LUTs of that group's items, over Looks
 		GroupLooks map[string]map[string][]float32
+		// LUTLooks: a LUT's own looks (its item's: each role's look over that item's own zones, as the showcase
+		// scene draws it), in place of Looks / GroupLooks for that LUT
+		LUTLooks map[string]map[string][]float32
 		// BySize: on an item whose secondary zones cover more of it than its primary ones, the two looks swapped (the
 		// theme's main look on what's biggest)
 		BySize    bool
@@ -672,7 +675,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		Overwrite bool
 		Decals    string // "", "one", "two" (DecalModes): the items' decal sheets recolored too
 	}
-	if err := decode(r, &in); err != nil {
+	if err := decodeMax(r, &in, 64<<20); err != nil {
 		fail(w, 400, err)
 		return
 	}
@@ -683,6 +686,9 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 	all := []map[string][]float32{in.Looks}
 	for _, gl := range in.GroupLooks {
 		all = append(all, gl)
+	}
+	for _, ll := range in.LUTLooks {
+		all = append(all, ll)
 	}
 	for _, looks := range all {
 		for role, row := range looks {
@@ -766,7 +772,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		wr := slices.Clone(written[hs]) // (a copy: recorded only once the doc is written)
-		looks := lookFor(in.Looks, in.GroupLooks, lutGroup[hs], swapped[hs])
+		looks := lutLookFor(in.Looks, in.GroupLooks, in.LUTLooks, hs, lutGroup[hs], swapped[hs])
 		wr, changed, nz, nk := themeZones(d, van, roles, looks, wr, in.Overwrite, byRole)
 		zones += nz
 		kept += nk

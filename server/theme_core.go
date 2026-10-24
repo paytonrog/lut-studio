@@ -219,6 +219,15 @@ func lookFor(looks map[string][]float32, groupLooks map[string]map[string][]floa
 	return looks
 }
 
+// lutLookFor: lookFor with LUT hs's own looks (lutLooks[hs]: its item's, each role's look over that item's own zones,
+// as the showcase scene draws it) in place of the theme's, when it has them
+func lutLookFor(looks map[string][]float32, groupLooks map[string]map[string][]float32, lutLooks map[string]map[string][]float32, hs, group string, swap bool) map[string][]float32 {
+	if ll, ok := lutLooks[hs]; ok {
+		return lookFor(ll, nil, group, swap)
+	}
+	return lookFor(looks, groupLooks, group, swap)
+}
+
 // themeZones: the looks over every zone of d with a role that has one (van: the game's LUT; wr: per zone the hash of
 // the row the theme last wrote, "" none; a zone changed by hand since is kept unless overwrite). Returns wr (grown to
 // d's height), whether d changed, zones themed, zones kept. byRole (nil: not counted): zones themed per role.
@@ -376,6 +385,7 @@ type planLUT struct {
 type ThemeLooks struct {
 	Looks      map[string][]float32
 	GroupLooks map[string]map[string][]float32
+	LUTLooks   map[string]map[string][]float32
 	BySize     bool
 }
 
@@ -499,7 +509,7 @@ func (pl *ThemePlan) Apply(t ThemeLooks) ([]*lut.Document, []*lut.Texture, error
 	}
 	for _, L := range pl.mats {
 		d := cloneDoc(L.base)
-		looks := lookFor(t.Looks, t.GroupLooks, L.group, t.BySize && pl.swapped[L.hash])
+		looks := lutLookFor(t.Looks, t.GroupLooks, t.LUTLooks, L.hash, L.group, t.BySize && pl.swapped[L.hash])
 		if _, changed, _, _ := themeZones(d, L.van, L.roles, looks, nil, true, nil); changed {
 			if err := keep(L, d); err != nil {
 				return nil, nil, err
