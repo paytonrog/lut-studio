@@ -665,8 +665,9 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		Items   []string
 		// GroupLooks: an item group's own looks (e.g. "Capes"), for the LUTs of that group's items, over Looks
 		GroupLooks map[string]map[string][]float32
-		// LUTLooks: a LUT's own looks (its item's: each role's look over that item's own zones, as the showcase
-		// scene draws it), in place of Looks / GroupLooks for that LUT
+		// LUTLooks: a LUT's own looks as they go on it (its item's: each role's look over that item's own zones,
+		// swapped as its item decides, as the showcase scene draws it), in place of Looks / GroupLooks / BySize
+		// for that LUT
 		LUTLooks map[string]map[string][]float32
 		// BySize: on an item whose secondary zones cover more of it than its primary ones, the two looks swapped (the
 		// theme's main look on what's biggest)
@@ -886,7 +887,7 @@ func (s *Server) applyTheme(w http.ResponseWriter, r *http.Request) {
 		}
 		slices.Sort(order)
 		for _, sh := range order {
-			light, dark, ok := sheetInks(drawnBy[sh], in.Looks, in.GroupLooks, lutGroup, swapped)
+			light, dark, ok := sheetInks(drawnBy[sh], in.Looks, in.GroupLooks, in.LUTLooks, lutGroup, swapped)
 			if !ok {
 				continue
 			}

@@ -219,11 +219,12 @@ func lookFor(looks map[string][]float32, groupLooks map[string]map[string][]floa
 	return looks
 }
 
-// lutLookFor: lookFor with LUT hs's own looks (lutLooks[hs]: its item's, each role's look over that item's own zones,
-// as the showcase scene draws it) in place of the theme's, when it has them
+// lutLookFor: lookFor with LUT hs's own looks (lutLooks[hs]: as they go on it, its item's, each role's look over that
+// item's own zones and swapped as its item decides, as the showcase scene draws it) in place of the theme's, when it
+// has them (only a cape's glow added: not swapped again)
 func lutLookFor(looks map[string][]float32, groupLooks map[string]map[string][]float32, lutLooks map[string]map[string][]float32, hs, group string, swap bool) map[string][]float32 {
 	if ll, ok := lutLooks[hs]; ok {
-		return lookFor(ll, nil, group, swap)
+		return lookFor(ll, nil, group, false)
 	}
 	return lookFor(looks, groupLooks, group, swap)
 }

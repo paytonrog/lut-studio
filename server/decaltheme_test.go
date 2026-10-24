@@ -109,8 +109,8 @@ func TestCapeGlowTakesTrim(t *testing.T) {
 	}
 }
 
-// lutLookFor: a LUT with looks of its own takes them (its group's, a cape's glow and a bySize swap still applied),
-// the others the theme's
+// lutLookFor: a LUT with looks of its own takes them as they are (a cape's glow added, not swapped: its item's swap
+// is in them), the others the theme's
 func TestLUTLooks(t *testing.T) {
 	theme, own := []float32{0.1, 0.1, 0.1}, []float32{0.9, 0.9, 0.9}
 	looks := map[string][]float32{"primary": theme, "trim": theme}
@@ -119,8 +119,11 @@ func TestLUTLooks(t *testing.T) {
 	if l := lutLookFor(looks, groupLooks, lutLooks, "0x01", "Capes", false); l["primary"][0] != own[0] || l["glow"][0] != own[0] {
 		t.Errorf("own looks: %v", l)
 	}
-	if l := lutLookFor(looks, groupLooks, lutLooks, "0x01", "Armor", true); l["secondary"][0] != own[0] || l["primary"] != nil {
-		t.Errorf("own looks swapped: %v", l)
+	if l := lutLookFor(looks, groupLooks, lutLooks, "0x01", "Armor", true); l["primary"][0] != own[0] || l["secondary"] != nil {
+		t.Errorf("own looks swapped again: %v", l)
+	}
+	if l := lutLookFor(looks, groupLooks, lutLooks, "0x02", "Armor", true); l["secondary"][0] != theme[0] || l["primary"] != nil {
+		t.Errorf("theme's looks not swapped: %v", l)
 	}
 	if l := lutLookFor(looks, groupLooks, lutLooks, "0x02", "Armor", false); l["primary"][0] != theme[0] {
 		t.Errorf("theme's looks: %v", l)

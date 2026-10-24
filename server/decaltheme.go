@@ -135,14 +135,14 @@ func decalInks(looks []map[string][]float32) (light, dark [3]float32, ok bool) {
 	return light, dark, true
 }
 
-// sheetInks: decalInks for a sheet drawn with these themed LUTs (each item group's looks, swapped as Apply does).
-// web/decaltheme.js sheetInks gathers the same from the pieces on screen.
+// sheetInks: decalInks for a sheet drawn with these themed LUTs (each item group's looks, swapped as Apply does; a
+// LUT's own looks when it has them: lutLookFor). web/decaltheme.js sheetInks gathers the same from the pieces on screen.
 func sheetInks(luts []string, looks map[string][]float32, groupLooks map[string]map[string][]float32,
-	lutGroup map[string]string, swapped map[string]bool) (light, dark [3]float32, ok bool) {
+	lutLooks map[string]map[string][]float32, lutGroup map[string]string, swapped map[string]bool) (light, dark [3]float32, ok bool) {
 	slices.Sort(luts)
 	var all []map[string][]float32
 	for _, hs := range luts {
-		all = append(all, lookFor(looks, groupLooks, lutGroup[hs], swapped[hs]))
+		all = append(all, lutLookFor(looks, groupLooks, lutLooks, hs, lutGroup[hs], swapped[hs]))
 	}
 	if len(all) == 0 {
 		all = append(all, looks)
